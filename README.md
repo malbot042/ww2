@@ -4,7 +4,9 @@ Juego arcade de combate con vista cenital, ambientado en la Segunda Guerra Mundi
 
 ## Cómo jugar
 
-Abre `index.html` en un navegador. También puedes activar GitHub Pages en el repo y jugarlo desde la URL que te dé.
+**Jugar online:** https://malbot042.github.io/ww2/
+
+También puedes abrir `index.html` directamente en el navegador.
 
 | Tecla | Acción |
 |---|---|
