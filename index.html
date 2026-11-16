@@ -34,7 +34,7 @@
   <div id="orders">
     <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Objetivo A·B·C</span>
     <span><kbd>Q</kbd> Seguirme</span><span><kbd>E</kbd> Ataque libre</span><span><kbd>R</kbd> Mantener</span><span><kbd>F</kbd> Defender</span>
-    <span><kbd>Tab</kbd> Cambiar unidad</span><span><kbd>Z</kbd><kbd>X</kbd> Zoom</span><span><kbd>M</kbd> Mapa táctico</span><span><kbd>P</kbd> Pausa</span>
+    <span><kbd>Tab</kbd> Cambiar unidad</span><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Cámara</span><span><kbd>V</kbd> Vista: <b id="camName">Cenital</b></span><span><kbd>Z</kbd><kbd>X</kbd> Zoom</span><span><kbd>M</kbd> Mapa</span><span><kbd>P</kbd> Pausa</span>
   </div>
   <div id="msg"></div>
   <div id="hit"></div>
@@ -46,7 +46,7 @@
     <header class="brand"><h1>FRENTES <span>1939–45</span></h1><p>Mando táctico de escuadra · 10 contra 10 · Mar, aire y tierra</p></header>
     <h2 class="pick">Elige el frente</h2>
     <div id="fronts"></div>
-    <p class="foot">Teclado: <kbd>W A S D</kbd> mover · <kbd>Espacio</kbd> disparar · <kbd>Shift</kbd> arma secundaria · <kbd>1 2 3</kbd> objetivos · <kbd>M</kbd> mapa táctico. El ratón es opcional: arrastra para seleccionar, clic derecho para ordenar, doble clic para tomar el mando.</p>
+    <p class="foot">Teclado: <kbd>← ↑ → ↓</kbd> mover tu unidad · <kbd>W A S D</kbd> cámara · <kbd>V</kbd> cambiar vista · <kbd>Espacio</kbd> disparar · <kbd>Shift</kbd> arma secundaria · <kbd>1 2 3</kbd> objetivos · <kbd>M</kbd> mapa táctico. El ratón es opcional: arrastra para seleccionar, clic derecho para ordenar, doble clic para tomar el mando.</p>
   </section>
   <section id="scrBattle" class="scr hide">
     <header class="bhead"><button class="ghost" id="backFront">← Frentes</button><div><h2 id="bfName"></h2><p id="bfVs"></p></div></header>
@@ -61,13 +61,15 @@
     <p class="note">El tiempo está detenido, pero puedes seguir dando órdenes, seleccionar con el ratón y cambiar de unidad.</p>
     <div class="help">
       <div><h4>Tu unidad</h4>
-        <p><kbd>W</kbd><kbd>S</kbd> / <kbd>↑</kbd><kbd>↓</kbd> Acelerar y frenar</p><p><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd> Girar</p>
+        <p><kbd>↑</kbd><kbd>↓</kbd> Acelerar y frenar</p><p><kbd>←</kbd><kbd>→</kbd> Girar</p>
         <p><kbd>Espacio</kbd> Arma principal (apunta sola)</p><p><kbd>Shift</kbd> Torpedos · bombas · humo · cañón de cubierta</p>
         <p><kbd>C</kbd> Sumergirse (submarino) · cargas de profundidad (destructor)</p><p><kbd>T</kbd> Cambiar de blanco (tanques)</p></div>
       <div><h4>Escuadra</h4>
         <p><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Enviar a objetivo A, B o C</p><p><kbd>Q</kbd> Seguirme en formación</p><p><kbd>E</kbd> Ataque libre</p><p><kbd>R</kbd> Mantener posición</p><p><kbd>F</kbd> Defender lo nuestro</p>
         <p><kbd>Tab</kbd> Tomar el mando de otra unidad</p><p><kbd>Esc</kbd> Seleccionar a toda la escuadra</p></div>
       <div><h4>Vista</h4>
+        <p><kbd>W</kbd><kbd>S</kbd> Bajar o subir la cámara (de cenital a vista de persecución)</p><p><kbd>A</kbd><kbd>D</kbd> Girar la cámara alrededor de tu unidad</p>
+        <p><kbd>V</kbd> Vistas: cenital, desde atrás, laterales y mirando hacia atrás · <kbd>B</kbd> volver a cenital</p>
         <p><kbd>Z</kbd><kbd>X</kbd> / rueda: zoom</p><p><kbd>M</kbd> Mapa táctico completo</p>
         <h4>Consejos</h4><p>Los barcos disparan con todas sus torres de costado. Los tanques son más débiles por los lados y por detrás. Mantener más objetivos que el enemigo le resta puntos cada segundo.</p></div>
     </div>

@@ -29,16 +29,19 @@ Cada frente tiene también una **campaña**, que encadena sus batallas en el ord
 
 | Tecla | Acción |
 |---|---|
-| W S / ↑ ↓ | Acelerar y frenar |
-| A D / ← → | Girar |
-| Espacio | Arma principal; las torretas apuntan solas |
-| Shift / X | Secundaria: torpedos, bombas, humo o cañón de cubierta |
+| ↑ ↓ | Acelerar y frenar tu unidad |
+| ← → | Girar |
+| Espacio (o Ctrl derecho) | Arma principal; las torretas apuntan solas |
+| Shift | Secundaria: torpedos, bombas, humo o cañón de cubierta |
 | C | Sumergirse/emerger (submarino) o cargas de profundidad (destructor) |
 | T | Cambiar de blanco (tanques) |
+| **W S** | Bajar o subir la cámara: de la vista cenital a la de persecución |
+| **A D** | Girar la cámara alrededor de tu unidad |
+| **V** | Vistas: cenital, desde atrás, lateral izquierdo, lateral derecho y mirando hacia atrás (B vuelve a cenital) |
+| Z X / rueda | Zoom |
 | 1 2 3 | Enviar la escuadra seleccionada al objetivo A, B o C |
 | Q · E · R · F | Seguirme · Ataque libre · Mantener posición · Defender |
 | Tab | Tomar el mando de otra unidad |
-| Z X / rueda | Zoom |
 | M | Mapa táctico con todo el campo de batalla |
 | P | Pausa táctica (puedes seguir dando órdenes) |
 | Esc | Seleccionar a toda la escuadra |

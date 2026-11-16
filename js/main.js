@@ -6,7 +6,7 @@ import { startBattle, updateBattle, issueOrder, setPlayer, orderLabel } from './
 import { updateUnits, updateProjs } from './units.js';
 import { initFx, updateFx, initAudio, setEngine } from './fx.js';
 import { hudInit, hudHide, updateHud, flash, hitMark, hurt, addFeed, initAimMarkers, updateAimMarkers } from './hud.js';
-import { clamp, V3, rnd } from './util.js';
+import { clamp, V3, rnd, angDiff } from './util.js';
 
 const $ = id => document.getElementById(id);
 
@@ -43,22 +43,58 @@ G.onEnd = res => setTimeout(() => showResults(res), 2200);
 G.onDemoEnd = () => startDemo();
 
 // ---------- cámara ----------
+// pitch: 1.1 ≈ cenital (63°), valores bajos = vista de persecución. yaw: relativo a la unidad en vistas bajas (0 = desde atrás).
+const CAM_PRESETS = [
+  { n: 'Cenital', pitch: 1.1, yaw: 0 }, { n: 'Desde atrás', pitch: 0.3, yaw: 0 },
+  { n: 'Lateral izquierdo', pitch: 0.26, yaw: -Math.PI / 2 }, { n: 'Lateral derecho', pitch: 0.26, yaw: Math.PI / 2 },
+  { n: 'Mirando hacia atrás', pitch: 0.28, yaw: Math.PI },
+];
+G.cam = { pitch: 1.1, yaw: 0, ang: 0, rel: false, preset: 0 };
+export function setCamPreset(i) {
+  const c = G.cam, p = CAM_PRESETS[i]; c.preset = i;
+  const rel = p.pitch < 0.95;
+  if (rel !== c.rel) c.rel = rel;
+  c.pitch = p.pitch; c.yaw = p.yaw;
+  $('camName').textContent = p.n;
+  flash(`Cámara: ${p.n}`, '', 1);
+}
 const camTarget = V3();
 function updateCamera(dt) {
-  const p = G.player;
+  const p = G.player, c = G.cam;
+  // WASD: inclinación y giro de la cámara
+  if (G.running && !G.strategic) {
+    if (G.keys.KeyW) c.pitch = Math.max(0.1, c.pitch - 0.9 * dt);
+    if (G.keys.KeyS) c.pitch = Math.min(1.45, c.pitch + 0.9 * dt);
+    if (G.keys.KeyA) c.yaw += 1.6 * dt;
+    if (G.keys.KeyD) c.yaw -= 1.6 * dt;
+    const rel = c.pitch < 0.95;
+    if (rel !== c.rel && p) { c.yaw = rel ? angDiff(c.ang, p.h + Math.PI) : c.ang; c.rel = rel; }
+  }
+  let pitch = c.pitch, angT = c.rel && p ? p.h + Math.PI + c.yaw : c.yaw;
+  if (G.strategic || G.demo || !p) { pitch = G.strategic ? 1.42 : 1.03; angT = 0; }
+  const t = clamp((pitch - 0.12) / (1.1 - 0.12), 0, 1.4);
+  c.ang += angDiff(angT, c.ang) * Math.min(1, dt * (c.rel ? 5 : 3));
+  c.curPitch = (c.curPitch ?? pitch) + (pitch - (c.curPitch ?? pitch)) * Math.min(1, dt * 4);
+  const cp = c.curPitch, ct = clamp((cp - 0.12) / (1.1 - 0.12), 0, 1.4);
   let tgt;
-  if (G.demo) { const t = G.time * 0.05; tgt = V3(Math.sin(t) * 500, 0, Math.cos(t * 0.7) * 400); G.targetZoom = 950; }
+  if (G.demo) { const tt = G.time * 0.05; tgt = V3(Math.sin(tt) * 500, 0, Math.cos(tt * 0.7) * 400); G.targetZoom = 950; }
   else if (G.strategic) tgt = V3(0, 0, 0);
-  else if (p) { const look = G.zoom * 0.18 * (p.dom === 'air' ? 1.3 : 1); tgt = V3(p.p.x + Math.sin(p.h) * look, p.dom === 'air' ? p.p.y * 0.5 : Math.max(p.p.y, 0), p.p.z + Math.cos(p.h) * look); }
-  else tgt = G.focus.clone();
+  else if (p) {
+    const look = G.zoom * 0.18 * (p.dom === 'air' ? 1.3 : 1) * Math.min(1, ct);
+    tgt = V3(p.p.x + Math.sin(p.h) * look, p.dom === 'air' ? p.p.y * (0.5 + 0.5 * (1 - Math.min(1, ct))) : Math.max(p.p.y, 0), p.p.z + Math.cos(p.h) * look);
+  } else tgt = G.focus.clone();
   const zt = G.strategic ? (G.map.bounds * 3.1) : G.targetZoom;
   G.zoom += (zt - G.zoom) * Math.min(1, dt * 3);
-  G.focus.lerp(tgt, Math.min(1, dt * (G.strategic ? 4 : 3.2)));
-  const tilt = G.strategic ? 0.12 : G.demo ? 0.6 : 0.5;
+  G.focus.lerp(tgt, Math.min(1, dt * (G.strategic ? 4 : 3.2 + (1 - Math.min(1, ct)) * 9)));
+  const D = G.zoom * (0.32 + 0.8 * ct);
   const sh = G.shake; G.shake *= Math.pow(0.03, dt);
-  camera.position.set(G.focus.x + rnd(-sh, sh), G.focus.y + G.zoom, G.focus.z + G.zoom * tilt + rnd(-sh, sh));
-  camera.lookAt(camTarget.copy(G.focus));
-  if (scene.fog) { scene.fog.near = G.zoom * 1.4; scene.fog.far = G.zoom * (G.strategic ? 5 : 3.6) + 800; }
+  camera.position.set(G.focus.x + Math.sin(c.ang) * Math.cos(cp) * D + rnd(-sh, sh), G.focus.y + Math.sin(cp) * D, G.focus.z + Math.cos(c.ang) * Math.cos(cp) * D + rnd(-sh, sh));
+  const gmin = Math.max(G.map.gy(camera.position.x, camera.position.z), 0) + 4;
+  if (camera.position.y < gmin) camera.position.y = gmin;
+  camTarget.copy(G.focus);
+  if (ct < 1 && p && !G.strategic && !G.demo) { const k = 1 - ct; camTarget.x += Math.sin(p.h) * D * 0.25 * k * Math.cos(c.yaw); camTarget.z += Math.cos(p.h) * D * 0.25 * k * Math.cos(c.yaw); camTarget.y += (p.dom === 'air' ? 4 : p.top || 4) * k; }
+  camera.lookAt(camTarget);
+  if (scene.fog) { const low = 1 - Math.min(1, ct); scene.fog.near = G.zoom * (1.4 - low * 0.6) + low * 150; scene.fog.far = G.zoom * (G.strategic ? 5 : 3.6) + 800 + low * 900; }
   // sombras alrededor del foco
   const half = clamp(G.zoom * 0.95, 140, 1400);
   const sc = sun.shadow.camera;
@@ -115,6 +151,7 @@ function launch(key, keepCampaign = false) {
     G.running = false; G.paused = false; G.strategic = false;
     startBattle(key, false);
     const p = G.player; G.targetZoom = G.zoom = p.dom === 'land' ? 240 : p.dom === 'sea' ? 330 : 380;
+    G.cam.preset = 0; G.cam.pitch = 1.1; G.cam.yaw = 0; G.cam.ang = 0; G.cam.rel = false; $('camName').textContent = 'Cenital';
     hudInit(); show(null); $('menu').classList.add('hide');
     G.running = true;
     flash(`${BATTLES[key].title}, ${BATTLES[key].year}`, G.battle.kind === 'air' ? 'Pulsa 1, 2 o 3 para enviar tu escuadrilla contra las instalaciones A, B o C' : 'Pulsa 1, 2 o 3 para enviar tu escuadra a los objetivos A, B o C', 5);
@@ -163,8 +200,10 @@ addEventListener('keydown', ev => {
   else if (c === 'KeyR') { const n = issueOrder('hold'); if (n) flash('Mantener posición', `${n} unidades`); }
   else if (c === 'KeyF') { const n = issueOrder('defend'); if (n) flash('Defender', G.battle.kind === 'air' ? 'Patrulla sobre nuestras instalaciones' : 'A nuestros objetivos'); }
   else if (c === 'Tab') cycleUnit(ev.shiftKey ? -1 : 1);
-  else if (c === 'KeyZ') G.targetZoom = clamp(G.targetZoom / 1.25, 110, 2600);
-  else if (c === 'KeyX') G.targetZoom = clamp(G.targetZoom * 1.25, 110, 2600);
+  else if (c === 'KeyZ' || c === 'Equal' || c === 'NumpadAdd') G.targetZoom = clamp(G.targetZoom / 1.25, 110, 2600);
+  else if (c === 'KeyX' || c === 'Minus' || c === 'NumpadSubtract') G.targetZoom = clamp(G.targetZoom * 1.25, 110, 2600);
+  else if (c === 'KeyV') setCamPreset((G.cam.preset + 1) % CAM_PRESETS.length);
+  else if (c === 'KeyB') setCamPreset(0);
   else if (c === 'KeyM') { G.strategic = !G.strategic; }
   else if (c === 'KeyP' || c === 'Escape') { if (c === 'Escape' && G.selection.size < allWingmen().length && !G.paused) { selectAll(); flash('Toda la escuadra seleccionada'); } else togglePause(); }
   else if (c === 'KeyH') togglePause();

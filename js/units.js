@@ -359,7 +359,7 @@ function driveShip(e, thr, steer, dt) {
   const ty = e.submerged ? -3.8 : Math.sin(t * 0.9 + e.id) * 0.18;
   e.p.y += (ty - e.p.y) * Math.min(1, dt * (e.submerged ? 0.8 : 3));
   e.mesh.rotation.y = e.h;
-  e.mesh.rotation.z = -steer * 0.06 * Math.min(1, Math.abs(e.speed) / s.max) + Math.sin(t * 0.7 + e.id) * 0.012;
+  e.mesh.rotation.z = steer * 0.06 * Math.min(1, Math.abs(e.speed) / s.max) + Math.sin(t * 0.7 + e.id) * 0.012;
   e.mesh.rotation.x = Math.sin(t * 0.55 + e.id * 2) * 0.008 - (e.speed / s.max) * 0.01;
   // estela
   if (Math.abs(e.speed) > 3 && e.p.y > -2) {
@@ -385,7 +385,7 @@ function driveTank(e, thr, steer, dt) {
   e.p.y = Math.max((yf + yb) / 2, map.gy(e.p.x, e.p.z) - 0.2);
   e.mesh.rotation.y = e.h;
   e.mesh.rotation.x = -Math.atan2(yf - yb, e.hl * 1.6) + (e.thr ? -e.thr * 0.01 : 0);
-  e.mesh.rotation.z = -Math.atan2(yl - yr, e.hl * 0.8);
+  e.mesh.rotation.z = Math.atan2(yl - yr, e.hl * 0.8);
   if (Math.abs(e.speed) > 4 && Math.random() < (G.map.theme === 'desert' ? 0.7 : 0.25)) FX.dust(e.p.clone().addScaledVector(f, -e.hl), G.map.theme === 'desert' ? null : new THREE.Color(0x8d8166));
 }
 function flyPlane(e, thr, steer, dt) {
@@ -400,15 +400,15 @@ function flyPlane(e, thr, steer, dt) {
   if (Math.abs(e.p.x) > b || Math.abs(e.p.z) > b) { const back = Math.atan2(-e.p.x, -e.p.z); e.h += clamp(angDiff(back, e.h), -s.turn * dt * 1.2, s.turn * dt * 1.2); e.bank = 0.8 * Math.sign(angDiff(back, e.h)); }
   const ground = G.map.gy(e.p.x, e.p.z), alt = Math.max(e.alt + (e.dive || 0), ground + 30);
   const vy = (alt - e.p.y) * Math.min(1, dt * 1.5); e.p.y += vy;
-  e.mesh.rotation.y = e.h; e.mesh.rotation.z = e.bank; e.mesh.rotation.x = -vy / dt * 0.012;
+  e.mesh.rotation.y = e.h; e.mesh.rotation.z = -e.bank; e.mesh.rotation.x = -vy / dt * 0.012;
   if (e.mesh.userData.prop) e.mesh.userData.prop.rotation.z += dt * 50;
 }
 
 // ---------- control del jugador ----------
 export function controlPlayer(e, dt) {
-  const thr = K('KeyW') || K('ArrowUp') ? 1 : K('KeyS') || K('ArrowDown') ? -1 : 0;
-  const steer = K('KeyA') || K('ArrowLeft') ? 1 : K('KeyD') || K('ArrowRight') ? -1 : 0;
-  const f1 = K('Space'), f2 = K('ShiftLeft') || K('ShiftRight') || K('KeyX'), once = c => G.keysOnce.has(c);
+  const thr = K('ArrowUp') ? 1 : K('ArrowDown') ? -1 : 0;
+  const steer = K('ArrowLeft') ? 1 : K('ArrowRight') ? -1 : 0;
+  const f1 = K('Space') || K('ControlRight'), f2 = K('ShiftLeft') || K('ShiftRight'), once = c => G.keysOnce.has(c);
   e.thr = thr; e.steer = steer;
   if (e.dom === 'air') {
     flyPlane(e, thr, steer, dt);

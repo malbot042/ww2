@@ -20,7 +20,7 @@ export const MAPCFG = {
   africa_air: { theme: 'desert', gen: 'desertAir', ext: 4800, N: 320, bounds: 1650, zoneS: 720, zoneR: 0, spawn: 1380, sites: true },
 };
 
-let worldGroup = null, water = null, clouds = [];
+let worldGroup = null, water = null, clouds = [], sky = null;
 
 function dispose(o) {
   o.traverse(c => { if (c.geometry) c.geometry.dispose(); if (c.material) { (Array.isArray(c.material) ? c.material : [c.material]).forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } });
@@ -318,6 +318,21 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     worldGroup.add(sp); clouds.push(sp);
   }
 
+  // ----- Cúpula de cielo (para vistas bajas) -----
+  sky = new THREE.Mesh(new THREE.SphereGeometry(6000, 32, 16), new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { hc: { value: new THREE.Color(th.fog) }, zc: { value: new THREE.Color(th.skyZ) }, sd: { value: new THREE.Vector3(-0.45, 0.8, 0.35).normalize() }, sc: { value: new THREE.Color(th.sun) } },
+    vertexShader: `varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform vec3 hc, zc, sd, sc; varying vec3 vP;
+      void main(){ float t = clamp(vP.y * 2.4, 0.0, 1.0); vec3 c = mix(hc, zc, pow(t, 0.65));
+        c += sc * pow(max(dot(vP, sd), 0.0), 64.0) * 0.6;
+        gl_FragColor = vec4(c, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+  }));
+  sky.renderOrder = -10; sky.frustumCulled = false; worldGroup.add(sky);
+
   // ----- Atmósfera y luz -----
   G.scene.background = new THREE.Color(th.sky);
   G.scene.fog = new THREE.Fog(th.fog, 600, 2400);
@@ -340,4 +355,5 @@ export function updateWorld(dt) {
   u.t.value += dt;
   u.fogN.value = G.scene.fog.near; u.fogF.value = G.scene.fog.far;
   for (const c of clouds) { c.position.x += 6 * dt; if (c.position.x > 2600) c.position.x = -2600; }
+  if (sky && G.camera) sky.position.copy(G.camera.position);
 }
