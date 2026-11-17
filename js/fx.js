@@ -50,7 +50,7 @@ class PSys {
   }
 }
 
-let smoke, glow;
+let smoke, glow, trails;
 const C = h => new THREE.Color(h);
 const COL = { fire: C(0xff9a3a), fire2: C(0xffd27a), flash: C(0xfff2c4), smoke: C(0x3a3836), smokeL: C(0x8d8a84), white: C(0xf4f7f8), foam: C(0xe8f0f0), dust: C(0xb9a27c), flak: C(0x1e1e1e), smokeW: C(0xdedcd6), red: C(0xff5030), wood: C(0x4a3a2a) };
 
@@ -62,13 +62,13 @@ export function initFx() {
   const puff = canvasTex(128, (g, s) => {
     for (let k = 0; k < 22; k++) { const x = s / 2 + (Math.random() - 0.5) * s * 0.42, y = s / 2 + (Math.random() - 0.5) * s * 0.42, r = s * (0.1 + Math.random() * 0.2); const sh = 190 + Math.random() * 65; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(${sh},${sh},${sh},0.5)`); gr.addColorStop(1, `rgba(${sh},${sh},${sh},0)`); g.fillStyle = gr; g.fillRect(0, 0, s, s); }
   });
-  smoke = new PSys(5000, false, puff); glow = new PSys(2500, true, soft);
-  G.scene.add(smoke.pts, glow.pts);
+  smoke = new PSys(5000, false, puff); glow = new PSys(2500, true, soft); trails = new PSys(3000, false, soft);
+  G.scene.add(smoke.pts, glow.pts, trails.pts);
 }
-export function resetFx() { for (const s of [smoke, glow]) { s.life.fill(0); s.age.fill(1); s.size.fill(0); } }
+export function resetFx() { for (const s of [smoke, glow, trails]) { s.life.fill(0); s.age.fill(1); s.size.fill(0); } }
 export function updateFx(dt) {
   const sc = G.renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(G.camera.fov / 2)));
-  for (const s of [smoke, glow]) {
+  for (const s of [smoke, glow, trails]) {
     s.mat.uniforms.scale.value = sc;
     if (G.scene.fog) { s.mat.uniforms.fogC.value.copy(G.scene.fog.color); s.mat.uniforms.fogN.value = G.scene.fog.near; s.mat.uniforms.fogF.value = G.scene.fog.far; }
     s.update(dt);
@@ -118,7 +118,8 @@ export function bowWave(p, side, speed) { if (speed < 8) return; for (const s of
 export function bubbles(p) { smoke.spawn(p.x + rnd(-0.6, 0.6), 0.25, p.z + rnd(-0.6, 0.6), 0, 0, 0, 1.4, 4, 2.4, COL.foam, 0.5); }
 export function dust(p, c) { smoke.spawn(p.x + rnd(-1, 1), p.y + 0.6, p.z + rnd(-1, 1), rnd(-1.5, 1.5), rnd(1, 3), rnd(-1.5, 1.5), 3, 10, rnd(1.5, 2.5), c || COL.dust, 0.35, 0, 1); }
 export function smokeScreen(p) { smoke.spawn(p.x + rnd(-10, 10), p.y + rnd(1, 5), p.z + rnd(-10, 10), rnd(-2, 2) + 1, rnd(0.5, 2), rnd(-2, 2), 10, 26, rnd(5, 8), COL.smokeW, 0.75, 0, 0.3); }
-export function contrail(p) { smoke.spawn(p.x, p.y, p.z, 0, 0, 0, 1.2, 3, 0.6, COL.smokeW, 0.25); }
+// estelas de condensación: partículas propias, largas y que se ensanchan
+export function contrail(p, k = 1) { trails.spawn(p.x, p.y, p.z, rnd(-0.3, 0.3), rnd(-0.2, 0.2), rnd(-0.3, 0.3), 3.2 * k, 2.6 * k, rnd(7, 10), COL.white, 0.26); }
 
 // ---------- Audio sintetizado ----------
 let AC = null, noiseBuf = null, master = null, engine = null;

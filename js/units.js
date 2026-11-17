@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { trackMark } from './marks.js';
 import { updateDamageLook, onKillFx, crater } from './damagefx.js';
 import { gainXp } from './campaign.js';
 import { launchFlare } from './env.js';
@@ -575,6 +576,7 @@ function driveTank(e, thr, steer, dt) {
   }
   e.mesh.rotation.x = -Math.atan2(yf - yb, e.hl * 1.6) + (e.thr ? -e.thr * 0.01 : 0);
   e.mesh.rotation.z = Math.atan2(yl - yr, e.hl * 0.8);
+  if (Math.abs(e.speed) > 1) trackMark(e);
   if (Math.abs(e.speed) > 4 && Math.random() < (G.map.theme === 'desert' ? 0.7 : 0.25)) FX.dust(e.p.clone().addScaledVector(f, -e.hl), G.map.theme === 'desert' ? null : new THREE.Color(0x8d8166));
 }
 function flyPlane(e, thr, steer, dt) {
@@ -597,6 +599,16 @@ function flyPlane(e, thr, steer, dt) {
   if (!e.leaving && (Math.abs(e.p.x) > b || Math.abs(e.p.z) > b)) { const back = Math.atan2(-e.p.x, -e.p.z); e.h += clamp(angDiff(back, e.h), -s.turn * dt * 1.2, s.turn * dt * 1.2); e.bank = 0.8 * Math.sign(angDiff(back, e.h)); }
   e.mesh.rotation.y = e.h; e.mesh.rotation.z = -e.bank; e.mesh.rotation.x = -Math.atan2(e.vy, e.speed);
   if (e.mesh.userData.props) for (const pr of e.mesh.userData.props) pr.rotation.z += dt * 50;
+  // estelas de condensación por encima de 180 m (desde los motores exteriores o las puntas de ala)
+  if (e.p.y - ground > 180 && !e.falling) {
+    e.ctT = (e.ctT || 0) - dt;
+    if (e.ctT <= 0) {
+      e.ctT = 0.022;
+      const span = e.m.span * 1.6, off = (e.m.engines > 1 ? 0.36 : 0.46) * span, rx = Math.cos(e.h), rz = -Math.sin(e.h);
+      const k = clamp((e.p.y - ground - 180) / 40, 0.3, 1) * (e.s.heavy ? 1.4 : 1);
+      for (const sgn of [-1, 1]) FX.contrail(V3(e.p.x + rx * off * sgn - f.x * 6, e.p.y, e.p.z + rz * off * sgn - f.z * 6), k);
+    }
+  }
   // choque contra el suelo o el agua
   if (e.p.y < G.map.gy(e.p.x, e.p.z) + 2.5) { kill(e, null); e.falling = 0.05; if (e === G.player && G.onMsg) G.onMsg('¡Te has estrellado!', 'Vigila la altitud al picar'); }
 }

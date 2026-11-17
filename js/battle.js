@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { initMarks } from './marks.js';
 import { initDamageFx } from './damagefx.js';
 import { applyVeterans } from './campaign.js';
 import { G } from './state.js';
@@ -57,7 +58,7 @@ export function startBattle(key, demo = false, opts = {}) {
   const b = BATTLES[key]; G.battle = b; G.battleKey = key; G.demo = demo;
   G.roster = opts.roster || b.allies; G.fog = !demo && b.kind !== 'test' && opts.fog !== false;
   const map = buildWorld(b.map);
-  initDamageFx();
+  initDamageFx(); initMarks();
   applyEnv(demo || b.kind === 'test' ? {} : opts.env || b.env || {});
   const naval = b.kind === 'naval', air = b.kind === 'air', mixed = b.kind === 'combined';
   clearAnchors();
