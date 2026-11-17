@@ -184,3 +184,8 @@ em.vet{font-style:normal;color:#f2c94c}.sqn i.rk{font-style:normal;color:#f2c94c
 body.touchui #orders{display:none}body.touchui #squad{max-height:38vh!important}
 @media (max-height:520px){body.touchui #squad,body.touchui #support{display:none}body.touchui #unit{transform:scale(.78);transform-origin:top left}body.touchui #right{transform:scale(.7);transform-origin:top right}#touch .joy{width:120px;height:120px;left:18px;bottom:18px}}
 #contCamp{display:flex;gap:14px;align-items:center;margin:18px 0 6px;flex-wrap:wrap}#contCamp:empty{display:none}#contCamp span{opacity:.85;font-size:14px}p.rec{font-size:13px;color:#f2c94c;margin:6px 0 0}
+/* tutorial */
+#tut{position:fixed;left:50%;top:76px;transform:translateX(-50%);z-index:22;width:min(520px,92vw);padding:14px 18px;background:rgba(14,20,26,.88);color:#eef2f4;border-radius:12px;border:1px solid rgba(242,201,76,.5)}#tut.hide{display:none}
+#tut .tn{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#f2c94c}#tut h3{margin:4px 0 6px;font-size:20px}#tut p{margin:0 0 10px;font-size:14px;line-height:1.5}#tut kbd{background:#3d4a3a;border-radius:4px;padding:1px 6px;font-size:12px}
+#tut .tb2{height:3px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;margin-bottom:10px}#tut .tb2 i{display:block;height:100%;background:#f2c94c;transition:width .4s}#tut .row{display:flex;gap:8px;justify-content:flex-end}#tut button{padding:6px 12px;font-size:13px}
+.front.f-tut{background:linear-gradient(135deg,#3a4a32,#22301e)}

@@ -183,7 +183,7 @@ function ammoMult(q, e) {
 }
 // ---------- daño por partes ----------
 export const MOD_NAME = { engine: 'Motor dañado', rudder: 'Timón dañado', fire: 'Incendio', tracks: 'Orugas rotas', turret: 'Torreta atascada', controls: 'Mandos dañados', gun: 'Torre destruida' };
-function applyCrit(e, m, by, idx) {
+export function applyCrit(e, m, by, idx) {
   if (!e.alive) return;
   if (m === 'gun') { const t = e.tur[idx]; if (!t || t.userData.dead) return; t.userData.dead = true; t.rotation.z = 0.12; t.rotation.x = 0.08; }
   else if (m === 'fire') { if (e.mods.fire > 0) return; e.mods.fire = 16 + rnd(0, 10); }
