@@ -303,7 +303,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     list.forEach((p, i) => { d.position.set(p.x, h(p.x, p.z) + (opts.yo || 0) * p.s - (opts.sink || 0), p.z); d.rotation.set(p.rx || 0, p.r, 0); d.scale.set(p.s * (p.sx || 1), p.s * (p.sy || 1), p.s * (p.sz || 1)); d.updateMatrix(); im.setMatrixAt(i, d.matrix); });
     im.castShadow = opts.shadow !== false; im.receiveShadow = true; worldGroup.add(im);
   }
-  const scatter = (count, test, extra = () => ({})) => { const out = []; for (let i = 0; i < count; i++) { const x = (R() * 2 - 1) * (cfg.bounds + 450), z = (R() * 2 - 1) * (cfg.bounds + 450); const y = h(x, z); if (test(x, z, y)) out.push({ x, z, r: R() * 6.28, s: 0.75 + R() * 0.6, ...extra(x, z) }); } return out; };
+  const scatter = (count, test, extra = () => ({}), full = false) => { const out = []; if (!full) count = Math.round(count * (G.qual ? G.qual.veg : 1)); for (let i = 0; i < count; i++) { const x = (R() * 2 - 1) * (cfg.bounds + 450), z = (R() * 2 - 1) * (cfg.bounds + 450); const y = h(x, z); if (test(x, z, y)) out.push({ x, z, r: R() * 6.28, s: 0.75 + R() * 0.6, ...extra(x, z) }); } return out; };
   const inZone = (x, z, r = 40) => roadDist(x, z) < 10 || zones.some(([a, b]) => Math.hypot(x - a, z - b) < r);
 
   if (cfg.theme === 'tropical') {
@@ -365,7 +365,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     inst(new THREE.BoxGeometry(7, 5, 10).translate(0, 2.5, 0), 0xcfc4ad, houses);
     if (cfg.gen === 'normandy') { // erizos checos en la playa
       const hog = mergeGeometries([new THREE.BoxGeometry(0.35, 0.35, 3.4).rotateX(0.6), new THREE.BoxGeometry(0.35, 0.35, 3.4).rotateX(-0.6).rotateY(Math.PI / 2), new THREE.BoxGeometry(3.4, 0.35, 0.35).rotateZ(0.6)]).translate(0, 1, 0);
-      const hogs = scatter(9000, (x, z, y) => y > -1.2 && y < 1.3 && R() < 0.5 && !inZone(x, z, 12));
+      const hogs = scatter(9000, (x, z, y) => y > -1.2 && y < 1.3 && R() < 0.5 && !inZone(x, z, 12), undefined, true);
       inst(hog, 0x3b3833, hogs, { rough: 0.6 });
     }
     inst(new THREE.CylinderGeometry(4.6, 4.6, 10.4, 3, 1).rotateX(Math.PI / 2).rotateZ(Math.PI / 2).scale(1, 0.75, 1).translate(0, 6.4, 0).rotateY(Math.PI / 2), 0x6b4a3a, roofs, { flat: true });

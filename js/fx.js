@@ -29,6 +29,7 @@ class PSys {
     this.pts.renderOrder = additive ? 4 : 3;
   }
   spawn(x, y, z, vx, vy, vz, size, grow, life, c, a, grav = 0, drag = 0) {
+    if (G.qual && G.qual.part < 1 && Math.random() > G.qual.part) return;
     const i = this.i = (this.i + 1) % this.n, i3 = i * 3, i4 = i * 4;
     this.pos[i3] = x; this.pos[i3 + 1] = y; this.pos[i3 + 2] = z;
     this.vel[i3] = vx; this.vel[i3 + 1] = vy; this.vel[i3 + 2] = vz;

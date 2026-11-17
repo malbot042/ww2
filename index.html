@@ -14,6 +14,7 @@
 <body>
 <canvas id="gl"></canvas>
 <div id="vig"></div>
+<div id="fps"></div>
 <div id="selbox"></div>
 
 <!-- HUD -->
@@ -63,6 +64,7 @@
     <header class="brand"><h1>FRENTES <span>1939–45</span></h1><p>Mando táctico de escuadra · 10 contra 10 · Mar, aire y tierra</p></header>
     <h2 class="pick">Elige el frente</h2>
     <div id="fronts"></div>
+    <div class="qsel"><label>Calidad gráfica <select id="optQual2"></select></label></div>
     <p class="foot">Teclado: <kbd>← ↑ → ↓</kbd> mover tu unidad · <kbd>W A S D</kbd> cámara · <kbd>V</kbd> cambiar vista · <kbd>Espacio</kbd> disparar · <kbd>Shift</kbd> arma secundaria · <kbd>1 2 3</kbd> objetivos · <kbd>M</kbd> mapa táctico. El ratón es opcional: arrastra para seleccionar, clic derecho para ordenar, doble clic para tomar el mando.</p>
   </section>
   <section id="scrBattle" class="scr hide">
@@ -104,7 +106,7 @@
         <p><kbd>Z</kbd><kbd>X</kbd> / rueda: zoom</p><p><kbd>M</kbd> Mapa táctico completo</p>
         <h4>Consejos</h4><p>Los barcos disparan con todas sus torres de costado. Los tanques son más débiles por los lados y por detrás. Mantener más objetivos que el enemigo le resta puntos cada segundo. La munición es limitada: vuelve a tu base (círculo verde con R) para rearmarte y reparar. AP contra blindados y barcos, HE contra infantería, cañones y defensas.</p></div>
     </div>
-    <h4 class="vh">Sonido y cámara</h4><div id="vols" class="vols"></div><label class="chk cine"><input type="checkbox" id="optCine" checked> Cámara lenta en los grandes derribos</label>
+    <h4 class="vh">Sonido y cámara</h4><div id="vols" class="vols"></div><label class="chk cine"><input type="checkbox" id="optCine" checked> Cámara lenta en los grandes derribos</label><div class="qrow"><label>Calidad gráfica <select id="optQual"></select></label><label class="chk"><input type="checkbox" id="optFps"> Mostrar FPS</label></div><p class="note small">La densidad de vegetación se aplica al cargar la próxima batalla.</p>
     <div class="row"><button class="btn" id="resume">Continuar</button><button class="ghost dark" id="quit">Abandonar al menú</button></div>
   </div>
 </div>

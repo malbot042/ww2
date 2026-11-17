@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { applyQuality, autoQuality, updateFps, QUALITY } from './quality.js';
 import { recordReplay, updateReplay, startReplay, stopReplay, replaying, hasReplay, resetReplay, replayProgress } from './replay.js';
 import { applyVolumes, updateMusic, musicHeat, RADIO, initSoundUI, radioStop } from './sound.js';
 import { updateDamageFx } from './damagefx.js';
@@ -135,14 +136,15 @@ function frame(now) {
   const dt = G.slowT > 0 ? rdt * 0.3 : rdt; if (G.slowT > 0) G.slowT -= rdt;
   if (G.map) {
     const sim = G.running && !G.paused && !G.deploying;
-    if (sim || G.demo) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); }
     if (sim) recordReplay(dt);
+    if (sim || G.demo) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); }
     else if (G.deploying) { updateVision(dt); updateMarkers(); }
     updateWorld(dt); if (sim || G.demo) updateEnv(dt); updateCamera(dt);
     if (G.running) { updateHud(dt); updateAimMarkers(); const p = G.player; if (p && p.alive) setEngine(engineProfile(p), Math.abs(p.speed) / p.s.max, !G.paused); }
     else { updateAimMarkers(); setEngine('ship', 0, false); }
     updateMusic(dt);
   }
+  updateFps(rdt);
   G.keysOnce.clear();
   renderer.render(scene, camera);
 }
@@ -264,7 +266,11 @@ function doSupport(kind) {
 }
 G.onSupport = (side, kind, p) => { if (!G.demo) { if (side === 'E') RADIO.incoming(kind); else RADIO.support(kind); } if (side === 'E' && !G.demo) { if (kind === 'barrage') flash('¡Artillería enemiga!', 'Busca la marca de humo y apártate', 2); else if (kind === 'air') flash('¡Ataque aéreo enemigo!', '', 1.6); } };
 initSoundUI();
-G.opts = G.opts || { cine: true };
+G.opts = G.opts || { cine: true, fps: false, quality: autoQuality() };
+applyQuality(G.opts.quality);
+function qualUI() { for (const id of ['optQual', 'optQual2']) { const el = $(id); el.innerHTML = Object.entries(QUALITY).map(([k, q]) => `<option value="${k}" ${k === G.opts.quality ? 'selected' : ''}>${q.n}</option>`).join(''); el.onchange = () => { G.opts.quality = el.value; applyQuality(el.value); qualUI(); G.onOptions && G.onOptions(); }; } $('optFps').checked = G.opts.fps; }
+qualUI();
+$('optFps').onchange = ev => { G.opts.fps = ev.target.checked; G.onOptions && G.onOptions(); };
 $('optCine').checked = G.opts.cine; $('optCine').onchange = ev => { G.opts.cine = ev.target.checked; G.onOptions && G.onOptions(); };
 const FORMS = ['cuña', 'línea', 'columna']; G.formation = 'cuña';
 
