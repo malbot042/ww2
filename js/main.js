@@ -91,7 +91,7 @@ function updateCamera(dt) {
   else if (G.strategic) tgt = V3(0, 0, 0);
   else if (p) {
     const look = G.zoom * 0.18 * (p.dom === 'air' ? 1.3 : 1) * Math.min(1, ct);
-    tgt = V3(p.p.x + Math.sin(p.h) * look, p.dom === 'air' ? p.p.y * (0.5 + 0.5 * (1 - Math.min(1, ct))) : Math.max(p.p.y, 0), p.p.z + Math.cos(p.h) * look);
+    tgt = V3(p.p.x + Math.sin(p.h) * look, p.dom === 'air' ? p.p.y * (0.5 + 0.3 * clamp((p.p.y - 120) / 120, 0, 1) + 0.5 * (1 - Math.min(1, ct))) : Math.max(p.p.y, 0), p.p.z + Math.cos(p.h) * look);
   } else tgt = G.focus.clone();
   const zt = G.strategic ? (G.map.bounds * 3.1) : G.targetZoom;
   G.zoom += (zt - G.zoom) * Math.min(1, dt * 3);

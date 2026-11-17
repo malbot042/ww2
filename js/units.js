@@ -34,7 +34,7 @@ export function spawnUnit(key, side, x, z, h) {
   G.unitsGroup.add(mesh);
   const e = mkEnt({ key, m, s, cls: m.cls, dom: s.dom, side, fac: m.fac, mesh, h, name: m.name });
   e.p.set(x, 0, z);
-  if (e.dom === 'air') { e.baseAlt = (m.cls === 'bomber' ? 150 : 115) + rnd(-15, 15); e.alt = e.baseAlt; e.p.y = e.alt; e.speed = s.max * 0.8; }
+  if (e.dom === 'air') { e.baseAlt = (s.heavy ? 215 : m.cls === 'bomber' ? 150 : 115) + rnd(-15, 15); e.alt = e.baseAlt; e.p.y = e.alt; e.speed = s.max * 0.8; }
   else if (e.dom === 'land') e.p.y = G.map.gy(x, z);
   mesh.rotation.y = h;
   G.ents.push(e);
@@ -461,9 +461,25 @@ function dropBomb(e) {
   e.cd.bomb = b.cd; FX.sfx('bomb', e.p, 0.6);
   return true;
 }
+// bombarderos pesados: suelta una ráfaga de bombas en línea (stick)
+function startStick(e) { if (!e.s.heavy || e.stick > 0 || e.ammo.bomb < 1 || e.cd.bomb > 0) return false; e.stick = Math.min(e.s.bomb.stick || 6, Math.floor(e.ammo.bomb)); return true; }
+function stickStep(e) { if (e.stick > 0 && e.cd.bomb <= 0) { if (dropBomb(e)) e.stick--; else e.stick = 0; if (e.stick <= 0) e.cd.bomb = 3; else e.cd.bomb = e.s.bomb.cd; } }
 function fallTime(e, ground) { const h = Math.max(3, e.p.y - 2 - ground), vy = e.vel.y; return (vy + Math.sqrt(vy * vy + 2 * GRAV * h)) / GRAV; }
 export function bombImpact(e) { const ground = G.map.gy(e.p.x, e.p.z), T = fallTime(e, ground); return V3(e.p.x + e.vel.x * T, ground, e.p.z + e.vel.z * T); }
 function rearGunner(e) {
+  if (e.s.heavy) { // artilleros: cubren todo el horizonte, cada uno con su propio blanco
+    const n = e.s.heavy.n;
+    for (let i = 0; i < n; i++) {
+      const k = 'gun' + i; if (e.cd[k] > 0) continue;
+      const t = pickTarget(e, o => isPlane(o) && (i === 0 || Math.random() < 0.6), 300); if (!t) { e.cd[k] = 0.3; continue; }
+      if (e.ammo.guns !== undefined) { if (e.ammo.guns < 1) return; e.ammo.guns--; }
+      const from = e.p.clone().add(V3(rnd(-4, 4), (i % 2 ? -2 : 2), rnd(-6, 6)));
+      const dir = lead(from, t, 700).sub(from).normalize().add(V3(rnd(-0.05, 0.05), rnd(-0.04, 0.04), rnd(-0.05, 0.05)));
+      proj('bullet', e, from, dir.normalize().multiplyScalar(700).add(e.vel), { dmg: e.s.guns.dmg, life: 0.45 });
+      e.cd[k] = 0.16 + Math.random() * 0.05;
+    }
+    return;
+  }
   if (!e.s.rear || e.cd.rear > 0) return;
   const t = pickTarget(e, isPlane, 220); if (!t) return;
   const to = t.p.clone().sub(e.p); if (to.dot(fwdOf(e)) > 0) return;
@@ -576,7 +592,7 @@ function flyPlane(e, thr, steer, dt) {
   const b = G.map.bounds + 150;
   if (!e.leaving && (Math.abs(e.p.x) > b || Math.abs(e.p.z) > b)) { const back = Math.atan2(-e.p.x, -e.p.z); e.h += clamp(angDiff(back, e.h), -s.turn * dt * 1.2, s.turn * dt * 1.2); e.bank = 0.8 * Math.sign(angDiff(back, e.h)); }
   e.mesh.rotation.y = e.h; e.mesh.rotation.z = -e.bank; e.mesh.rotation.x = -Math.atan2(e.vy, e.speed);
-  if (e.mesh.userData.prop) e.mesh.userData.prop.rotation.z += dt * 50;
+  if (e.mesh.userData.props) for (const pr of e.mesh.userData.props) pr.rotation.z += dt * 50;
   // choque contra el suelo o el agua
   if (e.p.y < G.map.gy(e.p.x, e.p.z) + 2.5) { kill(e, null); e.falling = 0.05; if (e === G.player && G.onMsg) G.onMsg('¡Te has estrellado!', 'Vigila la altitud al picar'); }
 }
@@ -599,7 +615,8 @@ export function controlPlayer(e, dt) {
       if (t) { const ld = lead(e.p, t, 700); if (Math.abs(angDiff(angTo(e, ld), e.h)) < 0.18 && Math.abs(t.p.y - e.p.y) < 60) dir = ld.sub(e.p).normalize(); }
       fireGuns(e, dir);
     }
-    if (f2) dropBomb(e);
+    if (f2) { if (e.s.heavy) startStick(e); else dropBomb(e); }
+    stickStep(e);
     rearGunner(e);
     e.target = null;
     return;
@@ -892,8 +909,36 @@ function aiTank(e, t, goal, dt) {
 function aiPlane(e, t, goal, dt) {
   let ang, thr = 0.4;
   if (e.ai.evade > 0) e.ai.evade -= dt;
-  else { for (const o of G.ents) if (o.alive && o.side !== e.side && o.cls === 'fighter' && !o.falling) { const to = e.p.clone().sub(o.p); const d = to.length(); if (d < 160 && to.normalize().dot(V3(Math.sin(o.h), 0, Math.cos(o.h))) > 0.94 && Math.random() < 0.02) { e.ai.evade = 1.6; e.ai.dir = Math.random() < 0.5 ? 1 : -1; } } }
+  else if (!e.s.heavy) { for (const o of G.ents) if (o.alive && o.side !== e.side && o.cls === 'fighter' && !o.falling) { const to = e.p.clone().sub(o.p); const d = to.length(); if (d < 160 && to.normalize().dot(V3(Math.sin(o.h), 0, Math.cos(o.h))) > 0.94 && Math.random() < 0.02) { e.ai.evade = 1.6; e.ai.dir = Math.random() < 0.5 ? 1 : -1; } } }
   if (e.ai.evade > 0) { flyPlane(e, 1, e.ai.dir, dt); rearGunner(e); return; }
+  stickStep(e);
+  if (e.s.heavy) {
+    // formación en caja: los punteros eligen el blanco, el resto mantiene su puesto y suelta cuando suelta el guía
+    const grp = G.ents.filter(o => o.alive && !o.falling && o.side === e.side && o.s.heavy && !o.support);
+    const ld0 = grp[0], idx = grp.indexOf(e);
+    e.alt = e.baseAlt;
+    if (ld0 && idx > 0) {
+      const SL = [[0, 0], [-45, -35], [45, -35], [0, -70], [-90, -70], [90, -70]][idx % 6];
+      const c = Math.cos(ld0.h), s = Math.sin(ld0.h);
+      const slot = V3(ld0.p.x + SL[0] * c + SL[1] * s, 0, ld0.p.z - SL[0] * s + SL[1] * c);
+      e.alt = ld0.alt + (idx % 2 ? 12 : -8);
+      const d = dist2(e.p, slot);
+      ang = d > 30 ? angTo(e, slot) : ld0.h;
+      thr = clamp(0.4 + (d - 30) / 120, 0.1, 1);
+      if (ld0.stick > 0) startStick(e);
+      flyPlane(e, thr, steerTo(e, ang, 2.5), dt); rearGunner(e); return;
+    }
+    if (t) {
+      const imp = bombImpact(e), tt = fallTime(e, G.map.gy(t.p.x, t.p.z));
+      const aim = t.p.clone().addScaledVector(t.vel, tt); aim.x -= e.vel.x * tt; aim.z -= e.vel.z * tt;
+      // ajustar para que la ráfaga se centre en el blanco
+      const half = ((e.s.bomb.stick || 6) - 1) / 2 * e.s.bomb.cd * e.speed;
+      aim.x -= Math.sin(e.h) * half; aim.z -= Math.cos(e.h) * half;
+      ang = e.stick > 0 ? e.h : angTo(e, aim);
+      if (dist2(imp, t.p) < 20 + (t.hw || 4) && startStick(e)) { /* lanzando */ }
+      flyPlane(e, 0.6, steerTo(e, ang, 2.5), dt); rearGunner(e); return;
+    }
+  }
   if (e.cls === 'bomber' && t) {
     const imp = bombImpact(e);
     const tt = fallTime(e, G.map.gy(t.p.x, t.p.z));

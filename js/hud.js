@@ -38,7 +38,7 @@ function weaponLines(e) {
   else if (e.cls === 'pt') { L.push(['Espacio · Ametralladoras', '<b class="ok">AUTO</b>']); L.push(['Shift · Torpedos' + cnt('torp'), cd(e.cd.torp, 'torp')]); }
   else if (e.cls === 'sub') { L.push(['Espacio · Torpedos (proa)' + cnt('torp'), cd(e.cd.torp, 'torp')]); L.push(['Shift · Cañón de cubierta' + cnt('deck'), e.submerged ? '<b>—</b>' : cd(e.cd.main, 'deck')]); L.push(['C · ' + (e.submerged ? 'Emerger' : 'Sumergirse'), `<b class="${e.battery < 0.25 ? 'bad' : ''}">Batería ${Math.round(e.battery * 100)}%</b>`]); }
   else if (e.dom === 'air') {
-    L.push(['Espacio · Ametralladoras' + cnt('guns'), n('guns') < 1 ? '<b class="bad">AGOTADO</b>' : '<b class="ok">AUTO</b>'], ['Shift · Bomba' + cnt('bomb'), cd(e.cd.bomb, 'bomb')]);
+    L.push(['Espacio · Ametralladoras' + cnt('guns'), n('guns') < 1 ? '<b class="bad">AGOTADO</b>' : '<b class="ok">AUTO</b>'], [s.heavy ? 'Shift · Ráfaga de bombas' + cnt('bomb') : 'Shift · Bomba' + cnt('bomb'), e.stick > 0 ? '<b class="ok">SOLTANDO</b>' : cd(e.cd.bomb, 'bomb')]); if (s.heavy) L.push(['Artilleros', `<b class="ok">${s.heavy.n} · AUTO</b>`]);
     const agl = Math.round(e.p.y - G.map.gy(e.p.x, e.p.z));
     if (G.ents.some(c => c.alive && c.cls === 'carrier' && c.side === e.side)) L.push(['L · Aterrizar en el portaaviones', '<b>baja de 60 m sobre él</b>']);
     L.push(['↑ picar · ↓ subir', `<b class="${agl < 30 ? 'bad blink' : ''}">Altitud ${agl} m${agl < 30 ? ' ¡BAJO!' : ''}</b>`]);

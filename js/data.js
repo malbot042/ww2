@@ -42,7 +42,7 @@ export const BATTLES = {
   'africa-air': {
     front: 'africa', kind: 'air', map: 'africa_air', title: 'Desierto occidental', year: '1942',
     brief: 'Ataca los depósitos del Eje (A, B, C) con los Hurricane mientras los Kittyhawk mantienen alejados a los Bf 109 y Macchi. Defiende tus aeródromos de los Stuka.',
-    allies: [['p40', 6], ['hurricane', 4]], enemy: [['bf109', 4], ['mc202', 2], ['ju87', 4]], sites: ['uk', 'de'],
+    allies: [['p40', 6], ['hurricane', 4]], enemy: [['bf109', 4], ['mc202', 2], ['ju87', 2], ['he111', 2]], sites: ['uk', 'de'],
   },
   'africa-combined': {
     front: 'africa', kind: 'combined', map: 'tobruk', title: 'Asedio de Tobruk', year: '1941',
@@ -66,7 +66,7 @@ export const BATTLES = {
   'europe-air': {
     front: 'europe', kind: 'air', map: 'europe_air', title: 'Sobre el Canal', year: '1944',
     brief: 'Superioridad aérea antes del desembarco: destruye el radar, el aeródromo y el depósito alemanes en la costa francesa (A, B, C). Los P-47 llevan la carga pesada.',
-    allies: [['p51', 6], ['p47', 4]], enemy: [['bf109g', 6], ['fw190f', 4]], sites: ['us', 'de'],
+    allies: [['p51', 5], ['p47', 2], ['b17', 3]], enemy: [['bf109g', 6], ['fw190f', 4]], sites: ['us', 'de'],
   },
   'europe-combined': {
     front: 'europe', kind: 'combined', map: 'normandy', title: 'Día D: playa de Normandía', year: '1944',
@@ -114,6 +114,8 @@ export const CLS = {
 };
 
 // Modelos concretos: cls, fac, nombre y parámetros visuales
+// bombarderos pesados: bombardeo horizontal en ráfaga desde gran altura, varios artilleros de defensa
+const HEAVY = { hp: 900, min: 62, max: 84, acc: 16, turn: 0.55, value: 60, r: 18, alt: 210, guns: { range: 300, rof: 0.14, dmg: 1.1 }, bomb: { dmg: 150, rad: 30, cd: 0.28, stick: 6 }, ammo: { guns: 1600, bomb: 12 }, heavy: { n: 4 } };
 export const MODELS = {
   // ---------- Naval ----------
   fletcher: { cls: 'destroyer', fac: 'us', name: 'USS Fletcher', type: 'Destructor', hull: 0x4b5864, sup: 0x8b949a, deck: 0x4a5056, turrets: [0.36, 0.26, -0.2, -0.3, -0.4], tw: 1, funnels: [0.07, -0.07], tubes: [-0.02, -0.13] },
@@ -148,6 +150,9 @@ export const MODELS = {
   hurricane: { cls: 'bomber', fac: 'uk', name: 'Hurricane IID', type: 'Cazabombardero', len: 9.8, span: 12.2, color: 0x9c845a, stats: { hp: 220, max: 122, turn: 1.25 } },
   bf109: { cls: 'fighter', fac: 'de', name: 'Bf 109 F-4 Trop', type: 'Caza', len: 9, span: 9.9, color: 0xb59d6c, nose: 0xe8e2d0, stats: { hp: 124, max: 145, turn: 1.6 } },
   mc202: { cls: 'fighter', fac: 'it', name: 'Macchi C.202 Folgore', type: 'Caza', len: 8.9, span: 10.6, color: 0xb6a070, stats: { hp: 120, max: 140, turn: 1.72 } },
+  b17: { cls: 'bomber', fac: 'us', name: 'B-17 Flying Fortress', type: 'Bombardero pesado', len: 22.7, span: 31.6, engines: 4, fus: 1.7, chord: 1.9, radial: true, color: 0x9aa0a3, metal: true, stats: HEAVY },
+  lancaster: { cls: 'bomber', fac: 'uk', name: 'Avro Lancaster', type: 'Bombardero pesado', len: 21.1, span: 31.1, engines: 4, fus: 1.6, chord: 1.8, color: 0x3b3d2e, stats: { ...HEAVY, hp: 820, max: 88, bomb: { dmg: 190, rad: 34, cd: 0.3, stick: 7 }, ammo: { guns: 1200, bomb: 14 }, heavy: { n: 3 } } },
+  he111: { cls: 'bomber', fac: 'de', name: 'He 111 H', type: 'Bombardero medio', len: 16.4, span: 22.6, engines: 2, fus: 1.4, chord: 1.6, color: 0x6c7360, stats: { ...HEAVY, hp: 560, max: 92, turn: 0.7, bomb: { dmg: 140, rad: 30, cd: 0.32, stick: 4 }, ammo: { guns: 900, bomb: 8 }, heavy: { n: 3 }, value: 45 } },
   ju87: { cls: 'bomber', fac: 'de', name: 'Ju 87 Stuka', type: 'Bombardero en picado', len: 11.1, span: 13.8, color: 0x8a8158, fixedGear: true, gull: true, stats: { hp: 220, max: 108 } },
   p51: { cls: 'fighter', fac: 'us', name: 'P-51D Mustang', type: 'Caza de escolta', len: 9.8, span: 11.3, color: 0xb4b9bd, metal: true, stripes: true, stats: { hp: 150, max: 155, turn: 1.6 } },
   p47: { cls: 'bomber', fac: 'us', name: 'P-47 Thunderbolt', type: 'Cazabombardero', len: 11, span: 12.4, radial: true, color: 0x4b5320, stripes: true, stats: { hp: 270, max: 130, turn: 1.25, guns: { range: 320, rof: 0.08, dmg: 1.6 }, ammo: { guns: 800, bomb: 2 } } },

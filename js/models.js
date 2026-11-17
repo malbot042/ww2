@@ -123,27 +123,45 @@ function wingGeo(span, c0, c1, sweep = 0, th = 0.28) {
 function buildPlane(m) {
   const S = 1.6, L = m.len * S, SP = m.span * S, g = new THREE.Group();
   const body = mat(m.color, { r: m.metal ? 0.32 : 0.6, m: m.metal ? 0.75 : 0.2 }), dk = mat(DARK);
-  const rN = m.radial ? 0.62 * S : 0.42 * S, rMax = 0.6 * S;
+  const FU = m.fus || 1, multi = (m.engines || 1) > 1;
+  const rN = multi ? 0.34 * S * FU : m.radial ? 0.62 * S : 0.42 * S, rMax = 0.6 * S * FU;
   const prof = [[0.01, -L / 2], [0.16 * S, -L / 2 + 0.2], [0.3 * S, -L * 0.3], [rMax * 0.85, -L * 0.05], [rMax, L * 0.12], [rMax, L * 0.25], [rN, L * 0.4], [rN * 0.95, L / 2 - 0.1], [0.01, L / 2]];
   const lg = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 14); lg.rotateX(Math.PI / 2); // eje y → z
   const fus = new THREE.Mesh(lg, body); fus.scale.set(0.9, 1, 1); g.add(fus);
   // alas
-  const c0 = 2.2 * S, c1 = 1.1 * S;
+  const c0 = 2.2 * S * (m.chord || 1), c1 = 1.1 * S * (m.chord || 1);
   const wg = wingGeo(SP, c0, c1, 0, 0.25 * S); const w = new THREE.Mesh(wg, body); w.position.set(0, -0.35 * S, L * 0.08); g.add(w);
-  const tp = new THREE.Mesh(wingGeo(SP * 0.36, 1.2 * S, 0.7 * S, 0, 0.14 * S), body); tp.position.set(0, 0.05, -L / 2 + 0.9 * S); g.add(tp);
+  const tp = new THREE.Mesh(wingGeo(SP * (multi ? 0.32 : 0.36), 1.2 * S * FU, 0.7 * S * FU, 0, 0.14 * S), body); tp.position.set(0, 0.05, -L / 2 + 0.9 * S * FU); g.add(tp);
   const fs = new THREE.Shape(); fs.moveTo(0, 0); fs.lineTo(1.6 * S, 0); fs.lineTo(1.0 * S, 1.6 * S); fs.lineTo(0.2 * S, 1.6 * S); fs.lineTo(-0.2 * S, 0.6 * S);
   const fg = new THREE.ExtrudeGeometry(fs, { depth: 0.12 * S, bevelEnabled: false }); fg.rotateY(Math.PI / 2);
-  const fin = new THREE.Mesh(fg, body); fin.position.set(-0.06 * S, 0.25 * S, -L / 2 + 1.7 * S); g.add(fin);
+  const fin = new THREE.Mesh(fg, body); fin.scale.setScalar(FU); fin.position.set(-0.06 * S, 0.25 * S, -L / 2 + 1.7 * S * FU); g.add(fin);
   // cabina
-  const can = new THREE.Mesh(new THREE.SphereGeometry(0.5 * S, 12, 8), mat(0x22313d, GLASS)); can.scale.set(0.8, 0.85, 2.2); can.position.set(0, rMax * 0.75, L * 0.02); g.add(can);
+  const can = new THREE.Mesh(new THREE.SphereGeometry(0.5 * S, 12, 8), mat(0x22313d, GLASS)); can.scale.set(0.8, 0.85, 2.2); can.position.set(0, rMax * 0.75, multi ? L * 0.3 : L * 0.02); g.add(can);
+  const props = [];
+  if (multi) {
+    // morro acristalado, torretas de los artilleros y góndolas de motor con su hélice
+    const gl = mat(0x22313d, GLASS), nose = new THREE.Mesh(new THREE.SphereGeometry(rN * 1.05, 12, 8), gl); nose.scale.z = 1.6; nose.position.z = L / 2 - 0.2; g.add(nose);
+    for (const [y, z] of [[rMax * 0.9, L * 0.16], [-rMax * 0.9, -L * 0.02], [0.1, -L / 2 + 0.2]]) { const t = new THREE.Mesh(new THREE.SphereGeometry(0.5 * S, 10, 6), gl); t.position.set(0, y, z); g.add(t); }
+    const n = m.engines, xs = n === 4 ? [-0.36, -0.18, 0.18, 0.36] : [-0.25, 0.25];
+    for (const fx of xs) {
+      const x = fx * SP, nz = L * 0.08 + c0 * 0.55;
+      const nc = cyl(0.5 * S, 0.42 * S, 3.2 * S, body, 12); nc.rotation.x = Math.PI / 2; nc.position.set(x, -0.3 * S, nz - 0.9 * S); g.add(nc);
+      if (m.radial) { const cw = cyl(0.56 * S, 0.5 * S, 0.7 * S, dk, 12); cw.rotation.x = Math.PI / 2; cw.position.set(x, -0.3 * S, nz + 0.6 * S); g.add(cw); }
+      const pr = new THREE.Group(); pr.position.set(x, -0.3 * S, nz + 1.05 * S);
+      for (let k = 0; k < 3; k++) { const pv = new THREE.Group(); pv.add(box(0.16 * S, 1.4 * S, 0.06, dk, 0, 0.7 * S, 0)); pv.rotation.z = k * Math.PI * 2 / 3; pr.add(pv); }
+      pr.add(new THREE.Mesh(new THREE.CircleGeometry(1.5 * S, 18), new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false })));
+      g.add(pr); props.push(pr);
+    }
+  }
   // morro / capó / hélice
-  if (m.radial) { const cw = cyl(rN * 1.05, rN, 0.9 * S, mat(m.cowl ?? m.nose ?? m.color, { r: 0.5 }), 16); cw.rotation.x = Math.PI / 2; cw.position.z = L / 2 - 0.4 * S; g.add(cw); }
+  if (multi) { /* sin hélice en el morro */ }
+  else if (m.radial) { const cw = cyl(rN * 1.05, rN, 0.9 * S, mat(m.cowl ?? m.nose ?? m.color, { r: 0.5 }), 16); cw.rotation.x = Math.PI / 2; cw.position.z = L / 2 - 0.4 * S; g.add(cw); }
   else if (m.nose) { const nc = cyl(rN * 0.9, rN, 1.4 * S, mat(m.nose), 14); nc.rotation.x = Math.PI / 2; nc.position.z = L / 2 - 0.6 * S; g.add(nc); }
-  const sp = new THREE.Mesh(new THREE.ConeGeometry(0.28 * S, 0.7 * S, 10), mat(m.nose ?? 0x2a2a2a)); sp.rotation.x = Math.PI / 2; sp.position.z = L / 2 + 0.3 * S; g.add(sp);
   const prop = new THREE.Group(); prop.position.z = L / 2 + 0.15 * S;
+  if (!multi) { const sp = new THREE.Mesh(new THREE.ConeGeometry(0.28 * S, 0.7 * S, 10), mat(m.nose ?? 0x2a2a2a)); sp.rotation.x = Math.PI / 2; sp.position.z = L / 2 + 0.3 * S; g.add(sp); }
   for (let k = 0; k < 3; k++) { const b = box(0.18 * S, 1.6 * S, 0.06, dk, 0, 0.8 * S, 0); const pv = new THREE.Group(); pv.add(b); pv.rotation.z = k * Math.PI * 2 / 3; prop.add(pv); }
   const disc = new THREE.Mesh(new THREE.CircleGeometry(1.7 * S, 20), new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false })); prop.add(disc);
-  g.add(prop);
+  if (!multi) { g.add(prop); props.push(prop); }
   if (m.fixedGear) for (const s of [-1, 1]) { const lg2 = box(0.35 * S, 1.3 * S, 0.9 * S, body, s * 1.5 * S, -1.1 * S, L * 0.18); g.add(lg2); }
   if (m.sharkMouth) { const sm = box(0.9 * S, 0.06, 0.8 * S, mat(0xb3221f), 0, -0.45 * S, L * 0.36); g.add(sm); }
   if (m.fac === 'it') g.add(box(1.3 * S, 1.3 * S, 0.4 * S, mat(0xf0f0ec), 0, 0, -L * 0.25));
@@ -152,7 +170,7 @@ function buildPlane(m) {
   // insignias en alas
   const mk = m.fac === 'us' && m.stripes ? 'wing44' : 'wing';
   for (const s of [-1, 1]) { const ins = insignia(m.fac, 0.75 * S, mk); ins.rotation.x = -Math.PI / 2; ins.position.set(s * SP * 0.36, -0.05 * S, L * 0.08); g.add(ins); }
-  g.userData = { prop, r: CLS[m.cls].r };
+  g.userData = { props, r: m.stats?.r ?? CLS[m.cls].r };
   return g;
 }
 
