@@ -47,10 +47,12 @@ Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin punt
 
 | Tecla | Acción |
 |---|---|
-| ↑ ↓ | Acelerar y frenar tu unidad |
+| ↑ ↓ | Acelerar y frenar tu unidad; en avión, **picar** (↑) y **subir** (↓) |
 | ← → | Girar |
 | Espacio (o Ctrl derecho) | Arma principal; las torretas apuntan solas |
 | Shift | Secundaria: torpedos, bombas, humo o cañón de cubierta |
+| N | Munición perforante (AP) o explosiva (HE) |
+| K | Control de daños: apaga incendios y repara averías (40 s de espera) |
 | C | Sumergirse/emerger (submarino) o cargas de profundidad (destructor) |
 | T | Siguiente blanco (queda fijado) · **Y** vuelve al blanco automático · clic sobre un enemigo para fijarlo |
 | **W S** | Bajar o subir la cámara: de la vista cenital a la de persecución |
@@ -66,6 +68,18 @@ Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin punt
 | Esc | Seleccionar a toda la escuadra |
 
 **Ratón (opcional):** arrastra para seleccionar unidades, haz clic derecho sobre un objetivo o un punto del mapa para darles una orden y doble clic sobre una unidad para tomar su mando.
+
+## Averías, munición y altitud (v0.6)
+- **Averías por partes:**
+  - Barcos: torres, motor, timón e incendio.
+  - Tanques: orugas, motor, torreta e incendio.
+  - Aviones: motor, mandos e incendio.
+  - **K** activa el control de daños.
+- **Munición limitada:** AP contra blindados y barcos, HE contra infantería, cañones y defensas (cambias con **N**). Para rearmarte y reparar, vuelve a tu **base**, el círculo verde con **R**.
+- **Aviones con altitud real:** picar da velocidad, subir la quita, y puedes estrellarte. Desde arriba las bombas se dispersan más.
+- **Infantería con bazuca o Panzerschreck y cañones antitanque** en El Alamein, el Bocage y el Día D. Los tanques tienen ametralladora coaxial automática.
+
+La hoja de ruta completa está en [MEJORAS.md](MEJORAS.md).
 
 ## Detalles tácticos
 - **Ritmo arcade:** barcos y tanques se mueven más rápido que en la realidad; el HUD muestra la velocidad real equivalente.

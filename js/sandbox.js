@@ -56,7 +56,7 @@ export function initSandbox(opts) {
   $('sbAlly').onclick = ev => { const k = $('sbUnit').value; if (domOf(k) === 'static') { flash('Las defensas solo pueden ser enemigas', '', 1.4); return; } const e = addUnit(k, 'A', false); flash(`Aliado: ${e.name}`, 'Te sigue en formación', 1.2); ev.target.blur(); };
   $('sbTargets').onclick = ev => { targetSet(); ev.target.blur(); };
   $('sbClear').onclick = ev => { for (const e of G.ents.filter(x => x !== G.player && (x.side === 'E' || x.side === 'A'))) removeEntity(e); G.smokes.length = 0; flash('Campo despejado', '', 1); ev.target.blur(); };
-  $('sbRepair').onclick = ev => { const p = G.player; if (p) { p.hp = p.s.hp; p.battery = 1; for (const k in p.cd) p.cd[k] = 0; } flash('Unidad reparada', 'Vida, recarga y batería al máximo', 1.2); ev.target.blur(); };
+  $('sbRepair').onclick = ev => { const p = G.player; if (p) { p.hp = p.s.hp; p.battery = 1; for (const k in p.cd) p.cd[k] = 0; p.ammo = { ...p.ammoMax }; p.mods = {}; p.repairing = 0; p.tur.forEach(t => { t.userData.dead = false; t.rotation.x = t.rotation.z = 0; }); } flash('Unidad reparada y rearmada', 'Vida, munición, averías y batería', 1.2); ev.target.blur(); };
   $('sbGod').addEventListener('change', () => { G.godMode = $('sbGod').checked; });
 }
 export function sandboxStart() {
@@ -85,7 +85,7 @@ function changePlayer(key) {
 // blancos pasivos alrededor, adecuados al dominio del jugador
 function targetSet() {
   const p = G.player, dom = p.dom, passive = true;
-  const list = dom === 'sea' ? ['kagero', 'hipper', 'sboot', 'u7c'] : dom === 'air' ? ['zero', 'bf109g', 'ju87', 'val', 'aa'] : ['pz4h', 'panther', 'tiger', 'stug', 'm13'];
+  const list = dom === 'sea' ? ['kagero', 'hipper', 'sboot', 'u7c'] : dom === 'air' ? ['zero', 'bf109g', 'ju87', 'val', 'aa'] : ['pz4h', 'panther', 'tiger', 'stug', 'inf_de', 'pak40'];
   list.forEach((k, i) => {
     const kd = domOf(k);
     const dist = kd === 'sea' ? 450 + i * 120 : kd === 'air' ? 350 + i * 60 : kd === 'static' ? 300 : 180 + i * 50;

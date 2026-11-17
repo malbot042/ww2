@@ -25,15 +25,35 @@ export function addFeed(txt, side) { feed.unshift({ txt, side, t: 6 }); feed = f
 function renderFeed() { $('feed').innerHTML = feed.map(f => `<div class="f ${f.side}">${f.txt}</div>`).join(''); }
 
 function weaponLines(e) {
-  const s = e.s, cd = v => v <= 0 ? '<b class="ok">LISTO</b>' : `<b>${v.toFixed(1)} s</b>`;
+  const s = e.s, A = e.ammo, n = k => Math.floor(A[k] ?? 0);
+  const cd = (v, k) => k !== undefined && n(k) < 1 ? '<b class="bad">AGOTADO</b>' : v <= 0 ? '<b class="ok">LISTO</b>' : `<b>${v.toFixed(1)} s</b>`;
+  const cnt = k => A[k] !== undefined ? ` <i class="am">${n(k)}</i>` : '';
   const L = [];
-  const aim = v => v > 0 ? '<b>' + v.toFixed(1) + ' s</b>' : !e.target ? '<b>SIN BLANCO</b>' : e.aimReady ? '<b class="ok">LISTO</b>' : '<b class="warn">APUNTANDO</b>';
-  if (e.cls === 'destroyer' || e.cls === 'cruiser') { L.push(['Espacio · Artillería', aim(e.cd.main)]); if (s.torp) L.push(['Shift · Torpedos', cd(e.cd.torp)]); if (s.dc) L.push(['C · Cargas de profundidad', cd(e.cd.dc)]); }
-  else if (e.cls === 'pt') { L.push(['Espacio · Ametralladoras', '<b class="ok">AUTO</b>']); L.push(['Shift · Torpedos', cd(e.cd.torp)]); }
-  else if (e.cls === 'sub') { L.push(['Espacio · Torpedos (proa)', cd(e.cd.torp)]); L.push(['Shift · Cañón de cubierta', e.submerged ? '<b>—</b>' : cd(e.cd.main)]); L.push(['C · ' + (e.submerged ? 'Emerger' : 'Sumergirse'), `<b class="${e.battery < 0.25 ? 'bad' : ''}">Batería ${Math.round(e.battery * 100)}%</b>`]); }
-  else if (e.dom === 'air') { L.push(['Espacio · Ametralladoras', '<b class="ok">AUTO</b>']); L.push(['Shift · Bomba', cd(e.cd.bomb)]); }
-  else if (e.dom === 'land') { L.push(['Espacio · Cañón', aim(e.cd.main)]); L.push(['Shift · Humo', cd(e.cd.smoke)]); }
-  return L.map(([a, b]) => `<div class="wp"><span>${a}</span>${b}</div>`).join('');
+  const main = A.ap !== undefined ? n(A.ap !== undefined ? e.ammoSel : 'ap') : 1;
+  const aim = v => A.ap !== undefined && n('ap') + n('he') < 1 ? '<b class="bad">SIN MUNICIÓN</b>' : v > 0 ? '<b>' + v.toFixed(1) + ' s</b>' : !e.target ? '<b>SIN BLANCO</b>' : e.aimReady ? '<b class="ok">LISTO</b>' : '<b class="warn">APUNTANDO</b>';
+  const ammoLine = () => A.ap !== undefined ? [`N · Munición`, `<b class="sel ${e.ammoSel === 'ap' ? 'on' : ''}">AP ${n('ap')}</b> <b class="sel ${e.ammoSel === 'he' ? 'on' : ''}">HE ${n('he')}</b>`] : null;
+  if (e.cls === 'destroyer' || e.cls === 'cruiser') { L.push(['Espacio · Artillería', aim(e.cd.main)], ammoLine()); if (s.torp) L.push(['Shift · Torpedos' + cnt('torp'), cd(e.cd.torp, 'torp')]); if (s.dc) L.push(['C · Cargas de profundidad' + cnt('dc'), cd(e.cd.dc, 'dc')]); }
+  else if (e.cls === 'pt') { L.push(['Espacio · Ametralladoras', '<b class="ok">AUTO</b>']); L.push(['Shift · Torpedos' + cnt('torp'), cd(e.cd.torp, 'torp')]); }
+  else if (e.cls === 'sub') { L.push(['Espacio · Torpedos (proa)' + cnt('torp'), cd(e.cd.torp, 'torp')]); L.push(['Shift · Cañón de cubierta' + cnt('deck'), e.submerged ? '<b>—</b>' : cd(e.cd.main, 'deck')]); L.push(['C · ' + (e.submerged ? 'Emerger' : 'Sumergirse'), `<b class="${e.battery < 0.25 ? 'bad' : ''}">Batería ${Math.round(e.battery * 100)}%</b>`]); }
+  else if (e.dom === 'air') {
+    L.push(['Espacio · Ametralladoras' + cnt('guns'), n('guns') < 1 ? '<b class="bad">AGOTADO</b>' : '<b class="ok">AUTO</b>'], ['Shift · Bomba' + cnt('bomb'), cd(e.cd.bomb, 'bomb')]);
+    const agl = Math.round(e.p.y - G.map.gy(e.p.x, e.p.z));
+    L.push(['↑ picar · ↓ subir', `<b class="${agl < 30 ? 'bad blink' : ''}">Altitud ${agl} m${agl < 30 ? ' ¡BAJO!' : ''}</b>`]);
+  }
+  else if (e.cls === 'inf') { L.push(['Espacio · Fusiles', '<b class="ok">AUTO</b>'], [`Shift · ${e.fac === 'de' ? 'Panzerschreck' : e.fac === 'uk' ? 'PIAT' : 'Bazuca'}` + cnt('rocket'), cd(e.cd.rocket, 'rocket')]); L.push(['Soldados', `<b>${Math.ceil(e.hp / e.s.hp * 6)}/6</b>`]); }
+  else if (e.dom === 'land') { L.push(['Espacio · Cañón', aim(e.cd.main)], ammoLine()); if (e.cls === 'tank') L.push(['Shift · Humo', cd(e.cd.smoke)]); }
+  // averías y control de daños
+  const m = e.mods, chips = [];
+  if (m.fire > 0) chips.push(`<span class="mod fire">Incendio ${Math.ceil(m.fire)} s</span>`);
+  if (m.engine) chips.push('<span class="mod">Motor</span>'); if (m.rudder) chips.push('<span class="mod">Timón</span>');
+  if (m.tracks > 0) chips.push(`<span class="mod">Orugas ${Math.ceil(m.tracks)} s</span>`); if (m.turret) chips.push('<span class="mod">Torreta</span>'); if (m.controls) chips.push('<span class="mod">Mandos</span>');
+  const dead = e.tur.filter(t => t.userData.dead).length; if (dead && e.dom === 'sea') chips.push(`<span class="mod">${dead} torre${dead > 1 ? 's' : ''} fuera</span>`);
+  let html = L.filter(Boolean).map(([a, b]) => `<div class="wp"><span>${a}</span>${b}</div>`).join('');
+  if (e.cls !== 'inf') html += `<div class="wp"><span>K · Control de daños</span>${e.repairing > 0 ? `<b class="warn">REPARANDO ${e.repairing.toFixed(0)} s</b>` : e.cd.rep > 0 ? `<b>${Math.ceil(e.cd.rep)} s</b>` : chips.length ? '<b class="ok">LISTO</b>' : '<b>—</b>'}</div>`;
+  if (chips.length) html += `<div class="mods">${chips.join('')}</div>`;
+  if (e.atBase) html += '<div class="mods"><span class="mod base">En base: rearmando y reparando</span></div>';
+  else if (e.rearming || (A.ap !== undefined && n('ap') + n('he') < 1)) html += '<div class="mods"><span class="mod">Sin munición: vuelve a la base (R verde)</span></div>';
+  return html;
 }
 function targetPanel(e) {
   const t = e.target;
@@ -120,6 +140,8 @@ function drawMinimap() {
     else { g.save(); g.translate(x, y); g.rotate(-e.h); g.fillRect(-1.8, -4, 3.6, 8); g.restore(); }
     g.globalAlpha = 1;
   }
+  // bases de reabastecimiento aliadas
+  if (G.bases && G.bases.A) for (const dom in G.bases.A) { const b = G.bases.A[dom], [x, y] = worldToMM(b.x, b.z); g.strokeStyle = '#7fd66b'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, 6, 0, 7); g.stroke(); g.fillStyle = '#7fd66b'; g.fillText('R', x, y + 1); }
   // objetivo ordenado en amarillo
   const ok = orderedZone();
   if (ok >= 0) {
@@ -139,7 +161,7 @@ function drawMinimap() {
 }
 
 // ---------- indicadores 3D: mira de bombas y guía de torpedos ----------
-let bombRing, torpLine, tgtRing, tgtMark;
+let bombRing, torpLine, tgtRing, tgtMark, altLine;
 const YEL = 0xffd23a;
 export function initAimMarkers() {
   bombRing = new THREE.Mesh(new THREE.RingGeometry(5, 6.5, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthTest: false, side: THREE.DoubleSide }));
@@ -149,6 +171,8 @@ export function initAimMarkers() {
   // marcador amarillo sobre el blanco (visible con cualquier cámara y zoom)
   const tex = canvasTex(64, g => { g.fillStyle = '#ffd23a'; g.strokeStyle = 'rgba(0,0,0,0.7)'; g.lineWidth = 4; g.beginPath(); g.moveTo(8, 10); g.lineTo(56, 10); g.lineTo(32, 50); g.closePath(); g.stroke(); g.fill(); });
   tgtMark = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, sizeAttenuation: false, depthTest: false, transparent: true }));
+  const ag = new THREE.BufferGeometry(); ag.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+  altLine = new THREE.Line(ag, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthTest: false })); altLine.frustumCulled = false; altLine.renderOrder = 12; G.scene.add(altLine);
   tgtMark.scale.set(0.028, 0.028, 1); tgtMark.renderOrder = 14; tgtMark.center.set(0.5, 0); G.scene.add(tgtMark);
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
   torpLine = new THREE.Line(g, new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 12, gapSize: 10, transparent: true, opacity: 0.6, depthTest: false }));
@@ -156,8 +180,9 @@ export function initAimMarkers() {
 }
 export function updateAimMarkers() {
   const e = G.player, ok = e && e.alive && !G.demo;
-  bombRing.visible = ok && e.dom === 'air';
-  if (bombRing.visible) { const ip = bombImpact(e); bombRing.position.set(ip.x, ip.y + 0.5, ip.z); bombRing.material.opacity = e.cd.bomb <= 0 ? 0.85 : 0.25; }
+  bombRing.visible = altLine.visible = ok && e.dom === 'air';
+  if (altLine.visible) { const a = altLine.geometry.attributes.position.array; a[0] = a[3] = e.p.x; a[2] = a[5] = e.p.z; a[1] = e.p.y - 1.5; a[4] = G.map.gy(e.p.x, e.p.z) + 0.5; altLine.geometry.attributes.position.needsUpdate = true; altLine.material.color.setHex(e.p.y - a[4] < 30 ? 0xff5040 : 0xffffff); }
+  if (bombRing.visible) { const ip = bombImpact(e); const sc = 1 + Math.max(0, e.p.y - ip.y) / 110; bombRing.scale.set(sc, sc, sc); bombRing.position.set(ip.x, ip.y + 0.5, ip.z); bombRing.material.opacity = e.cd.bomb <= 0 && e.ammo.bomb >= 1 ? 0.85 : 0.25; }
   const t = ok && e.target && e.target.alive ? e.target : null;
   tgtRing.visible = tgtMark.visible = !!t && e.dom !== 'air';
   if (t) {

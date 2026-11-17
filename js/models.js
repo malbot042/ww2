@@ -237,6 +237,37 @@ export function buildAA(fac) {
   return g;
 }
 
+// ---------- INFANTERÍA Y ANTITANQUE ----------
+function soldier(uni, helm, k, kneel = false) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.26 * k, (kneel ? 0.45 : 0.85) * k, 3, 8), uni); body.position.y = (kneel ? 0.6 : 0.85) * k; g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.2 * k, 8, 6), helm); head.scale.y = 0.8; head.position.y = (kneel ? 1.25 : 1.68) * k; g.add(head);
+  const rifle = box(0.06 * k, 0.06 * k, 1.0 * k, mat(0x3a2e22), 0.22 * k, (kneel ? 0.85 : 1.15) * k, 0.25 * k); rifle.rotation.x = -0.4; g.add(rifle);
+  return g;
+}
+function buildInfantry(m) {
+  const k = 1.7, g = new THREE.Group(), uni = mat(m.color, { r: 0.95, m: 0 }), helm = mat(m.helmet, { r: 0.7 });
+  const pos = [[0, 2.2], [-1.6, 0.6], [1.6, 0.6], [-2.4, -1.4], [0, -1.2], [2.4, -1.4]];
+  const soldiers = pos.map(([x, z], i) => { const s = soldier(uni, helm, k); s.position.set(x, 0, z); s.rotation.y = (i - 2.5) * 0.08; g.add(s); return s; });
+  const tube = box(0.12 * k, 0.12 * k, 1.4 * k, mat(0x30332a), 0.3 * k, 1.5 * k, 0); soldiers[0].add(tube); // bazuca
+  g.userData = { soldiers, hw: 3.6, hl: 3.6, top: 3.2 };
+  return g;
+}
+function buildATGun(m) {
+  const k = 1.55, g = new THREE.Group(), gm = mat(m.color, { r: 0.85 }), dk = mat(DARK);
+  for (const s of [-1, 1]) { const tr = box(0.18 * k, 0.18 * k, 3.2 * k, gm, s * 0.6 * k, 0.25 * k, -1.5 * k); tr.rotation.y = s * 0.28; g.add(tr); const w = cyl(0.45 * k, 0.45 * k, 0.22 * k, mat(0x2a2a26), 12, s * 0.85 * k, 0.45 * k, 0); w.rotation.z = Math.PI / 2; g.add(w); }
+  const tur = new THREE.Group(); tur.position.y = 0.7 * k; g.add(tur);
+  tur.add(box(1.9 * k, 1.1 * k, 0.08 * k, gm, 0, 0.35 * k, 0.35 * k));
+  tur.add(box(0.5 * k, 0.4 * k, 1.2 * k, gm, 0, 0.1 * k, 0));
+  const barrel = tube(0.07 * k, m.gun * k, dk); barrel.position.set(0, 0.15 * k, 0.4 * k); tur.add(barrel);
+  if (m.brake) { const b = cyl(0.14 * k, 0.14 * k, 0.3 * k, dk, 8, 0, 0.15 * k, (0.4 + m.gun - 0.15) * k); b.rotation.x = Math.PI / 2; tur.add(b); }
+  const muzzle = new THREE.Object3D(); muzzle.position.set(0, 0.15 * k, (0.4 + m.gun) * k); tur.add(muzzle);
+  const uni = mat(m.fac === 'de' ? 0x5d6253 : m.fac === 'uk' ? 0x8a7a55 : 0x5b5a3a, { r: 0.95, m: 0 }), helm = mat(0x4b4f40);
+  [[-1.1, -1.4], [1.1, -1.6], [0.2, -2.6]].forEach(([x, z]) => { const s = soldier(uni, helm, 1.6, true); s.position.set(x, 0, z); g.add(s); });
+  g.userData = { turret: tur, muzzle, hw: 1.8, hl: 2.6, top: 2.2 };
+  return g;
+}
+
 export function buildBattery(fac) {
   const g = new THREE.Group(), con = mat(0x8f8c82, { r: 0.95, m: 0 }), dk = mat(DARK);
   g.add(box(16, 6, 12, con, 0, 2.6, -1));
@@ -250,7 +281,7 @@ export function buildBattery(fac) {
 }
 export function buildModel(key) {
   const m = MODELS[key], dom = CLS[m.cls].dom;
-  const g = dom === 'sea' ? buildShip(m) : dom === 'air' ? buildPlane(m) : buildTank(m);
+  const g = dom === 'sea' ? buildShip(m) : dom === 'air' ? buildPlane(m) : m.cls === 'inf' ? buildInfantry(m) : m.cls === 'atgun' ? buildATGun(m) : buildTank(m);
   g.traverse(o => { if (o.isMesh && !(o.material instanceof THREE.MeshBasicMaterial)) { o.castShadow = true; o.receiveShadow = true; } });
   return g;
 }

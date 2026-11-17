@@ -3,9 +3,9 @@ import { G } from './state.js';
 import { FRONTS, BATTLES, KIND_NAME, MODELS } from './data.js';
 import { updateWorld } from './world.js';
 import { startBattle, updateBattle, issueOrder, setPlayer, orderLabel } from './battle.js';
-import { lockTarget, targetFilter } from './units.js';
+import { lockTarget, targetFilter, MOD_NAME } from './units.js';
 import { initSandbox, sandboxStart, sandboxHide, sandboxHit } from './sandbox.js';
-import { updateUnits, updateProjs } from './units.js';
+import { updateUnits, updateProjs, spawnUnit } from './units.js';
 import { initFx, updateFx, initAudio, setEngine } from './fx.js';
 import { hudInit, hudHide, updateHud, flash, hitMark, hurt, addFeed, initAimMarkers, updateAimMarkers } from './hud.js';
 import { clamp, V3, rnd, angDiff } from './util.js';
@@ -31,6 +31,11 @@ initFx(); initAimMarkers();
 
 // ---------- callbacks del juego ----------
 G.onMsg = (a, b) => flash(a, b);
+G.onCrit = (e, m, by) => {
+  if (G.demo) return;
+  if (by && by === G.player) hitMark(`¡${MOD_NAME[m]}!`);
+  if (e === G.player) flash(m === 'fire' ? '¡Incendio!' : `¡${MOD_NAME[m]}!`, m === 'tracks' ? 'Se reparan solas en unos segundos' : 'Pulsa K para control de daños', 2);
+};
 G.onHurt = () => hurt();
 G.onHit = (e, zone, mult, dmg) => { if (G.battle && G.battle.kind === 'test') sandboxHit(e, zone, mult, dmg); if (zone === null) return hitMark('Impacto'); hitMark(['Impacto frontal', 'Impacto lateral', 'Impacto trasero'][zone] + (mult < 0.8 ? ' · blindaje resiste' : mult > 1.3 ? ' · ¡crítico!' : ''), mult < 0.8); };
 G.onKill = (e, by) => {
@@ -295,4 +300,4 @@ $('squad').addEventListener('dblclick', ev => { const el = ev.target.closest('.s
 // ---------- arranque ----------
 buildFrontMenu(); show('scrFront'); startDemo();
 requestAnimationFrame(frame);
-if (location.hash === '#debug') window.__ww2 = { G, launch, startBattle, step(dt) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); }, issueOrder, setPlayer };
+if (location.hash === '#debug') window.__ww2 = { G, launch, startBattle, spawn: spawnUnit, step(dt) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); }, issueOrder, setPlayer };

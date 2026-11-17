@@ -126,3 +126,9 @@ button:focus-visible{outline:3px solid var(--paper);outline-offset:2px}
 #sandbox label.chk{flex-direction:row;align-items:center;gap:6px}
 #sbInfo{font-size:13px;opacity:.85;border-top:1px solid var(--line);padding-top:6px;min-height:34px}#sbInfo b{color:#ffd27a;font-size:16px}
 .front.f-test{background:#23251d}.f-test::before{background:repeating-linear-gradient(45deg,#3a3d2c 0 14px,#2f3224 14px 28px),#2f3224}
+.wp i.am{font-style:normal;color:var(--paper);opacity:.75;margin-left:4px}
+.wp b.sel{opacity:.45;margin-left:4px}.wp b.sel.on{opacity:1;color:#ffd23a}
+.mods{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.mod{font-size:12px;font-weight:700;background:rgba(208,71,59,.85);color:#fff;border-radius:3px;padding:1px 6px}
+.mod.fire{background:#e0701e;animation:pulse .5s infinite alternate}.mod.base{background:rgba(127,214,107,.85);color:#13200e}
+.blink{animation:blink .5s infinite alternate}@keyframes blink{to{opacity:.3}}

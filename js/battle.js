@@ -20,7 +20,7 @@ function clearBattle() {
   if (markers) { G.scene.remove(markers); }
   markers = new THREE.Group(); G.scene.add(markers);
   icons = new Map(); selRings = new Map();
-  G.ents = []; G.smokes = []; G.objectives = []; G.sitesA = []; G.sitesE = []; G.player = null; G.selection = new Set();
+  G.ents = []; G.smokes = []; G.bases = null; G.objectives = []; G.sitesA = []; G.sitesE = []; G.player = null; G.selection = new Set();
   resetFx();
 }
 
@@ -102,6 +102,26 @@ export function startBattle(key, demo = false) {
     return out;
   };
   const allies = place(b.allies, 'A'), enemies = place(b.enemy, 'E');
+  // cañones antitanque enemigos: ya emplazados junto a los objetivos de tierra
+  const landZones = G.objectives.filter(z => z.dom === 'land');
+  enemies.filter(e => e.cls === 'atgun').forEach((e, i) => {
+    if (!landZones.length) return;
+    const z = landZones[i % landZones.length], [x, zz] = findNear(z.pos.x + (i % 2 ? 50 : -50), z.pos.z - 70, wantLand);
+    e.p.set(x, map.gy(x, zz), zz); e.h = 0; e.mesh.rotation.y = 0; e.order = { type: 'hold', x, z: zz };
+  });
+  // bases de reabastecimiento: donde despliega cada bando por tipo de unidad
+  G.bases = { A: {}, E: {} };
+  if (b.kind !== 'test') for (const side of ['A', 'E']) for (const dom of ['sea', 'land', 'air']) {
+    const us = (side === 'A' ? allies : enemies).filter(e => e.dom === dom && e.cls !== 'atgun'); if (!us.length) continue;
+    const c = V3(); us.forEach(e => c.add(e.p)); c.divideScalar(us.length); c.y = 0;
+    G.bases[side][dom] = c;
+    if (side === 'A' && !demo) {
+      const R = { sea: 300, land: 180, air: 340 }[dom], y = dom === 'land' ? map.gy(c.x, c.z) + 1 : dom === 'sea' ? 0.8 : Math.max(map.gy(c.x, c.z), 0) + 1;
+      const ring = new THREE.Mesh(new THREE.RingGeometry(R - 3, R, 64), new THREE.MeshBasicMaterial({ color: 0x7fd66b, transparent: true, opacity: 0.35, depthTest: false, depthWrite: false, side: THREE.DoubleSide }));
+      ring.rotation.x = -Math.PI / 2; ring.position.set(c.x, y, c.z); ring.renderOrder = 9; markers.add(ring);
+      const lab = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex('R', '#7fd66b'), sizeAttenuation: false, depthTest: false, transparent: true })); lab.scale.set(0.035, 0.035, 1); lab.position.set(c.x, y + 20, c.z); lab.renderOrder = 10; markers.add(lab);
+    }
+  }
   // defensas fijas (baterías costeras y antiaéreos)
   if (b.statics && map.extra && map.extra.statics) {
     const st = map.extra.statics;
@@ -173,6 +193,7 @@ function command(side) {
   const sorted = units.slice().sort((a, b) => a.id - b.id);
   for (const e of sorted) {
     if (mixed && e.dom === 'air') continue;
+    if (e.cls === 'atgun') { if (e.order.type !== 'hold') e.order = { type: 'hold', x: e.p.x, z: e.p.z }; continue; }
     let best = -1, bs = -1e9;
     zs.forEach((z, k) => { if (mixed && z.dom !== e.dom) return; const sc = w[k] / (cnt[k] + 1) - e.p.distanceTo(z.pos) / 2500 + (e.order.type === 'zone' && e.order.k === k ? 0.25 : 0); if (sc > bs) { bs = sc; best = k; } });
     if (best < 0) { e.order = { type: 'attack' }; continue; }
