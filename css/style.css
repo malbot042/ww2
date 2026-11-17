@@ -171,3 +171,15 @@ em.vet{font-style:normal;color:#f2c94c}.sqn i.rk{font-style:normal;color:#f2c94c
 /* calidad y fps */
 .qrow{display:flex;gap:18px;align-items:center;margin:0 0 6px;font-size:13px}.qrow label{display:flex;gap:8px;align-items:center}.qrow select,.qsel select{font:inherit;padding:4px 8px;border-radius:6px}.qsel{text-align:center;margin:10px 0 0;font-size:13px;opacity:.85}.qsel label{display:inline-flex;gap:8px;align-items:center}.note.small{font-size:12px;opacity:.7;margin:0 0 10px}
 #fps{position:fixed;left:50%;bottom:4px;transform:translateX(-50%);z-index:40;font:12px/1 monospace;color:#9be29b;background:rgba(0,0,0,.55);padding:3px 7px;border-radius:5px;display:none;pointer-events:none}#fps.mid{color:#f2c94c}#fps.bad{color:#ff6b5a}
+/* controles táctiles */
+#touch{position:fixed;inset:0;pointer-events:none;z-index:25;user-select:none;-webkit-user-select:none}#touch.hide{display:none}
+#touch .joy{position:absolute;left:28px;bottom:28px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.25);pointer-events:auto;touch-action:none}
+#touch .knob{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;background:rgba(255,255,255,.35);border:2px solid rgba(255,255,255,.6)}
+#touch .tbtns{position:absolute;right:20px;bottom:24px;display:grid;grid-template-columns:repeat(4,64px);gap:8px;pointer-events:auto}
+#touch .tord{position:absolute;right:20px;bottom:156px;display:flex;gap:6px;pointer-events:auto}
+#touch button{height:56px;border-radius:14px;border:1px solid rgba(255,255,255,.3);background:rgba(15,20,26,.55);color:#fff;font:600 12px system-ui;touch-action:none}
+#touch .tord button{height:40px;padding:0 10px;border-radius:20px}
+#touch button.fire{background:rgba(200,60,40,.7);grid-row:span 2;height:120px;font-size:15px}#touch button.sec{background:rgba(200,150,40,.6)}
+#touch button.on{transform:scale(.93);filter:brightness(1.4)}
+body.touchui #orders{display:none}body.touchui #squad{max-height:38vh!important}
+@media (max-height:520px){body.touchui #squad,body.touchui #support{display:none}body.touchui #unit{transform:scale(.78);transform-origin:top left}body.touchui #right{transform:scale(.7);transform-origin:top right}#touch .joy{width:120px;height:120px;left:18px;bottom:18px}}
