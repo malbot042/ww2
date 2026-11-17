@@ -54,7 +54,8 @@ let smoke, glow, trails;
 const C = h => new THREE.Color(h);
 const COL = { fire: C(0xff9a3a), fire2: C(0xffd27a), flash: C(0xfff2c4), smoke: C(0x3a3836), smokeL: C(0x8d8a84), white: C(0xf4f7f8), foam: C(0xe8f0f0), dust: C(0xb9a27c), flak: C(0x1e1e1e), smokeW: C(0xdedcd6), red: C(0xff5030), wood: C(0x4a3a2a) };
 
-let softTex = null;
+let softTex = null, hook = null;
+export function setFxHook(h) { hook = h; }
 export const glowTex = () => softTex;
 export function initFx() {
   const soft = canvasTex(64, (g, s) => { const gr = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.4, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, s, s); });
@@ -76,11 +77,12 @@ export function updateFx(dt) {
 }
 
 // ---------- Efectos ----------
-export function muzzle(p, dir, s = 1) {
+export function muzzleR(p, s, d) { muzzle(p, new THREE.Vector3(d[0], d[1], d[2]), s); }
+export function muzzle(p, dir, s = 1) { hook && hook('muzzleR', p, s, [dir.x, dir.y, dir.z]);
   glow.spawn(p.x, p.y, p.z, dir.x * 8, 0, dir.z * 8, 4 * s, 6 * s, 0.12, COL.flash, 1);
   for (let i = 0; i < 4; i++) smoke.spawn(p.x, p.y, p.z, dir.x * rnd(6, 16) + rnd(-2, 2), rnd(1, 4), dir.z * rnd(6, 16) + rnd(-2, 2), 3 * s, 14 * s, rnd(1.2, 2.2), COL.smokeL, 0.5, -1, 1.2);
 }
-export function explosion(p, s = 1, opts = {}) {
+export function explosion(p, s = 1, opts = {}) { hook && hook('explosion', p, s, opts);
   glow.spawn(p.x, p.y + 1, p.z, 0, 0, 0, 10 * s, 26 * s, 0.22, COL.flash, 1);
   for (let i = 0; i < 10 * s; i++) glow.spawn(p.x, p.y + 1, p.z, rnd(-14, 14) * s, rnd(4, 22) * s, rnd(-14, 14) * s, 5 * s, 9 * s, rnd(0.35, 0.8), i % 2 ? COL.fire : COL.fire2, 0.9, 8, 1.5);
   for (let i = 0; i < 9 * s; i++) smoke.spawn(p.x + rnd(-2, 2) * s, p.y + 2, p.z + rnd(-2, 2) * s, rnd(-5, 5) * s, rnd(5, 14) * s, rnd(-5, 5) * s, 6 * s, 22 * s, rnd(2, 4.5), COL.smoke, 0.75, -1.5, 1.2);
@@ -90,17 +92,17 @@ export function explosion(p, s = 1, opts = {}) {
   const d = p.distanceTo(G.focus); G.shake = Math.max(G.shake, Math.max(0, s * 2.5 - d / 140));
 }
 export function hitSpark(p) { glow.spawn(p.x, p.y, p.z, 0, 2, 0, 3, 6, 0.15, COL.fire2, 1); smoke.spawn(p.x, p.y, p.z, 0, 3, 0, 2, 6, 0.8, COL.smokeL, 0.5); }
-export function splash(p, s = 1) {
+export function splash(p, s = 1) { hook && hook('splash', p, s);
   for (let i = 0; i < 16 * s; i++) { const r = rnd(0, 1.8) * s; const a = rnd(0, 6.28); smoke.spawn(p.x + Math.cos(a) * r, 0.3, p.z + Math.sin(a) * r, Math.cos(a) * rnd(1, 4) * s, rnd(18, 34) * Math.sqrt(s), Math.sin(a) * rnd(1, 4) * s, 2.2 * s, 5 * s, rnd(1.2, 2), COL.white, 0.85, 26, 0.5); }
   smoke.spawn(p.x, 0.4, p.z, 0, 0, 0, 8 * s, 22 * s, 1.6, COL.foam, 0.6);
   sfx('splash', p, s);
 }
-export function dirt(p, s = 1) {
+export function dirt(p, s = 1) { hook && hook('dirt', p, s);
   for (let i = 0; i < 10 * s; i++) smoke.spawn(p.x, p.y + 0.5, p.z, rnd(-6, 6) * s, rnd(8, 20) * s, rnd(-6, 6) * s, 2.5 * s, 8 * s, rnd(1, 2.2), COL.dust, 0.8, 18, 0.8);
   glow.spawn(p.x, p.y + 1, p.z, 0, 0, 0, 4 * s, 8 * s, 0.15, COL.fire2, 0.8);
   sfx('thud', p, s);
 }
-export function flak(p) {
+export function flak(p) { hook && hook('flak', p);
   glow.spawn(p.x, p.y, p.z, 0, 0, 0, 6, 10, 0.15, COL.fire2, 1);
   for (let i = 0; i < 4; i++) smoke.spawn(p.x + rnd(-1, 1), p.y, p.z + rnd(-1, 1), rnd(-2, 2), rnd(-1, 1), rnd(-2, 2), 6, 12, rnd(2.5, 4), COL.flak, 0.8, 0, 0.8);
   sfx('flak', p, 0.6);

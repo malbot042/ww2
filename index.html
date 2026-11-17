@@ -104,17 +104,18 @@
         <p><kbd>Z</kbd><kbd>X</kbd> / rueda: zoom</p><p><kbd>M</kbd> Mapa táctico completo</p>
         <h4>Consejos</h4><p>Los barcos disparan con todas sus torres de costado. Los tanques son más débiles por los lados y por detrás. Mantener más objetivos que el enemigo le resta puntos cada segundo. La munición es limitada: vuelve a tu base (círculo verde con R) para rearmarte y reparar. AP contra blindados y barcos, HE contra infantería, cañones y defensas.</p></div>
     </div>
-    <h4 class="vh">Sonido</h4><div id="vols" class="vols"></div>
+    <h4 class="vh">Sonido y cámara</h4><div id="vols" class="vols"></div><label class="chk cine"><input type="checkbox" id="optCine" checked> Cámara lenta en los grandes derribos</label>
     <div class="row"><button class="btn" id="resume">Continuar</button><button class="ghost dark" id="quit">Abandonar al menú</button></div>
   </div>
 </div>
 
+<div id="replayTag" class="hide"><b>● REPETICIÓN</b><span>Últimos 20 s · Esc para salir</span><div class="rpb"><i id="rpBar"></i></div></div>
 <div class="ov hide" id="results">
   <div class="card">
     <h1 id="resTitle">Victoria</h1>
     <h3 id="resSub"></h3>
     <div id="resStats"></div>
-    <div class="row"><button class="btn" id="resNext">Siguiente</button><button class="ghost dark" id="resRetry">Repetir</button><button class="ghost dark" id="resMenu">Menú</button></div>
+    <div class="row"><button class="btn" id="resNext">Siguiente</button><button class="ghost dark" id="resReplay">Ver repetición</button><button class="ghost dark" id="resRetry">Repetir</button><button class="ghost dark" id="resMenu">Menú</button></div>
   </div>
 </div>
 

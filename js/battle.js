@@ -24,7 +24,7 @@ function clearBattle() {
   if (G.unitsGroup) { G.scene.remove(G.unitsGroup); }
   G.unitsGroup = new THREE.Group(); G.scene.add(G.unitsGroup);
   if (markers) { G.scene.remove(markers); }
-  markers = new THREE.Group(); G.scene.add(markers);
+  markers = new THREE.Group(); G.scene.add(markers); G.markersGroup = markers;
   icons = new Map(); selRings = new Map();
   G.ents = []; G.smokes = []; G.bases = null; G.objectives = []; G.sitesA = []; G.sitesE = []; G.player = null; G.selection = new Set();
   resetFx();

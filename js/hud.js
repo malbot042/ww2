@@ -206,7 +206,7 @@ export function initAimMarkers() {
   torpLine.renderOrder = 13; torpLine.frustumCulled = false; G.scene.add(torpLine);
 }
 export function updateAimMarkers() {
-  const e = G.player, ok = e && e.alive && !G.demo;
+  const e = G.player, ok = e && e.alive && !G.demo && !G.replayCam;
   bombRing.visible = altLine.visible = ok && e.dom === 'air';
   if (altLine.visible) { const a = altLine.geometry.attributes.position.array; a[0] = a[3] = e.p.x; a[2] = a[5] = e.p.z; a[1] = e.p.y - 1.5; a[4] = G.map.gy(e.p.x, e.p.z) + 0.5; altLine.geometry.attributes.position.needsUpdate = true; altLine.material.color.setHex(e.p.y - a[4] < 30 ? 0xff5040 : 0xffffff); }
   if (bombRing.visible) { const ip = bombImpact(e); const sc = 1 + Math.max(0, e.p.y - ip.y) / 110; bombRing.scale.set(sc, sc, sc); bombRing.position.set(ip.x, ip.y + 0.5, ip.z); bombRing.material.opacity = e.cd.bomb <= 0 && e.ammo.bomb >= 1 ? 0.85 : 0.25; }

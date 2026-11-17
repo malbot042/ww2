@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { recordReplay, updateReplay, startReplay, stopReplay, replaying, hasReplay, resetReplay, replayProgress } from './replay.js';
 import { applyVolumes, updateMusic, musicHeat, RADIO, initSoundUI, radioStop } from './sound.js';
 import { updateDamageFx } from './damagefx.js';
 import { newCampaign, endCampaignBattle, restoreSnapshot, UNLOCKS } from './campaign.js';
@@ -47,6 +48,7 @@ G.onHurt = () => { hurt(); musicHeat(0.06); const p = G.player; if (p && p.hp < 
 G.onHit = (e, zone, mult, dmg) => { if (G.battle && G.battle.kind === 'test') sandboxHit(e, zone, mult, dmg); if (zone === null) return hitMark('Impacto'); hitMark(['Impacto frontal', 'Impacto lateral', 'Impacto trasero'][zone] + (mult < 0.8 ? ' · blindaje resiste' : mult > 1.3 ? ' · ¡crítico!' : ''), mult < 0.8); };
 G.onKill = (e, by) => {
   if (G.demo) return;
+  if (G.opts.cine && !G.over && (e.s.value >= 60 || (by === G.player && e.s.value >= 40)) && e.p.distanceTo(G.focus) < G.zoom * 2.5) { G.slowT = 1.4; G.shake = Math.max(G.shake || 0, 1.5); }
   musicHeat(0.12);
   if (e.side === 'E' && by === G.player) RADIO.kill(); else if (e.side === 'A' && !e.support && e !== G.player && e.dom !== 'static') RADIO.lost(e);
   const who = by ? (by === G.player ? 'Tú' : by.name) : '';
@@ -76,7 +78,8 @@ export function setCamPreset(i) {
 }
 const camTarget = V3();
 function updateCamera(dt) {
-  const p = G.player, c = G.cam;
+  const p = G.replayCam || G.player, c = G.cam;
+  if (G.replayCam) { c.yaw += 0.12 * dt; c.pitch += (0.55 - c.pitch) * Math.min(1, dt); }
   // WASD: inclinación y giro de la cámara
   if (G.running && !G.strategic) {
     if (G.keys.KeyW) c.pitch = Math.max(0.1, c.pitch - 0.9 * dt);
@@ -122,10 +125,18 @@ function updateCamera(dt) {
 let last = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
-  const dt = Math.min((now - last) / 1000, 0.05); last = now;
+  const rdt = Math.min((now - last) / 1000, 0.05); last = now;
+  if (G.map && replaying()) {
+    updateReplay(rdt); updateWorld(rdt); updateCamera(rdt); updateMusic(rdt); updateAimMarkers();
+    $('rpBar').style.width = (replayProgress() * 100).toFixed(1) + '%';
+    renderer.render(scene, camera); G.keysOnce.clear(); return;
+  }
+  // cámara lenta en los grandes derribos
+  const dt = G.slowT > 0 ? rdt * 0.3 : rdt; if (G.slowT > 0) G.slowT -= rdt;
   if (G.map) {
     const sim = G.running && !G.paused && !G.deploying;
     if (sim || G.demo) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); }
+    if (sim) recordReplay(dt);
     else if (G.deploying) { updateVision(dt); updateMarkers(); }
     updateWorld(dt); if (sim || G.demo) updateEnv(dt); updateCamera(dt);
     if (G.running) { updateHud(dt); updateAimMarkers(); const p = G.player; if (p && p.alive) setEngine(engineProfile(p), Math.abs(p.speed) / p.s.max, !G.paused); }
@@ -178,8 +189,8 @@ function launch(key, keepCampaign = false, opts = {}) {
   if (!keepCampaign) G.campaign = null;
   show('loading'); $('loadTxt').textContent = `${BATTLES[key].title}, ${BATTLES[key].year}`;
   setTimeout(() => {
-    G.running = false; G.paused = false; G.strategic = false;
-    startBattle(key, false, opts);
+    G.running = false; G.paused = false; G.strategic = false; G.slowT = 0;
+    resetReplay(); startBattle(key, false, opts);
     const p = G.player; G.targetZoom = G.zoom = ZOOM_DEF[p.dom];
     G.cam.preset = 0; G.cam.pitch = 1.1; G.cam.yaw = 0; G.cam.ang = 0; G.cam.rel = false; $('camName').textContent = 'Cenital';
     hudInit(); show(null); $('menu').classList.add('hide');
@@ -218,6 +229,8 @@ function showResults(res) {
   if (c && (!win || !next)) { $('resSub').textContent += win ? ' · Campaña completada' : ' · Campaña terminada'; }
   $('resRetry').onclick = () => { if (c) { c.score -= score; restoreSnapshot(); } launch(G.battleKey, !!c, lastOpts); };
   $('resMenu').onclick = () => { G.campaign = null; toMenu(); };
+  $('resReplay').classList.toggle('hide', !hasReplay());
+  $('resReplay').onclick = () => { $('results').classList.add('hide'); $('replayTag').classList.remove('hide'); startReplay(() => { $('replayTag').classList.add('hide'); show('results'); }); };
   show('results');
 }
 function toMenu() { endPlacement(); sandboxHide(); hudHide(); G.running = false; show('scrFront'); startDemo(); }
@@ -251,6 +264,8 @@ function doSupport(kind) {
 }
 G.onSupport = (side, kind, p) => { if (!G.demo) { if (side === 'E') RADIO.incoming(kind); else RADIO.support(kind); } if (side === 'E' && !G.demo) { if (kind === 'barrage') flash('¡Artillería enemiga!', 'Busca la marca de humo y apártate', 2); else if (kind === 'air') flash('¡Ataque aéreo enemigo!', '', 1.6); } };
 initSoundUI();
+G.opts = G.opts || { cine: true };
+$('optCine').checked = G.opts.cine; $('optCine').onchange = ev => { G.opts.cine = ev.target.checked; G.onOptions && G.onOptions(); };
 const FORMS = ['cuña', 'línea', 'columna']; G.formation = 'cuña';
 
 // ---------- entrada ----------
@@ -259,6 +274,7 @@ addEventListener('keydown', ev => {
   if (['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(ev.code)) ev.preventDefault();
   if (!G.keys[ev.code]) G.keysOnce.add(ev.code);
   G.keys[ev.code] = true;
+  if (replaying()) { if (ev.code === 'Escape' || ev.code === 'Space') stopReplay(); return; }
   if (!G.running) { if (ev.code === 'Escape' && !$('pause').classList.contains('hide')) togglePause(); return; }
   if (G.deploying) {
     const pre = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4 }[ev.code];
@@ -371,4 +387,4 @@ $('squad').addEventListener('dblclick', ev => { const el = ev.target.closest('.s
 // ---------- arranque ----------
 buildFrontMenu(); show('scrFront'); startDemo();
 requestAnimationFrame(frame);
-if (location.hash === '#debug') window.__ww2 = { G, launch, startBattle, spawn: spawnUnit, step(dt) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); }, issueOrder, setPlayer };
+if (location.hash === '#debug') window.__ww2 = { G, launch, startBattle, spawn: spawnUnit, step(dt) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); recordReplay(dt); }, startReplay, showResults: r => showResults(r), issueOrder, setPlayer };
