@@ -129,7 +129,7 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 
 | Mejora | Estado | Notas |
 |---|---|---|
-| 5.1 Selector de calidad y FPS | ✅ | Baja / Media / Alta (sombras, resolución, vegetación y partículas) y contador opcional; nivel por defecto según el equipo |
+| 5.1 Selector de calidad y FPS | ✅ | Baja / Media / Alta (sombras, vegetación y partículas; desde v1.1 la resolución es siempre baja) y contador opcional; nivel por defecto según el equipo |
 | 5.2 Mando | ✅ | Gamepad API con distribución estándar; chuleta en la pausa |
 | 5.3 Controles táctiles | ✅ | Joystick virtual, botones de acción y órdenes, pellizco para el zoom y arrastre para la cámara |
 | 5.4 Guardado | ✅ | Opciones, volúmenes, campaña en curso («Continuar campaña») y récords por batalla en el navegador |
@@ -168,3 +168,4 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 | v0.8 | Fase 3, contenido: Tarawa y Tobruk, portaaviones, acorazados, bombarderos pesados, noche y clima, campaña con progresión |
 | v0.9 | Fase 4, aspecto: daño visible, estelas y rodadas, estado de la mar, sonido y radio, cámara lenta y repetición |
 | v1.0 | Fase 5, técnico: calidad gráfica y FPS, mando, controles táctiles, guardado, tutorial y pantalla partida |
+| v1.1 | Resolución siempre baja (360 líneas) y efecto de monitor CRT sin curvatura: líneas de barrido, rejilla RGB, resplandor y aberración cromática (desactivable) |

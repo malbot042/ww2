@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { initPost, resizePost, renderPost } from './post.js';
 import { setupSplit, stopSplit, updateSplit, renderSplit } from './split.js';
 import { startTutorial, updateTutorial, stopTutorial } from './tutorial.js';
 import { loadSave, saveOptions, savedCampaign, saveCampaign, record, recordOf, clearSave } from './save.js';
@@ -29,7 +30,7 @@ const $ = id => document.getElementById(id);
 // ---------- render ----------
 const canvas = $('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); // solo el pase CRT final; la escena se dibuja a ~360 líneas (post.js)
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.95;
 const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(40, 1, 3, 9000);
@@ -39,7 +40,8 @@ Object.assign(sun.shadow.camera, { near: 10, far: 4000 });
 scene.add(hemi, sun, sun.target);
 Object.assign(G, { renderer, scene, camera, sun, hemi, keys: {}, keysOnce: new Set(), showSel: false });
 const SUN_DIR = new THREE.Vector3(-0.45, 0.8, 0.35).normalize();
-function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); resizePost(); }
+initPost(renderer);
 addEventListener('resize', resize); resize();
 initFx(); initAimMarkers();
 
@@ -136,7 +138,7 @@ function frame(now) {
   if (G.map && replaying()) {
     updateReplay(rdt); updateWorld(rdt); updateCamera(rdt); updateMusic(rdt); updateAimMarkers();
     $('rpBar').style.width = (replayProgress() * 100).toFixed(1) + '%';
-    renderer.render(scene, camera); G.keysOnce.clear(); return;
+    renderPost(renderer, () => renderer.render(scene, camera)); G.keysOnce.clear(); return;
   }
   // cámara lenta en los grandes derribos
   const dt = G.slowT > 0 ? rdt * 0.3 : rdt; if (G.slowT > 0) G.slowT -= rdt;
@@ -152,7 +154,7 @@ function frame(now) {
   }
   updateFps(rdt); updateTouch();
   G.keysOnce.clear();
-  if (G.split && G.running) renderSplit(renderer, scene, camera); else renderer.render(scene, camera);
+  renderPost(renderer, rt => { if (G.split && G.running) renderSplit(renderer, scene, camera, rt); else renderer.render(scene, camera); });
 }
 
 // ---------- menús ----------
@@ -287,7 +289,7 @@ function doSupport(kind) {
 }
 G.onSupport = (side, kind, p) => { if (!G.demo) { if (side === 'E') RADIO.incoming(kind); else RADIO.support(kind); } if (side === 'E' && !G.demo) { if (kind === 'barrage') flash('¡Artillería enemiga!', 'Busca la marca de humo y apártate', 2); else if (kind === 'air') flash('¡Ataque aéreo enemigo!', '', 1.6); } };
 initSoundUI();
-G.opts = G.opts || { cine: true, fps: false, quality: autoQuality() };
+G.opts = G.opts || { cine: true, fps: false, quality: autoQuality(), crt: true };
 loadSave(); G.onOptions = saveOptions; initSoundUI();
 $('optCine').checked = G.opts.cine;
 applyQuality(G.opts.quality);
@@ -295,6 +297,7 @@ function qualUI() { for (const id of ['optQual', 'optQual2']) { const el = $(id)
 qualUI();
 initTouch(canvas);
 $('padHelp').textContent = PAD_HELP;
+$('optCrt').checked = G.opts.crt !== false; $('optCrt').onchange = ev => { G.opts.crt = ev.target.checked; G.onOptions && G.onOptions(); };
 $('optFps').onchange = ev => { G.opts.fps = ev.target.checked; G.onOptions && G.onOptions(); };
 $('optCine').checked = G.opts.cine; $('optCine').onchange = ev => { G.opts.cine = ev.target.checked; G.onOptions && G.onOptions(); };
 const FORMS = ['cuña', 'línea', 'columna']; G.formation = 'cuña';

@@ -3,14 +3,14 @@ import * as THREE from 'three';
 import { G } from './state.js';
 
 export const QUALITY = {
-  low: { n: 'Baja', shadows: 0, ratio: 1, veg: 0.4, part: 0.5 },
-  mid: { n: 'Media', shadows: 1024, ratio: 1.25, veg: 0.7, part: 0.75 },
-  high: { n: 'Alta', shadows: 2048, ratio: 1.75, veg: 1, part: 1 },
+  // la resolución es siempre baja (~360 líneas, ver post.js); la calidad ajusta sombras, vegetación y partículas
+  low: { n: 'Baja', shadows: 0, veg: 0.4, part: 0.5 },
+  mid: { n: 'Media', shadows: 1024, veg: 0.7, part: 0.75 },
+  high: { n: 'Alta', shadows: 2048, veg: 1, part: 1 },
 };
 export function applyQuality(level) {
   const Q = QUALITY[level] || QUALITY.high, r = G.renderer, sun = G.sun;
   G.qual = { level, ...Q };
-  r.setPixelRatio(Math.min(devicePixelRatio, Q.ratio));
   r.shadowMap.enabled = Q.shadows > 0; r.shadowMap.type = Q.shadows >= 2048 ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   sun.castShadow = Q.shadows > 0;
   if (Q.shadows) { sun.shadow.mapSize.set(Q.shadows, Q.shadows); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }

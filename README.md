@@ -104,7 +104,8 @@ Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin punt
 - **Daño visible** (quemaduras, escora, restos, cráteres, petróleo), **estelas** de condensación y **rodadas** de los carros.
 - **Sonido:** motores por tipo, radio con voz en español, música procedural según la intensidad del combate.
 - **Cámara lenta** en los grandes derribos y **repetición** de los últimos 20 s al terminar.
-- **Calidad gráfica** Baja/Media/Alta con contador de FPS, **guardado** de opciones, campaña y récords.
+- **Aspecto retro:** la escena se dibuja siempre a baja resolución (360 líneas) y se muestra con un **efecto de monitor CRT** sin curvatura (líneas de barrido, rejilla RGB, resplandor). Se puede quitar el CRT en la pausa.
+- **Calidad gráfica** Baja/Media/Alta (sombras, vegetación, partículas) con contador de FPS, **guardado** de opciones, campaña y récords.
 - **Pantalla partida:** un segundo jugador maneja el Eje con un mando o con el teclado numérico (opción en el despliegue).
 
 La hoja de ruta completa está en [MEJORAS.md](MEJORAS.md).
@@ -139,6 +140,7 @@ js/marks.js       rodadas de los carros
 js/sound.js       música procedural, radio con voz y volúmenes
 js/replay.js      grabación y repetición de los últimos 20 s
 js/quality.js     niveles de calidad y contador de FPS
+js/post.js        render a baja resolución y pase CRT
 js/gamepad.js     mando (Gamepad API)
 js/touch.js       controles táctiles
 js/save.js        guardado en localStorage

@@ -61,12 +61,13 @@ export function updateSplit(dt) {
   $('p2hud').innerHTML = p ? `<div class="p2t">JUGADOR 2 · ${p.name}</div><div class="p2b"><i style="width:${(hp * 100).toFixed(0)}%"></i></div><div class="p2r">${p.alive ? (ready ? '<b>LISTO</b>' : 'Recargando…') : 'Destruido · cambiando de unidad'}${S.msgT > 0 ? ' · ' + S.msg : ''}</div>` : '<div class="p2t">JUGADOR 2 · sin unidades</div>';
 }
 // dos vistas: izquierda jugador 1, derecha jugador 2
-export function renderSplit(renderer, scene, cam1) {
-  const S = G.split, w = renderer.domElement.clientWidth || innerWidth, h = renderer.domElement.clientHeight || innerHeight, hw = Math.floor(w / 2);
-  renderer.setScissorTest(true);
+export function renderSplit(renderer, scene, cam1, rt) {
+  // se dibuja en el búfer de baja resolución (rt): viewport y tijera en sus píxeles
+  const S = G.split, w = rt.width, h = rt.height, hw = Math.floor(w / 2);
+  rt.scissorTest = true;
   cam1.aspect = hw / h; cam1.updateProjectionMatrix();
-  renderer.setViewport(0, 0, hw, h); renderer.setScissor(0, 0, hw, h); renderer.render(scene, cam1);
+  rt.viewport.set(0, 0, hw, h); rt.scissor.set(0, 0, hw, h); renderer.setRenderTarget(rt); renderer.render(scene, cam1);
   S.cam.aspect = (w - hw) / h; S.cam.updateProjectionMatrix();
-  renderer.setViewport(hw, 0, w - hw, h); renderer.setScissor(hw, 0, w - hw, h); renderer.render(scene, S.cam);
-  renderer.setScissorTest(false); renderer.setViewport(0, 0, w, h);
+  rt.viewport.set(hw, 0, w - hw, h); rt.scissor.set(hw, 0, w - hw, h); renderer.setRenderTarget(rt); renderer.render(scene, S.cam);
+  rt.scissorTest = false; rt.viewport.set(0, 0, w, h); rt.scissor.set(0, 0, w, h); renderer.setRenderTarget(rt);
 }
