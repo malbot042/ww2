@@ -83,7 +83,7 @@ const isGround = o => o.dom === 'static' || o.dom === 'land' || (o.dom === 'sea'
 export function targetFilter(e) {
   const mixed = G.battle && G.battle.kind === 'combined';
   switch (e.cls) {
-    case 'destroyer': case 'cruiser': return mixed ? o => visibleShip(o) || o.dom === 'land' || (o.dom === 'static' && o.cls !== 'site') : visibleShip;
+    case 'destroyer': case 'cruiser': case 'battleship': return mixed ? o => visibleShip(o) || o.dom === 'land' || (o.dom === 'static' && o.cls !== 'site') : visibleShip;
     case 'pt': case 'sub': return visibleShip;
     case 'tank': case 'atgun': return mixed ? o => o.dom === 'land' || o.dom === 'static' || visibleShip(o) : o => o.dom === 'land';
     case 'inf': return o => o.dom === 'land' || o.dom === 'static';
@@ -222,7 +222,7 @@ export function kill(e, by) {
   G.onKill && G.onKill(e, by);
   const p = e.p.clone();
   if (e.dom === 'air') { e.falling = 4; e.spin = rnd(-1, 1) > 0 ? 3 : -3; FX.explosion(p, 1); return; }
-  if (e.dom === 'sea') { FX.explosion(p.clone().setY(2), e.cls === 'cruiser' ? 2.8 : e.cls === 'pt' ? 1.2 : 2, {}); FX.splash(p, 2); e.sink = 0; e.burn = 30; }
+  if (e.dom === 'sea') { FX.explosion(p.clone().setY(2), e.cls === 'battleship' || e.cls === 'carrier' ? 3.6 : e.cls === 'cruiser' ? 2.8 : e.cls === 'pt' ? 1.2 : 2, {}); FX.splash(p, 2); e.sink = 0; e.burn = 30; }
   else if (e.cls === 'inf') { FX.dirt(p, 0.8); e.mesh.visible = false; e.gone = true; return; }
   else { FX.explosion(p.clone().setY(p.y + 1.5), e.cls === 'site' ? 3 : e.cls === 'atgun' ? 0.9 : 1.6, { debris: true, dust: true }); e.burn = e.cls === 'site' ? 90 : e.cls === 'atgun' ? 12 : 45; if (e.cls === 'tank' && Math.random() < 0.45 && e.tur[0]) e.popTurret = { v: V3(rnd(-4, 4), rnd(14, 22), rnd(-4, 4)), r: rnd(-4, 4) }; }
   e.mesh.traverse(o => { if (o.isMesh && !(o.material instanceof THREE.MeshBasicMaterial)) o.material = burnt; });
@@ -287,14 +287,14 @@ export function updateProjs(dt) {
           const mlt = ammoMult(q, e), zone = damage(e, q.dmg * mlt, q.owner, q.v, q.kind);
           rollCrit(e, q, q.dmg * mlt * (zone !== null && e.s.armor ? e.s.armor[zone] : 1), p, zone);
           if (q.ammo === 'he' || q.ammo === 'rocket') splashHE(q, p, e);
-          if (q.kind === 'naval') FX.explosion(p.clone(), q.dmg > 40 ? 1.1 : 0.8);
+          if (q.kind === 'naval') FX.explosion(p.clone(), q.dmg > 80 ? 1.8 : q.dmg > 40 ? 1.1 : 0.8);
           else if (q.kind === 'ap') { FX.hitSpark(p); FX.explosion(p.clone(), 0.45); }
           else FX.hitSpark(p);
           done = true; break;
         }
       }
       if (!done && p.y <= surf) {
-        if (q.kind === 'naval') { if (ground < 0) { FX.splash(V3(p.x, 0, p.z), q.dmg > 40 ? 1.8 : 1.2); for (const e of G.ents) if (e.alive && e.side !== q.side && e.dom === 'sea' && !e.submerged && dist2(e.p, p) < e.hl * 0.6 + 8) damage(e, q.dmg * 0.12, q.owner, null, 'near'); } else { FX.dirt(V3(p.x, surf, p.z), 1.2); for (const e of G.ents) if (e.alive && e.side !== q.side && (e.dom === 'land' || e.dom === 'static')) { const d = dist2(e.p, p) - e.hw; if (d < 10) damage(e, q.dmg * 0.6 * (1 - Math.max(0, d) / 12), q.owner, null, 'he'); } } }
+        if (q.kind === 'naval') { if (ground < 0) { FX.splash(V3(p.x, 0, p.z), q.dmg > 80 ? 2.8 : q.dmg > 40 ? 1.8 : 1.2); for (const e of G.ents) if (e.alive && e.side !== q.side && e.dom === 'sea' && !e.submerged && dist2(e.p, p) < e.hl * 0.6 + 8) damage(e, q.dmg * 0.12, q.owner, null, 'near'); } else { FX.dirt(V3(p.x, surf, p.z), 1.2); for (const e of G.ents) if (e.alive && e.side !== q.side && (e.dom === 'land' || e.dom === 'static')) { const d = dist2(e.p, p) - e.hw; if (d < 10) damage(e, q.dmg * 0.6 * (1 - Math.max(0, d) / 12), q.owner, null, 'he'); } } }
         else if (q.kind === 'ap') { FX.dirt(V3(p.x, surf, p.z), q.ammo === 'he' ? 0.9 : 0.6); if (q.ammo === 'he' || q.ammo === 'rocket') splashHE(q, V3(p.x, surf, p.z), null); }
         else if (Math.random() < 0.25) { if (ground < 0) FX.splash(V3(p.x, 0, p.z), 0.25); }
         done = true;
@@ -369,10 +369,10 @@ function fireNaval(e, t) {
       const ty = t.dom === 'sea' ? 1.5 : t.p.y + 1.5, vy = (ty - from.y + 0.5 * GRAV * T * T) / T;
       proj('naval', e, from, V3(dx / dd * s.hs, vy, dz / dd * s.hs), { grav: GRAV, dmg: s.dmg, life: T + 1.5, ammo: am === 'x' ? 'he' : am });
     }
-    FX.muzzle(from, fwdOf(e).clone().applyAxisAngle(V3(0, 1, 0), e.tYaw[i]), e.cls === 'cruiser' ? 1.6 : 1);
+    FX.muzzle(from, fwdOf(e).clone().applyAxisAngle(V3(0, 1, 0), e.tYaw[i]), e.cls === 'battleship' ? 2.6 : e.cls === 'cruiser' ? 1.6 : 1);
     fired++;
   }
-  if (fired) { e.cd.main = s.rof * rnd(0.92, 1.08); FX.sfx(e.cls === 'cruiser' || e.cls === 'battery' ? 'big' : 'cannon', e.p, 1); if (am !== 'x') e.ammo[am]--; }
+  if (fired) { e.cd.main = s.rof * rnd(0.92, 1.08); FX.sfx(e.cls === 'cruiser' || e.cls === 'battleship' || e.cls === 'battery' ? 'big' : 'cannon', e.p, e.cls === 'battleship' ? 1.6 : 1); if (am !== 'x') e.ammo[am]--; }
   return fired > 0;
 }
 function fireTank(e, t) {
@@ -410,7 +410,7 @@ function fireAA(e) {
   const s = e.s.aa; if (!s || e.cd.aa > 0) return;
   const t = pickTarget(e, isPlane, s.range); if (!t) return;
   const from = e.p.clone(); from.y += 4;
-  if (e.cls === 'cruiser' && Math.random() < 0.4) {
+  if ((e.cls === 'cruiser' || e.cls === 'battleship' || e.cls === 'carrier') && Math.random() < 0.4) {
     const tp = lead(from, t, 360); const dir = tp.sub(from).normalize();
     proj('flak', e, from, dir.multiplyScalar(360), { dmg: 10, life: from.distanceTo(t.p) / 360 + rnd(-0.1, 0.15) });
   } else {
@@ -612,7 +612,7 @@ export function controlPlayer(e, dt) {
     const filt = targetFilter(e), rng = e.cls === 'sub' ? 900 : weaponRange(e);
     e.target = playerTarget(e, filt, rng);
     e.bear = e.target ? bearingCount(e, e.target.p) : 0;
-    if (e.cls === 'destroyer' || e.cls === 'cruiser') { e.aimReady = aimTurrets(e, e.target?.p, dt, e.cls === 'cruiser' ? 1.1 : 1.6); if (f1) fireNaval(e, e.target); fireAA(e); }
+    if (e.cls === 'destroyer' || e.cls === 'cruiser' || e.cls === 'battleship') { e.aimReady = aimTurrets(e, e.target?.p, dt, e.cls === 'battleship' ? 0.7 : e.cls === 'cruiser' ? 1.1 : 1.6); if (f1) fireNaval(e, e.target); fireAA(e); }
     else if (e.cls === 'pt') { aimTurrets(e, e.target?.p, dt, 3); if (f1 && e.target) fireGuns(e, lead(e.p, e.target, 700).sub(e.p).setY(-0.5).normalize()); fireAA(e); }
     else if (e.cls === 'sub') {
       aimTurrets(e, !e.submerged ? e.target?.p : null, dt, 1.2);
@@ -845,7 +845,7 @@ function aiShip(e, t, goal, dt) {
   driveShip(e, thr, steerTo(e, ang), dt);
   if (e.cls === 'sub') aimTurrets(e, null, dt);
   else if (e.cls === 'pt') { aimTurrets(e, t?.p, dt, 3); if (t && dist2(t.p, e.p) < e.s.mg.range) fireGuns(e, lead(e.p, t, 700).sub(e.p).setY(-0.5).normalize()); fireAA(e); }
-  else { aimTurrets(e, t?.p, dt, e.cls === 'cruiser' ? 1.0 : 1.4); if (t) fireNaval(e, t); fireAA(e); }
+  else { aimTurrets(e, t?.p, dt, e.cls === 'battleship' ? 0.6 : e.cls === 'cruiser' ? 1.0 : 1.4); if (t) fireNaval(e, t); fireAA(e); }
 }
 function aiTank(e, t, goal, dt) {
   let ang = angTo(e, goal), thr = 1;

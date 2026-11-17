@@ -72,32 +72,32 @@ function buildShip(m) {
     g.userData = { turrets, hw: B / 2 + 0.4, hl: L / 2, top: F + 2 };
     return g;
   }
-  const isCr = m.cls === 'cruiser';
+  const isBB = m.cls === 'battleship', isCr = m.cls === 'cruiser' || isBB, K = isBB ? 1.5 : 1;
   // Superestructura y puente
   const bz = (isCr ? 0.12 : 0.17) * L;
   g.add(box(B * 0.62, 2.4, L * 0.12, supM, 0, F + 1.2, bz));
   g.add(box(B * 0.5, 2.2, L * 0.07, supM, 0, F + 3.5, bz + L * 0.01));
   g.add(box(B * 0.52, 0.45, 0.2, mat(0x1d2730, GLASS), 0, F + 4.1, bz + L * 0.045));
-  if (m.bigBridge) { g.add(box(B * 0.42, 5, L * 0.05, supM, 0, F + 6.5, bz)); g.add(box(B * 0.46, 0.5, 0.2, mat(0x1d2730, GLASS), 0, F + 8.6, bz + L * 0.025)); }
+  if (m.bigBridge) { g.add(box(B * 0.42, 5 * K, L * 0.05, supM, 0, F + 4 + 2.5 * K, bz)); g.add(box(B * 0.46, 0.5, 0.2, mat(0x1d2730, GLASS), 0, F + 4 + 4.6 * K, bz + L * 0.025)); if (isBB) g.add(box(B * 0.34, 3, L * 0.035, supM, 0, F + 4 + 6.5 * K, bz)); }
   if (isCr) g.add(box(B * 0.58, 2, L * 0.24, supM, 0, F + 1, -L * 0.05));
   else g.add(box(B * 0.46, 1.4, L * 0.22, supM, 0, F + 0.7, -L * 0.04));
   // Mástil
-  const mz = bz - L * 0.04, mh = isCr ? 14 : 10;
+  const mz = bz - L * 0.04, mh = isBB ? 22 : isCr ? 14 : 10;
   g.add(cyl(0.14, 0.2, mh, dk, 6, 0, F + mh / 2 + 2, mz), box(B * 0.7, 0.12, 0.12, dk, 0, F + mh * 0.85, mz));
   // Chimeneas
-  for (const z of m.funnels) { const r = isCr ? B * 0.13 : B * 0.15, fh = isCr ? 6.5 : 4.4; const f = cyl(r, r * 1.08, fh, supM, 14, 0, F + fh / 2 + 1.2, z * L); f.scale.z = m.funnels.length === 1 ? 1.9 : 1.35; f.rotation.x = -0.1; g.add(f); const cap = cyl(r * 1.02, r * 1.02, 0.6, dk, 14, 0, F + fh + 1.2, z * L - 0.3); cap.scale.z = f.scale.z; g.add(cap); }
+  for (const z of m.funnels) { const r = isCr ? B * 0.13 : B * 0.15, fh = isBB ? 8 : isCr ? 6.5 : 4.4; const f = cyl(r, r * 1.08, fh, supM, 14, 0, F + fh / 2 + 1.2, z * L); f.scale.z = m.funnels.length === 1 ? 1.9 : 1.35; f.rotation.x = -0.1; g.add(f); const cap = cyl(r * 1.02, r * 1.02, 0.6, dk, 14, 0, F + fh + 1.2, z * L - 0.3); cap.scale.z = f.scale.z; g.add(cap); }
   // Tubos lanzatorpedos
   for (const z of (m.tubes || [])) { const tg = new THREE.Group(); tg.position.set(0, F + 0.6, z * L); for (let k = -1.5; k <= 1.5; k++) { const t = tube(0.28, 7, mat(0x4a4d48)); t.position.set(k * 0.62, 0, -3.5); tg.add(t); } g.add(tg); }
   // Torres principales
   const tw = m.tw || 1;
   const fwd = m.turrets.filter(z => z > 0).sort((a, b) => b - a), aft = m.turrets.filter(z => z < 0).sort((a, b) => a - b);
   for (const z of m.turrets) {
-    const isF = z > 0, list = isF ? fwd : aft, rank = list.indexOf(z), raised = rank === 1 ? (isCr ? 1.6 : 1.1) : rank >= 2 ? 0.4 : 0;
+    const isF = z > 0, list = isF ? fwd : aft, rank = list.indexOf(z), raised = rank === 1 ? (isBB ? 2.6 : isCr ? 1.6 : 1.1) : rank >= 2 ? 0.4 : 0;
     const t = new THREE.Group(); t.position.set(0, F + raised, z * L); t.userData.base = isF ? 0 : Math.PI; t.rotation.y = t.userData.base;
-    const tWid = isCr ? B * 0.55 : B * 0.44, tLen = isCr ? 6 : 3.4, tH = isCr ? 2 : 1.6;
+    const tWid = isBB ? B * 0.6 : isCr ? B * 0.55 : B * 0.44, tLen = isBB ? 10 : isCr ? 6 : 3.4, tH = isBB ? 3 : isCr ? 2 : 1.6;
     if (raised > 0.5) g.add(cyl(tWid * 0.55, tWid * 0.6, raised, supM, 14, 0, F + raised / 2, z * L));
     const house = new THREE.Mesh(new THREE.CylinderGeometry(tWid * 0.5, tWid * 0.56, tH, 6), supM); house.scale.z = tLen / tWid; house.position.y = tH / 2 + 0.1; t.add(house);
-    const bl = isCr ? 8.5 : 5, br = isCr ? 0.2 : 0.14;
+    const bl = isBB ? 14 : isCr ? 8.5 : 5, br = isBB ? 0.38 : isCr ? 0.2 : 0.14;
     for (let k = 0; k < tw; k++) { const b = tube(br, bl, dk); b.position.set((k - (tw - 1) / 2) * tWid * 0.3, tH * 0.55, tLen * 0.35); t.add(b); }
     g.add(t); turrets.push(t);
   }
@@ -107,7 +107,7 @@ function buildShip(m) {
     const bt = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 6), mat(0xe8e6de)); bt.scale.set(0.7, 0.45, 2.6); bt.position.set(s * B * 0.42, F + 1.2, -L * 0.1); g.add(bt);
   }
   g.add(box(0.05, 0.05, 0.05, dk));
-  g.userData = { turrets, hw: B / 2 + 0.6, hl: L / 2, top: F + (isCr ? 7 : 5) };
+  g.userData = { turrets, hw: B / 2 + 0.6, hl: L / 2, top: F + (isBB ? 10 : isCr ? 7 : 5) };
   return g;
 }
 

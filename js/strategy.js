@@ -9,7 +9,7 @@ import { V3, rnd, clamp } from './util.js';
 // ---------- NIEBLA DE GUERRA ----------
 export function sightOf(e) {
   switch (e.cls) {
-    case 'destroyer': case 'cruiser': return 1400; // radar
+    case 'destroyer': case 'cruiser': case 'battleship': case 'carrier': return 1400; // radar
     case 'pt': return 800;
     case 'sub': return e.submerged ? 600 : 750;
     case 'fighter': case 'bomber': return 950;

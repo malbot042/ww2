@@ -33,7 +33,7 @@ function weaponLines(e) {
   const main = A.ap !== undefined ? n(A.ap !== undefined ? e.ammoSel : 'ap') : 1;
   const aim = v => A.ap !== undefined && n('ap') + n('he') < 1 ? '<b class="bad">SIN MUNICIÓN</b>' : v > 0 ? '<b>' + v.toFixed(1) + ' s</b>' : !e.target ? '<b>SIN BLANCO</b>' : e.aimReady ? '<b class="ok">LISTO</b>' : '<b class="warn">APUNTANDO</b>';
   const ammoLine = () => A.ap !== undefined ? [`N · Munición`, `<b class="sel ${e.ammoSel === 'ap' ? 'on' : ''}">AP ${n('ap')}</b> <b class="sel ${e.ammoSel === 'he' ? 'on' : ''}">HE ${n('he')}</b>`] : null;
-  if (e.cls === 'destroyer' || e.cls === 'cruiser') { L.push(['Espacio · Artillería', aim(e.cd.main)], ammoLine()); if (s.torp) L.push(['Shift · Torpedos' + cnt('torp'), cd(e.cd.torp, 'torp')]); if (s.dc) L.push(['C · Cargas de profundidad' + cnt('dc'), cd(e.cd.dc, 'dc')]); }
+  if (e.cls === 'destroyer' || e.cls === 'cruiser' || e.cls === 'battleship') { L.push(['Espacio · Artillería', aim(e.cd.main)], ammoLine()); if (s.torp) L.push(['Shift · Torpedos' + cnt('torp'), cd(e.cd.torp, 'torp')]); if (s.dc) L.push(['C · Cargas de profundidad' + cnt('dc'), cd(e.cd.dc, 'dc')]); }
   else if (e.cls === 'carrier') { L.push(['Shift · Lanzar avión', `<b class="${e.hangar ? 'ok' : 'bad'}">${e.hangar} en hangar${e.cd.launch > 0 ? ' · ' + e.cd.launch.toFixed(0) + ' s' : ''}</b>`], ['Antiaéreos', '<b class="ok">AUTO</b>']); }
   else if (e.cls === 'pt') { L.push(['Espacio · Ametralladoras', '<b class="ok">AUTO</b>']); L.push(['Shift · Torpedos' + cnt('torp'), cd(e.cd.torp, 'torp')]); }
   else if (e.cls === 'sub') { L.push(['Espacio · Torpedos (proa)' + cnt('torp'), cd(e.cd.torp, 'torp')]); L.push(['Shift · Cañón de cubierta' + cnt('deck'), e.submerged ? '<b>—</b>' : cd(e.cd.main, 'deck')]); L.push(['C · ' + (e.submerged ? 'Emerger' : 'Sumergirse'), `<b class="${e.battery < 0.25 ? 'bad' : ''}">Batería ${Math.round(e.battery * 100)}%</b>`]); }
@@ -64,7 +64,7 @@ function targetPanel(e) {
   if (!t || !t.alive) return `<div class="tg empty"><div class="tgh"><span>Sin blanco a tiro</span></div><div class="tgk"><kbd>T</kbd> buscar blanco · clic sobre un enemigo para fijarlo</div></div>`;
   const d = Math.round(t.p.distanceTo(e.p)), hp = Math.max(0, t.hp / t.s.hp);
   let extra = '';
-  if ((e.cls === 'destroyer' || e.cls === 'cruiser') && e.tur.length) { const b = e.bear || 0; extra = `<div class="wp"><span>Torres que apuntan</span><b class="${b === e.tur.length ? 'ok' : b ? '' : 'bad'}">${b}/${e.tur.length}</b></div>` + (b < e.tur.length ? '<div class="tgk">Ponte de costado para disparar con todas</div>' : ''); }
+  if ((e.cls === 'destroyer' || e.cls === 'cruiser' || e.cls === 'battleship') && e.tur.length) { const b = e.bear || 0; extra = `<div class="wp"><span>Torres que apuntan</span><b class="${b === e.tur.length ? 'ok' : b ? '' : 'bad'}">${b}/${e.tur.length}</b></div>` + (b < e.tur.length ? '<div class="tgk">Ponte de costado para disparar con todas</div>' : ''); }
   if (e.dom === 'land' && t.cls === 'tank') {
     const fx = Math.sin(t.h), fz = Math.cos(t.h), dx = e.p.x - t.p.x, dz = e.p.z - t.p.z, l = Math.hypot(dx, dz) || 1, c = (dx * fx + dz * fz) / l;
     const zi = c > 0.62 ? 0 : c < -0.62 ? 2 : 1, m = t.s.armor[zi];
