@@ -122,9 +122,13 @@ function barrage(side, p) {
 }
 function airStrike(side, p) {
   const key = STRIKER[G.battle.front][side], b = G.map.bounds;
-  const from = side === 'A' ? V3(p.x * 0.3, 0, b + 80) : V3(p.x * 0.3, 0, -b - 80);
+  // entran desde el lado de su propia base
+  const ab = G.bases && G.bases[side] && (G.bases[side].air || G.bases[side].land || G.bases[side].sea);
+  let from = side === 'A' ? V3(p.x * 0.3, 0, b + 80) : V3(p.x * 0.3, 0, -b - 80);
+  if (ab) { const d = V3(ab.x - p.x, 0, ab.z - p.z); if (d.length() > 1) { d.normalize(); from = V3(ab.x + d.x * 300, 0, ab.z + d.z * 300); } }
+  const hd = Math.atan2(p.x - from.x, p.z - from.z);
   for (let k = 0; k < 2; k++) {
-    const e = spawnUnit(key, side, from.x + (k ? 40 : -40), from.z + k * 30, side === 'A' ? Math.PI : 0);
+    const e = spawnUnit(key, side, from.x + (k ? 40 : -40), from.z + k * 30, hd);
     e.support = true; e.strike = V3(p.x + rnd(-15, 15), 0, p.z + rnd(-15, 15)); e.order = { type: 'strike' }; e.ammo.bomb = 2; e.speed = e.s.max;
   }
   G.onSupport && G.onSupport(side, 'air', p);

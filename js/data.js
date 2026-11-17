@@ -8,7 +8,7 @@ export const FRONTS = {
   africa: {
     name: 'Norte de África', years: '1942', vs: 'Commonwealth contra Alemania e Italia',
     desc: 'El desierto occidental: dunas, escarpes y la costa mediterránea. El 8.º Ejército contra el Afrika Korps.',
-    battles: ['air', 'land'], enemyName: 'Eje',
+    battles: ['air', 'land', 'combined'], enemyName: 'Eje',
   },
   europe: {
     name: 'Europa', years: '1944', vs: 'Aliados contra Alemania',
@@ -43,6 +43,14 @@ export const BATTLES = {
     front: 'africa', kind: 'air', map: 'africa_air', title: 'Desierto occidental', year: '1942',
     brief: 'Ataca los depósitos del Eje (A, B, C) con los Hurricane mientras los Kittyhawk mantienen alejados a los Bf 109 y Macchi. Defiende tus aeródromos de los Stuka.',
     allies: [['p40', 6], ['hurricane', 4]], enemy: [['bf109', 4], ['mc202', 2], ['ju87', 4]], sites: ['uk', 'de'],
+  },
+  'africa-combined': {
+    front: 'africa', kind: 'combined', map: 'tobruk', title: 'Asedio de Tobruk', year: '1941',
+    brief: 'Tobruk resiste rodeada. Defiende el perímetro (B) y El Adem (C) con los Matilda y la infantería australiana, y mantén abierto el puerto (A) para que entre el convoy de suministros. Cada mercante que llega da puntos de mando y de batalla; los Stuka y las S-Boot irán a por él.',
+    hint: 'A: puerto (naval) · B: perímetro · C: El Adem. Escolta el convoy hasta el puerto',
+    allies: [['tribal', 2], ['hurricane', 2], ['p40', 2], ['matilda', 3], ['crusader', 1], ['inf_aus', 3], ['at_uk', 1]],
+    enemy: [['sboot', 2], ['u7c', 1], ['bf109', 2], ['ju87', 2], ['pz3', 3], ['pz4f2', 1], ['m13', 2], ['inf_dak', 2], ['pak40', 1]],
+    convoy: [['merchant', 2]],
   },
   'africa-land': {
     front: 'africa', kind: 'land', map: 'africa_land', title: 'El Alamein', year: '1942',
@@ -99,6 +107,7 @@ export const CLS = {
   atgun: { dom: 'land', hp: 120, max: 1.6, acc: 3, turn: 0.45, value: 12, gun: { range: 540, rof: 3.4, dmg: 82 }, armor: [0.85, 1.2, 1.5], tsp: 0.7, ammo: { ap: 40, he: 20 }, soft: true },
   site: { dom: 'static', hp: 1000, value: 150 },
   aa: { dom: 'static', hp: 90, value: 4, flak: { range: 420, rof: 1.2, dmg: 15 } },
+  merchant: { dom: 'sea', hp: 600, max: 18, acc: 4, turn: 0.35, len: 56, beam: 8, fb: 3.5, value: 35, aa: { range: 220, rof: 0.35, dmg: 2 } },
   battery: { dom: 'static', hp: 650, value: 40, main: { range: 950, rof: 5, dmg: 38, hs: 300, n: 1 } },
 };
 
@@ -145,6 +154,9 @@ export const MODELS = {
   inf_us: { cls: 'inf', fac: 'us', name: 'Escuadra de fusileros', type: 'Infantería con bazuca', color: 0x5b5a3a, helmet: 0x4b4f30 },
   inf_uk: { cls: 'inf', fac: 'uk', name: 'Sección británica', type: 'Infantería con PIAT', color: 0x9a8762, helmet: 0x6b6340 },
   inf_dak: { cls: 'inf', fac: 'de', name: 'Afrika Korps', type: 'Infantería', color: 0xa38d62, helmet: 0x8f7d55 },
+  inf_aus: { cls: 'inf', fac: 'uk', name: 'Infantería australiana', type: 'Infantería con fusil antitanque', color: 0xa08a5e, helmet: 0x7d6b48 },
+  matilda: { cls: 'tank', fac: 'uk', name: 'Matilda II', type: 'Carro de infantería', color: 0xc4ae84, L: 5.6, W: 2.6, H: 2.5, tur: 'cast', gun: 1.8, gr: 0.06, wheels: 6, wr: 0.3, skirts: true, glacis: 0.4, stats: { hp: 340, max: 13, turn: 1.1, gun: { range: 400, rof: 2.6, dmg: 42 }, armor: [0.55, 0.85, 1.3] } },
+  merchant: { cls: 'merchant', fac: 'uk', name: 'Mercante del convoy', type: 'Buque de carga', hull: 0x4a4a46, sup: 0xd8d2c0, deck: 0x6b5a46 },
   inf_jp: { cls: 'inf', fac: 'jp', name: 'Sección de infantería', type: 'Infantería con cargas antitanque', color: 0x7c7350, helmet: 0x6b6648 },
   at_jp: { cls: 'atgun', fac: 'jp', name: 'Cañón Tipo 1 (47 mm)', type: 'Cañón antitanque', color: 0x6d6a48, gun: 2.8 },
   chiha: { cls: 'tank', fac: 'jp', name: 'Tipo 97 Chi-Ha', type: 'Carro medio', color: 0x6d6a48, L: 5.5, W: 2.3, H: 2.2, tur: 'cast', gun: 1.4, gr: 0.075, wheels: 6, wr: 0.3, glacis: 0.3, stats: { hp: 190, max: 21, gun: { range: 380, rof: 3, dmg: 36 }, armor: [1.05, 1.35, 1.7] } },

@@ -96,6 +96,7 @@ export function startBattle(key, demo = false, opts = {}) {
           if (typeof s === 'function') [x, z] = s(col * gap * 1.6); else { x = s[0] + col * gap * (dom === 'air' ? 1.6 : 1); z = s[1] + row * 60 * sgn; }
           h = Math.atan2(-x, (map.extra.coast ? map.extra.coast(0) : 0) - z);
           if (dom === 'land' && side === 'A') h = Math.PI;
+          if (SP[side].h !== undefined) h = SP[side].h;
         } else { x = col * gap * (dom === 'air' ? 1.6 : 1); z = sgn * (sp + row * 60 + (dom === 'land' ? (i % 2) * 30 : 0)); }
         if (dom === 'sea') [x, z] = findNear(x, z, wantSea);
         if (dom === 'land') [x, z] = findNear(x, z, wantLand);
@@ -107,10 +108,13 @@ export function startBattle(key, demo = false, opts = {}) {
   const allies = place(G.roster, 'A'), enemies = place(b.enemy, 'E');
   G.startCount = { A: allies.length, E: enemies.length };
   // cañones antitanque enemigos: ya emplazados junto a los objetivos de tierra
-  const landZones = G.objectives.filter(z => z.dom === 'land');
+  // (los objetivos de tierra más cercanos al despliegue enemigo, y un poco hacia su lado)
+  const eLand = enemies.filter(e => e.dom === 'land'), ec = V3(); eLand.forEach(e => ec.add(e.p)); if (eLand.length) ec.divideScalar(eLand.length);
+  const landZones = G.objectives.filter(z => z.dom === 'land').sort((a, c) => a.pos.distanceTo(ec) - c.pos.distanceTo(ec)).slice(0, 2);
   enemies.filter(e => e.cls === 'atgun').forEach((e, i) => {
     if (!landZones.length) return;
-    const z = landZones[i % landZones.length], [x, zz] = findNear(z.pos.x + (i % 2 ? 50 : -50), z.pos.z - 70, wantLand);
+    const z = landZones[i % landZones.length], d = V3(ec.x - z.pos.x, 0, ec.z - z.pos.z).normalize();
+    const [x, zz] = findNear(z.pos.x + d.x * 70 + (i % 2 ? 50 : -50) * d.z, z.pos.z + d.z * 70 - (i % 2 ? 50 : -50) * d.x, wantLand);
     e.p.set(x, map.gy(x, zz), zz); e.h = 0; e.mesh.rotation.y = 0; e.order = { type: 'hold', x, z: zz };
   });
   // bases de reabastecimiento: donde despliega cada bando por tipo de unidad
@@ -127,6 +131,12 @@ export function startBattle(key, demo = false, opts = {}) {
     }
   }
   // defensas fijas (baterías costeras y antiaéreos)
+  // convoy aliado y antiaéreos propios (Tobruk)
+  if (b.convoy && map.extra && map.extra.convoy) {
+    const [cx, cz] = map.extra.convoy, port = G.objectives.find(z => z.dom === 'sea');
+    b.convoy.forEach(([k, n]) => { for (let i = 0; i < n; i++) { const [x, z] = findNear(cx + i * 140, cz, wantSea); const e = spawnUnit(k, 'A', x, z, -Math.PI / 2); e.convoy = true; if (port) e.order = { type: 'move', x: port.pos.x + i * 50, z: port.pos.z - 40 }; } });
+  }
+  if (map.extra && map.extra.staticsA) (map.extra.staticsA.aa || []).forEach(([x0, z0]) => { const [x, z] = findNear(x0, z0, wantLand); spawnAA('A', 'uk', x, z); });
   if (b.statics && map.extra && map.extra.statics) {
     const st = map.extra.statics;
     (st.battery || []).forEach(([x0, z0]) => { const [x, z] = findNear(x0, z0, wantLand); spawnBattery('E', b.staticFac || 'de', x, z, 0); });
@@ -256,6 +266,11 @@ export function updateBattle(dt) {
     }
     if (a > e) G.tickets.E = Math.max(0, G.tickets.E - (a - e) * 1.3 * dt);
     if (e > a) G.tickets.A = Math.max(0, G.tickets.A - (e - a) * 1.3 * dt);
+  }
+  // convoy: cada mercante que llega al puerto da puntos de mando y de batalla
+  for (const e of G.ents) if (e.convoy && e.alive && !e.arrived) {
+    const port = G.objectives.find(z => z.dom === 'sea');
+    if (port && Math.hypot(e.p.x - port.pos.x, e.p.z - port.pos.z) < 220) { e.arrived = true; if (G.cp) G.cp.A += 80; G.tickets.A = Math.min(G.ticketsMax, G.tickets.A + 60); G.onMsg && !G.demo && G.onMsg('¡Convoy en Tobruk!', 'Suministros: +80 puntos de mando y +60 puntos de batalla'); }
   }
   // final
   if (!G.over && !G.demo && b.kind !== 'test') {

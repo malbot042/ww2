@@ -268,6 +268,18 @@ function buildATGun(m) {
   return g;
 }
 
+function buildMerchant(m) {
+  const c = CLS.merchant, L = c.len, B = c.beam, F = c.fb, g = new THREE.Group();
+  const hullM = mat(m.hull, { r: 0.7 }), supM = mat(m.sup, { r: 0.6 }), deckM = mat(m.deck, { r: 0.9, m: 0 }), dk = mat(DARK);
+  const hg = extrudeUp(hullShape(L, B, 0.22), F + 3); hg.translate(0, -3, 0); g.add(new THREE.Mesh(hg, hullM));
+  const deck = new THREE.Mesh(new THREE.ShapeGeometry(hullShape(L * 0.98, B * 0.95, 0.22)), deckM); deck.rotation.x = -Math.PI / 2; deck.position.y = F + 0.02; g.add(deck);
+  g.add(box(B * 0.8, 4, L * 0.14, supM, 0, F + 2, -L * 0.22), box(B * 0.6, 2, L * 0.08, supM, 0, F + 5, -L * 0.22));
+  const fn = cyl(1.1, 1.2, 5, mat(0x1a1a1a), 12, 0, F + 6, -L * 0.3); g.add(fn); g.add(cyl(1.15, 1.15, 1, mat(0xa52a24), 12, 0, F + 7.5, -L * 0.3));
+  for (const z of [0.3, 0.12, -0.05]) g.add(box(B * 0.55, 1.2, L * 0.1, mat(0x5a4a38), 0, F + 0.6, z * L));
+  for (const z of [0.2, -0.38]) { g.add(cyl(0.2, 0.25, 12, dk, 6, 0, F + 6, z * L)); const d = box(0.15, 0.15, 9, dk, 0, F + 3, z * L + 4); d.rotation.x = 0.5; g.add(d); }
+  g.userData = { turrets: [], hw: B / 2 + 0.6, hl: L / 2, top: F + 7 };
+  return g;
+}
 export function buildBattery(fac) {
   const g = new THREE.Group(), con = mat(0x8f8c82, { r: 0.95, m: 0 }), dk = mat(DARK);
   g.add(box(16, 6, 12, con, 0, 2.6, -1));
@@ -281,7 +293,7 @@ export function buildBattery(fac) {
 }
 export function buildModel(key) {
   const m = MODELS[key], dom = CLS[m.cls].dom;
-  const g = dom === 'sea' ? buildShip(m) : dom === 'air' ? buildPlane(m) : m.cls === 'inf' ? buildInfantry(m) : m.cls === 'atgun' ? buildATGun(m) : buildTank(m);
+  const g = m.cls === 'merchant' ? buildMerchant(m) : dom === 'sea' ? buildShip(m) : dom === 'air' ? buildPlane(m) : m.cls === 'inf' ? buildInfantry(m) : m.cls === 'atgun' ? buildATGun(m) : buildTank(m);
   g.traverse(o => { if (o.isMesh && !(o.material instanceof THREE.MeshBasicMaterial)) { o.castShadow = true; o.receiveShadow = true; } });
   return g;
 }

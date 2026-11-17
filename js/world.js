@@ -19,6 +19,7 @@ export const MAPCFG = {
   normandy: { theme: 'channel', gen: 'normandy', ext: 4800, N: 360, bounds: 1550, zoneS: 0, zoneR: 210, spawn: 1000, combined: true },
   europe_land: { theme: 'bocage', gen: 'bocage', ext: 3600, N: 360, bounds: 1150, zoneS: 520, zoneR: 175, spawn: 780 },
   africa_land: { theme: 'desert', gen: 'desert', ext: 3600, N: 300, bounds: 1150, zoneS: 540, zoneR: 175, spawn: 780 },
+  tobruk: { theme: 'desert', gen: 'tobruk', ext: 4800, N: 360, bounds: 1550, zoneS: 0, zoneR: 200, spawn: 1000, combined: true },
   africa_air: { theme: 'desert', gen: 'desertAir', ext: 4800, N: 320, bounds: 1650, zoneS: 720, zoneR: 0, spawn: 1380, sites: true },
 };
 
@@ -86,18 +87,32 @@ function makeHeightFn(cfg, seed) {
     };
   } else if (gen === 'bocage') {
     fn = (x, z) => Math.max(2.5, 10 + N.fbm(x * 0.0007, z * 0.0007, 4) * 20 + N.fbm(x * 0.003, z * 0.003, 3) * 3);
-  } else if (gen === 'desert' || gen === 'desertAir') {
+  } else if (gen === 'desert' || gen === 'desertAir' || gen === 'tobruk') {
     fn = (x, z) => {
       let h = 8 + N.fbm(x * 0.0006, z * 0.0006, 4) * 14;
       h += Math.pow(N.ridge(x * 0.0022 + z * 0.0012, z * 0.0016 - x * 0.0004, 3), 3) * 6;
       const zr = 20 + N.fbm(x * 0.001, 5.5, 3) * 160; // cresta central
       h += 8 * Math.exp(-Math.pow((z - zr) / 140, 2));
       h += N.fbm(x * 0.02, z * 0.02, 2) * 0.6;
+      h = Math.max(h, 2); // sin charcos en el desierto
+      if (gen === 'tobruk') { // costa norte con el puerto de Tobruk en una ensenada
+        const s = z - (-720 + N.fbm(x * 0.0012, 7.7, 3) * 110), inlet = Math.abs(x - 150);
+        if (inlet < 150 && z < -470) h = Math.min(h, Math.max(-14, -1 - (150 - inlet) * 0.12 - (-470 - z) * 0.05));
+        if (s < 140) h = s < 0 ? Math.min(h, Math.max(-30, -1 + s * 0.12)) : Math.min(h, lerp(1.2, h, s / 140));
+      }
       if (gen === 'desertAir') { const s = z - (-1550 + N.fbm(x * 0.001, 2.2, 3) * 150); if (s < 160) h = s < 0 ? Math.max(-30, -1 + s * 0.15) : Math.min(h, lerp(1, h, s / 160)); }
       return h;
     };
   }
   let extra = {};
+  if (gen === 'tobruk') {
+    zones.length = 0; zones.push([150, -640], [-380, -260], [460, 280]);
+    extra = {
+      spawns: { A: { sea: [150, -1250], land: x => [x * 1.1, -380], air: [0, -1450], h: 0 }, E: { land: [0, 950], sea: [-1250, -1150], air: [0, 1450] } },
+      staticsA: { aa: [[60, -560], [260, -540]] },
+      convoy: [1300, -1250],
+    };
+  }
   if (gen === 'atoll') { // atolón alargado (Betio): playa sur, aeródromo en el centro, arrecife alrededor
     const RX = 950, RZ = 330, CZ = -220;
     const v = (x, z) => 1 - Math.hypot(x / RX, (z - CZ) / RZ) * (1 + N.fbm(x * 0.003, z * 0.003, 3) * 0.16);
@@ -158,7 +173,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
   };
   // Caminos
   const roads = [];
-  if (cfg.theme === 'bocage' || cfg.theme === 'desert') {
+  if ((cfg.theme === 'bocage' || cfg.theme === 'desert') && cfg.gen !== 'tobruk') {
     const zz = 0, amp = 60;
     roads.push({ t: 'h', f: x => zz + amp * Math.sin(x * 0.0025 + 1) });
     for (const [zx] of zones) roads.push({ t: 'v', f: z => zx + 35 * Math.sin(z * 0.004 + zx) });

@@ -15,7 +15,7 @@ function poolFor(key) {
   const b = BATTLES[key], doms = new Set(b.allies.map(([k]) => CLS[MODELS[k].cls].dom)), set = new Set();
   for (const bk of FRONTS[b.front].battles) BATTLES[`${b.front}-${bk}`].allies.forEach(([k]) => set.add(k));
   b.allies.forEach(([k]) => set.add(k));
-  return [...set].filter(k => doms.has(CLS[MODELS[k].cls].dom));
+  return [...set].filter(k => doms.has(CLS[MODELS[k].cls].dom) && MODELS[k].cls !== 'merchant');
 }
 export function openDeploy(key, onGo) {
   const b = BATTLES[key], counts = {};
