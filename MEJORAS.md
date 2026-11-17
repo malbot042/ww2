@@ -103,38 +103,54 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 - **Retirada:** las unidades por debajo del 30 % de vida vuelven a la base a reparar y regresan al 70 %. Lo hacen también tus unidades controladas por la IA.
 - **Cañones antitanque emplazados** junto a los objetivos.
 
-## 3. Contenido
+## 3. Contenido — ✅ hecho en v0.8
 
 | Mejora | Estado | Notas |
 |---|---|---|
-| Batalla combinada en el Pacífico | 🟡 | Desembarco en un atolón con tanques Chi-Ha y búnkeres |
-| Batalla combinada en África | ⬜ | Tobruk: puerto, convoyes y asedio |
-| Portaaviones | ⬜ | Lanzar y recuperar escuadrillas; blanco de gran valor |
-| Acorazados | ⬜ | Iowa, Yamato y Bismarck |
-| Bombarderos pesados | ⬜ | B-17 y Lancaster en formación con varias torretas |
-| Noche y clima | ⬜ | Bengalas, focos, niebla, tormenta y mar agitado que afecte a la puntería |
-| Campaña con progresión | ⬜ | Experiencia de las unidades que sobreviven y desbloqueo por épocas |
+| 3.1 Batalla combinada en el Pacífico | ✅ | Tarawa, 1943: desembarco en un atolón contra Chi-Ha, infantería, antitanques y baterías costeras |
+| 3.2 Batalla combinada en África | ✅ | Asedio de Tobruk, 1941: puerto, convoy que hay que escoltar (+80 PM y +60 puntos si llega) |
+| 3.3 Portaaviones | ✅ | USS Yorktown e IJN Akagi: lanzan (Shift) y recuperan aviones (L), base aérea móvil |
+| 3.4 Acorazados | ✅ | Washington, Iowa, Kirishima, Yamato, Bismarck y Rodney; torres lentas y salvas de gran calibre. Washington y Kirishima en Salomón, Rodney en el Día D; Iowa se desbloquea en campaña; Yamato y Bismarck en el campo de pruebas |
+| 3.5 Bombarderos pesados | ✅ | B-17, Lancaster y He 111: bombardeo horizontal en ráfaga desde ~210 m, 3-4 artilleros automáticos y formación en caja |
+| 3.6 Noche y clima | ✅ | Día, atardecer o noche; despejado, niebla o tormenta (lluvia, rayos). Menos detección y más dispersión; bengalas (J) y reflectores |
+| 3.7 Campaña con progresión | ✅ | Veteranía (★ Regular, ★★ Veterano, ★★★ Élite), puntos extra de despliegue y una unidad desbloqueada por victoria |
 
-## 4. Aspecto y sensación
-
-| Mejora | Estado | Notas |
-|---|---|---|
-| Daño visible en los modelos | ⬜ | Agujeros, escora progresiva y restos (de momento se ven las torres torcidas, el humo y el fuego) |
-| Estelas de vapor y huellas | ⬜ | Estelas a gran altitud y huellas de orugas en la arena |
-| Olas que mueven los barcos | ⬜ | Según el estado del mar |
-| Sonido | ⬜ | Motores por tipo, radio con órdenes y música |
-| Cámara cinemática y repetición | ⬜ | Al destruir algo importante y al final de la batalla |
-
-## 5. Técnico y comodidad
+## 4. Aspecto y sensación — ✅ hecho en v0.9
 
 | Mejora | Estado | Notas |
 |---|---|---|
-| **Selector de calidad y contador de fotogramas** | 🟡 | Sombras, vegetación y partículas ajustables; necesario porque no se ha medido el rendimiento en equipos reales |
-| Mando de consola | ⬜ | Gamepad API |
-| Controles táctiles | ⬜ | Tablet y móvil |
-| Guardado | ⬜ | Campaña, puntuaciones y opciones en el navegador |
-| Tutorial guiado | ⬜ | 3–4 minutos: control, órdenes, cámara, munición y averías |
-| Multijugador | ⬜ | Local o en línea; es lo más costoso de la lista |
+| 4.1 Daño visible | ✅ | Quemaduras sobre el casco al 75/50/25 %, escora y proa hundida por debajo del 40 %, restos, cráteres y manchas de petróleo |
+| 4.2 Estelas y huellas | ✅ | Estelas de condensación por encima de 180 m y rodadas de los carros (4000 marcas instanciadas) |
+| 4.3 Estado de la mar | ✅ | Oleaje y borregos según el clima; los barcos pequeños cabecean más; rociones; el tiro naval pierde precisión |
+| 4.4 Sonido | ✅ | Motor sintetizado por tipo, radio con voz en español (síntesis del navegador), música procedural que sigue la intensidad y volúmenes en la pausa |
+| 4.5 Cámara cinemática y repetición | ✅ | Cámara lenta en los grandes derribos (desactivable) y repetición de los últimos 20 s desde los resultados |
+
+## 5. Técnico y comodidad — ✅ hecho en v1.0
+
+| Mejora | Estado | Notas |
+|---|---|---|
+| 5.1 Selector de calidad y FPS | ✅ | Baja / Media / Alta (sombras, resolución, vegetación y partículas) y contador opcional; nivel por defecto según el equipo |
+| 5.2 Mando | ✅ | Gamepad API con distribución estándar; chuleta en la pausa |
+| 5.3 Controles táctiles | ✅ | Joystick virtual, botones de acción y órdenes, pellizco para el zoom y arrastre para la cámara |
+| 5.4 Guardado | ✅ | Opciones, volúmenes, campaña en curso («Continuar campaña») y récords por batalla en el navegador |
+| 5.5 Tutorial guiado | ✅ | 10 pasos con comprobación automática (unos 5 minutos) |
+| 5.6 Multijugador | ✅ local / ❌ en línea | Pantalla partida: el jugador 2 maneja el Eje con mando o teclado numérico. En línea no es viable en esta versión: no hay servidor y el artefacto bloquea WebRTC; haría falta un servidor de señalización y alojar el juego fuera |
+
+### Limitaciones conocidas
+
+- El equilibrio de las batallas nuevas (y de los acorazados, bombarderos pesados y la veteranía) está ajustado con simulaciones automáticas, no con partidas reales.
+- El rendimiento solo se ha medido con renderizado por software; conviene probar los tres niveles de calidad en equipos reales y en móvil.
+- Las voces de radio dependen de que el navegador tenga una voz en español instalada; si no la hay, usa la voz por defecto.
+- La repetición reproduce movimientos y efectos, no los proyectiles en vuelo.
+
+## Ideas para la siguiente ronda
+
+| Mejora | Notas |
+|---|---|
+| Editor de escenarios | Colocar unidades, objetivos y clima y guardarlo para compartir |
+| Más frentes | Frente oriental (Kursk) y Birmania |
+| Misiones con objetivos especiales | Escoltar, rescatar pilotos, destruir un puente en un tiempo límite |
+| Multijugador en línea | Requiere servidor de señalización y alojamiento propio (GitHub Pages valdría como cliente) |
 
 ---
 
@@ -149,3 +165,6 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 | v0.5 | Campo de pruebas; blanco y objetivo marcados en amarillo |
 | v0.6 | Averías por partes, munición AP/HE limitada y bases, altitud real en aviones, infantería y cañones antitanque |
 | v0.7 | Niebla de guerra, despliegue con presupuesto, puntos de mando (artillería, ataque aéreo, refuerzos), formaciones, rutas y órdenes encadenadas, IA más lista |
+| v0.8 | Fase 3, contenido: Tarawa y Tobruk, portaaviones, acorazados, bombarderos pesados, noche y clima, campaña con progresión |
+| v0.9 | Fase 4, aspecto: daño visible, estelas y rodadas, estado de la mar, sonido y radio, cámara lenta y repetición |
+| v1.0 | Fase 5, técnico: calidad gráfica y FPS, mando, controles táctiles, guardado, tutorial y pantalla partida |

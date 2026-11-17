@@ -10,11 +10,13 @@ Para jugar en local hay que servir la carpeta, porque los módulos ES no funcion
 
 | Frente | Naval | Aérea | Tanques | Combinada |
 |---|---|---|---|---|
-| **Pacífico** (EE. UU. contra Japón) | Islas Salomón, 1942 | Midway, 1942 | — | — |
-| **Norte de África** (Commonwealth contra Alemania e Italia) | — | Desierto occidental, 1942 | El Alamein, 1942 | — |
+| **Pacífico** (EE. UU. contra Japón) | Islas Salomón, 1942 | Midway, 1942 | — | **Tarawa, 1943** |
+| **Norte de África** (Commonwealth contra Alemania e Italia) | — | Desierto occidental, 1942 | El Alamein, 1942 | **Asedio de Tobruk, 1941** |
 | **Europa** (Aliados contra Alemania) | Canal de la Mancha, 1944 | Sobre el Canal, 1944 | Bocage normando, 1944 | **Día D: playa de Normandía, 1944** |
 
-Cada frente tiene también una **campaña**, que encadena sus batallas en el orden naval → aérea → tanques (→ combinada) y acumula la puntuación.
+Cada frente tiene también una **campaña**, que encadena sus batallas y acumula la puntuación. Las unidades que sobreviven ganan **veteranía** (★ Regular, ★★ Veterano, ★★★ Élite: más vida, precisión y cadencia), cada victoria da puntos extra de despliegue y desbloquea una unidad, y la campaña se guarda en el navegador para continuarla después.
+
+Antes de cada batalla eliges también la **hora** (día, atardecer o noche) y el **clima** (despejado, niebla o tormenta).
 
 ### Batalla combinada: Día D
 Mar, aire y tierra en el mismo mapa. 13 unidades aliadas contra 10 alemanas:
@@ -24,9 +26,12 @@ Mar, aire y tierra en el mismo mapa. 13 unidades aliadas contra 10 alemanas:
 Los objetivos A (salida de la playa) y B (pueblo) los capturan los tanques; el C (fondeadero) lo capturan los barcos. Los barcos pueden bombardear la costa, los tanques pueden disparar a los barcos cercanos y los aviones atacan lo que haya debajo. Con **Tab** saltas entre barco, avión y tanque, y con **G** seleccionas por tipo para dar órdenes solo a la flota, a la aviación o a los blindados. Si mandas un barco a un objetivo de tierra, se coloca en el agua más cercana para apoyar con su artillería.
 
 ### Unidades
-- **Naval:** cruceros (Baltimore, Takao, Belfast, Admiral Hipper), destructores (Fletcher, Kagero, Tribal, Z 1936), **submarinos** (Gato, I-15, Clase T, U-Boot VII C) y lanchas torpederas (PT-109, MTB Vosper, S-Boot).
-- **Aérea:** Wildcat, Zero, Dauntless, Val, Kittyhawk, Hurricane, Bf 109 F/G, Macchi C.202, Stuka, P-51D, P-47 y Fw 190 F.
-- **Tanques:** Sherman, Firefly, Cromwell, M10, Grant, Crusader, Panzer III, Panzer IV F2/H, M13/40, Panther, StuG III y Tiger I.
+- **Naval:** portaaviones (Yorktown, Akagi), acorazados (Washington, Iowa, Kirishima, Yamato, Bismarck, Rodney), cruceros (Baltimore, Takao, Belfast, Admiral Hipper), destructores (Fletcher, Kagero, Tribal, Z 1936), **submarinos** (Gato, I-15, Clase T, U-Boot VII C) y lanchas torpederas (PT-109, MTB Vosper, S-Boot).
+- **Aérea:** Wildcat, Zero, Dauntless, Val, Kittyhawk, Hurricane, Bf 109 F/G, Macchi C.202, Stuka, P-51D, P-47 y Fw 190 F; bombarderos pesados B-17, Lancaster y He 111.
+- **Tanques:** Sherman, Firefly, Cromwell, M10, Grant, Crusader, Panzer III, Panzer IV F2/H, M13/40, Panther, StuG III, Tiger I, Matilda II y Chi-Ha; infantería y cañones antitanque de cada bando.
+
+## Tutorial
+La tarjeta **Tutorial** del menú enseña lo básico en 10 pasos guiados (unos 5 minutos): moverse, cámara, zoom, fijar un blanco, disparar, munición, control de daños, órdenes a la escuadra, cambiar de unidad y mapa táctico.
 
 ## Campo de pruebas
 Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin puntos ni derrota. Desde el panel de la derecha puedes:
@@ -66,8 +71,14 @@ Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin punt
 | G | Seleccionar por tipo: todos, barcos, aviones o tanques |
 | Tab | Tomar el mando de otra unidad |
 | M | Mapa táctico con todo el campo de batalla |
-| P | Pausa táctica (puedes seguir dando órdenes) |
+| J | Bengala (de noche o al atardecer): ilumina y revela la zona |
+| L | Aterrizar en el portaaviones · **Shift** en un portaaviones lanza un avión |
+| P | Pausa táctica (puedes seguir dando órdenes); incluye volúmenes, calidad gráfica, FPS y cámara lenta |
 | Esc | Seleccionar a toda la escuadra |
+
+**Mando:** stick izquierdo mueve, stick derecho la cámara, RT dispara, LT secundaria, A blanco, B reparar, X sígueme, Y vista, LB cambiar unidad, RB mapa, cruceta para objetivos y Select/Start para pausa.
+
+**Pantalla táctil:** joystick virtual, botones de acción y de órdenes, pellizco para el zoom y un dedo para girar la cámara.
 
 **Ratón (opcional):** arrastra para seleccionar unidades, **Shift + clic derecho** para añadir puntos de ruta, haz clic derecho sobre un objetivo o un punto del mapa para darles una orden y doble clic sobre una unidad para tomar su mando.
 
@@ -86,6 +97,15 @@ Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin punt
 - **Niebla de guerra:** solo ves lo que detectan tus unidades (radar, sonar, línea de visión). Se puede desactivar en el despliegue.
 - **Puntos de mando:** se ganan controlando objetivos y destruyendo enemigos, y se gastan en artillería (7), ataque aéreo (8) o refuerzos (9). El enemigo también los usa.
 - **Formaciones, rutas y órdenes encadenadas,** y un mando enemigo que concentra fuerzas, flanquea y se retira a reparar.
+
+## Contenido, aspecto y comodidad (v0.8–v1.0)
+- **Portaaviones** que lanzan y recuperan aviones, **acorazados** de torres lentas y gran calibre y **bombarderos pesados** en formación en caja con varios artilleros.
+- **Noche y clima:** menos detección y más dispersión; bengalas, reflectores, lluvia, rayos y mar gruesa que mueve los barcos.
+- **Daño visible** (quemaduras, escora, restos, cráteres, petróleo), **estelas** de condensación y **rodadas** de los carros.
+- **Sonido:** motores por tipo, radio con voz en español, música procedural según la intensidad del combate.
+- **Cámara lenta** en los grandes derribos y **repetición** de los últimos 20 s al terminar.
+- **Calidad gráfica** Baja/Media/Alta con contador de FPS, **guardado** de opciones, campaña y récords.
+- **Pantalla partida:** un segundo jugador maneja el Eje con un mando o con el teclado numérico (opción en el despliegue).
 
 La hoja de ruta completa está en [MEJORAS.md](MEJORAS.md).
 
@@ -112,6 +132,18 @@ js/fx.js          partículas (humo, fuego, espuma) y audio sintetizado
 js/sandbox.js     campo de pruebas
 js/strategy.js    niebla de guerra, puntos de mando y apoyo
 js/deploy.js      fase de despliegue (composición y colocación)
+js/env.js         hora del día, clima, lluvia, rayos, bengalas y reflectores
+js/campaign.js    veteranía, premios y desbloqueos de campaña
+js/damagefx.js    daño visible, restos, cráteres y petróleo
+js/marks.js       rodadas de los carros
+js/sound.js       música procedural, radio con voz y volúmenes
+js/replay.js      grabación y repetición de los últimos 20 s
+js/quality.js     niveles de calidad y contador de FPS
+js/gamepad.js     mando (Gamepad API)
+js/touch.js       controles táctiles
+js/save.js        guardado en localStorage
+js/tutorial.js    tutorial guiado
+js/split.js       multijugador local a pantalla partida
 v1.html           primer prototipo (v0.1)
 ```
 Con `#debug` en la URL queda disponible `window.__ww2` para pruebas automáticas.
