@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { updateGamepads, PAD_HELP } from './gamepad.js';
 import { applyQuality, autoQuality, updateFps, QUALITY } from './quality.js';
 import { recordReplay, updateReplay, startReplay, stopReplay, replaying, hasReplay, resetReplay, replayProgress } from './replay.js';
 import { applyVolumes, updateMusic, musicHeat, RADIO, initSoundUI, radioStop } from './sound.js';
@@ -127,6 +128,7 @@ let last = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
   const rdt = Math.min((now - last) / 1000, 0.05); last = now;
+  updateGamepads();
   if (G.map && replaying()) {
     updateReplay(rdt); updateWorld(rdt); updateCamera(rdt); updateMusic(rdt); updateAimMarkers();
     $('rpBar').style.width = (replayProgress() * 100).toFixed(1) + '%';
@@ -270,6 +272,7 @@ G.opts = G.opts || { cine: true, fps: false, quality: autoQuality() };
 applyQuality(G.opts.quality);
 function qualUI() { for (const id of ['optQual', 'optQual2']) { const el = $(id); el.innerHTML = Object.entries(QUALITY).map(([k, q]) => `<option value="${k}" ${k === G.opts.quality ? 'selected' : ''}>${q.n}</option>`).join(''); el.onchange = () => { G.opts.quality = el.value; applyQuality(el.value); qualUI(); G.onOptions && G.onOptions(); }; } $('optFps').checked = G.opts.fps; }
 qualUI();
+$('padHelp').textContent = PAD_HELP;
 $('optFps').onchange = ev => { G.opts.fps = ev.target.checked; G.onOptions && G.onOptions(); };
 $('optCine').checked = G.opts.cine; $('optCine').onchange = ev => { G.opts.cine = ev.target.checked; G.onOptions && G.onOptions(); };
 const FORMS = ['cuña', 'línea', 'columna']; G.formation = 'cuña';
