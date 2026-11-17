@@ -14,6 +14,7 @@
 <body>
 <canvas id="gl"></canvas>
 <div id="vig"></div>
+<div id="splitLine" class="hide"></div><div id="p2hud" class="hide"></div>
 <div id="tut" class="panel hide"><div class="tn" id="tutN"></div><h3 id="tutT"></h3><p id="tutD"></p><div class="tb2"><i id="tutBar"></i></div><div class="row"><button class="ghost" id="tutSkip">Saltar paso</button><button class="ghost" id="tutExit">Salir</button></div></div>
 <div id="fps"></div>
 <div id="selbox"></div>
@@ -82,6 +83,7 @@
         <div id="dpSum"></div>
         <div class="envsel"><label>Hora<select id="optTime"><option value="day">Día</option><option value="dusk">Atardecer</option><option value="night">Noche</option></select></label><label>Clima<select id="optWeather"><option value="clear">Despejado</option><option value="fog">Niebla</option><option value="storm">Tormenta</option></select></label></div>
         <label class="chk"><input type="checkbox" id="optFog" checked> Niebla de guerra: solo ves lo que detectan tus unidades</label>
+        <label class="chk"><input type="checkbox" id="optSplit"> 2 jugadores en pantalla partida: el 2.º maneja una unidad del Eje con un mando (o el teclado numérico). Sin niebla de guerra.</label>
         <label class="chk"><input type="checkbox" id="optPlace" checked> Colocar las unidades antes de empezar</label>
         <div class="row"><button class="ghost" id="dpReset">Composición original</button><button class="btn" id="dpGo">Continuar</button></div>
       </aside>

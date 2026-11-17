@@ -47,7 +47,7 @@ function render() {
 }
 export function initDeployUI() {
   $('dpReset').onclick = () => { const b = BATTLES[state.key]; for (const k in state.counts) state.counts[k] = 0; b.allies.forEach(([k, n]) => state.counts[k] = n); render(); };
-  $('dpGo').onclick = () => { const roster = Object.entries(state.counts).filter(([, n]) => n > 0); state.onGo(roster, $('optFog').checked, $('optPlace').checked, { time: $('optTime').value, weather: $('optWeather').value }); };
+  $('dpGo').onclick = () => { const roster = Object.entries(state.counts).filter(([, n]) => n > 0); state.onGo(roster, $('optFog').checked, $('optPlace').checked, { time: $('optTime').value, weather: $('optWeather').value }, $('optSplit').checked); };
 }
 
 // ---------- colocación en el mapa ----------

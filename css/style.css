@@ -189,3 +189,8 @@ body.touchui #orders{display:none}body.touchui #squad{max-height:38vh!important}
 #tut .tn{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#f2c94c}#tut h3{margin:4px 0 6px;font-size:20px}#tut p{margin:0 0 10px;font-size:14px;line-height:1.5}#tut kbd{background:#3d4a3a;border-radius:4px;padding:1px 6px;font-size:12px}
 #tut .tb2{height:3px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;margin-bottom:10px}#tut .tb2 i{display:block;height:100%;background:#f2c94c;transition:width .4s}#tut .row{display:flex;gap:8px;justify-content:flex-end}#tut button{padding:6px 12px;font-size:13px}
 .front.f-tut{background:linear-gradient(135deg,#3a4a32,#22301e)}
+/* pantalla partida */
+#splitLine{position:fixed;top:0;bottom:0;left:50%;width:3px;margin-left:-1px;background:rgba(10,12,14,.85);z-index:15;pointer-events:none}#splitLine.hide,#p2hud.hide{display:none}
+#p2hud{position:fixed;right:16px;bottom:16px;z-index:16;width:280px;background:rgba(40,12,10,.78);color:#fff;border:1px solid rgba(255,110,90,.5);border-radius:10px;padding:10px 12px;font-size:13px;pointer-events:none}
+#p2hud .p2t{font-weight:700;letter-spacing:.04em;color:#ff9a86;margin-bottom:6px}#p2hud .p2b{height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden;margin-bottom:6px}#p2hud .p2b i{display:block;height:100%;background:#e85a44}#p2hud b{color:#9be29b}
+body.split #orders{left:25%;max-width:47vw;font-size:12px;gap:3px 8px}body.split #msg{right:50%}

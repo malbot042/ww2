@@ -1012,7 +1012,9 @@ export function updateUnits(dt) {
     if (e.detected > 0) e.detected -= dt;
     if (e.cls === 'sub') { e.battery = clamp(e.battery + (e.submerged ? -dt / 50 : dt / 28), 0, 1); if (e.submerged && e.battery <= 0) toggleDive(e); }
     const px = e.p.x, py = e.p.y, pz = e.p.z;
-    if (e === G.player && !G.demo) controlPlayer(e, dt); else aiUnit(e, dt);
+    if (e === G.player && !G.demo) controlPlayer(e, dt);
+    else if (G.split && e === G.split.p2 && !G.demo) G.split.run(() => controlPlayer(e, dt));
+    else aiUnit(e, dt);
     e.vel.set((e.p.x - px) / dt, (e.p.y - py) / dt, (e.p.z - pz) / dt);
     if (!e.alive) continue;
     updateMods(e, dt);

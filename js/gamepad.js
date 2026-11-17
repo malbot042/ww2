@@ -41,7 +41,7 @@ export function updateGamepads() {
   for (const gp of pads) if (!announced.has(gp.index)) { announced.add(gp.index); G.onMsg && G.onMsg('Mando conectado', gp.id.slice(0, 40)); }
   // el jugador 1 usa el primer mando (o el que diga la pantalla partida); el resto lo gestiona el multijugador local
   const p1 = G.split ? pads.find(p => p.index === G.split.p1Pad) : pads[0];
-  if (!p1) return;
+  if (!p1) { for (const [, st] of state) for (const c in st) if (st[c]) send('keyup', c); state.clear(); return; }
   const prev = state.get(p1.index) || {}, now = readPad(p1);
   // Start funciona como pausa durante la batalla (Enter solo durante el despliegue)
   if (now.Enter && !prev.Enter && G.running && !G.deploying) { send('keydown', 'KeyP'); send('keyup', 'KeyP'); }

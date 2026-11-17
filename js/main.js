@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { setupSplit, stopSplit, updateSplit, renderSplit } from './split.js';
 import { startTutorial, updateTutorial, stopTutorial } from './tutorial.js';
 import { loadSave, saveOptions, savedCampaign, saveCampaign, record, recordOf, clearSave } from './save.js';
 import { initTouch, updateTouch } from './touch.js';
@@ -141,7 +142,7 @@ function frame(now) {
   const dt = G.slowT > 0 ? rdt * 0.3 : rdt; if (G.slowT > 0) G.slowT -= rdt;
   if (G.map) {
     const sim = G.running && !G.paused && !G.deploying;
-    if (sim) { recordReplay(dt); updateTutorial(dt); }
+    if (sim) { recordReplay(dt); updateTutorial(dt); updateSplit(dt); }
     if (sim || G.demo) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); }
     else if (G.deploying) { updateVision(dt); updateMarkers(); }
     updateWorld(dt); if (sim || G.demo) updateEnv(dt); updateCamera(dt);
@@ -151,7 +152,7 @@ function frame(now) {
   }
   updateFps(rdt); updateTouch();
   G.keysOnce.clear();
-  renderer.render(scene, camera);
+  if (G.split && G.running) renderSplit(renderer, scene, camera); else renderer.render(scene, camera);
 }
 
 // ---------- menús ----------
@@ -197,7 +198,7 @@ function buildBattleMenu(fk) {
 let lastOpts = {};
 function toDeploy(key, keepCampaign = false) {
   if (!keepCampaign) G.campaign = null;
-  openDeploy(key, (roster, fog, place, env) => launch(key, true, { roster, fog, place, env }));
+  openDeploy(key, (roster, fog, place, env, split) => launch(key, true, { roster, fog: split ? false : fog, place, env, split }));
   show('scrDeploy');
 }
 function launch(key, keepCampaign = false, opts = {}) {
@@ -206,7 +207,8 @@ function launch(key, keepCampaign = false, opts = {}) {
   show('loading'); $('loadTxt').textContent = `${BATTLES[key].title}, ${BATTLES[key].year}`;
   setTimeout(() => {
     G.running = false; G.paused = false; G.strategic = false; G.slowT = 0;
-    resetReplay(); startBattle(key, false, opts);
+    resetReplay(); stopSplit(); resize(); startBattle(key, false, opts);
+    if (opts.split) setupSplit();
     const p = G.player; G.targetZoom = G.zoom = ZOOM_DEF[p.dom];
     G.cam.preset = 0; G.cam.pitch = 1.1; G.cam.yaw = 0; G.cam.ang = 0; G.cam.rel = false; $('camName').textContent = 'Cenital';
     hudInit(); show(null); $('menu').classList.add('hide');
@@ -254,7 +256,7 @@ function showResults(res) {
   $('resReplay').onclick = () => { $('results').classList.add('hide'); $('replayTag').classList.remove('hide'); startReplay(() => { $('replayTag').classList.add('hide'); show('results'); }); };
   show('results');
 }
-function toMenu() { stopTutorial(false); endPlacement(); sandboxHide(); hudHide(); G.running = false; buildFrontMenu(); show('scrFront'); startDemo(); }
+function toMenu() { stopTutorial(false); if (G.split) { stopSplit(); resize(); } endPlacement(); sandboxHide(); hudHide(); G.running = false; buildFrontMenu(); show('scrFront'); startDemo(); }
 $('backFront').onclick = () => show('scrFront');
 $('backBattle').onclick = () => show('scrBattle');
 initDeployUI();
