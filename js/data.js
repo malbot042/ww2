@@ -3,7 +3,7 @@ export const FRONTS = {
   pacific: {
     name: 'Pacífico', years: '1942–1944', vs: 'EE. UU. contra Japón',
     desc: 'Archipiélagos, atolones y mar abierto. La US Navy y sus portaaviones contra la Armada Imperial japonesa.',
-    battles: ['naval', 'air'], enemyName: 'Japón',
+    battles: ['naval', 'air', 'combined'], enemyName: 'Japón',
   },
   africa: {
     name: 'Norte de África', years: '1942', vs: 'Commonwealth contra Alemania e Italia',
@@ -31,6 +31,14 @@ export const BATTLES = {
     brief: 'Destruye las tres instalaciones japonesas del atolón (A, B, C) y protege las tuyas. Tus Dauntless son los bombarderos: escóltalos. El Zero gira mejor que el Wildcat; no te enzarces en giros cerrados.',
     allies: [['wildcat', 6], ['sbd', 4]], enemy: [['zero', 6], ['val', 4]], sites: ['us', 'jp'],
   },
+  'pacific-combined': {
+    front: 'pacific', kind: 'combined', map: 'atoll', title: 'Tarawa', year: '1943',
+    brief: 'Desembarco anfibio en un atolón fortificado. Tus Sherman e infantes de marina llegan a la playa sur bajo el fuego de los búnkeres; la flota los apoya desde el mar y los aviones embarcados cubren el cielo. Toma la cabeza de playa (A) y el aeródromo (B) y controla el fondeadero (C).',
+    hint: 'A: cabeza de playa · B: aeródromo · C: fondeadero (naval). Tab cambia entre barco, avión y tanque',
+    allies: [['baltimore', 1], ['fletcher', 2], ['wildcat', 2], ['sbd', 2], ['sherman', 3], ['inf_us', 3]],
+    enemy: [['kagero', 1], ['i15', 1], ['zero', 2], ['val', 1], ['chiha', 3], ['inf_jp', 3], ['at_jp', 1]],
+    statics: [['battery', 3], ['aa', 2]], staticFac: 'jp',
+  },
   'africa-air': {
     front: 'africa', kind: 'air', map: 'africa_air', title: 'Desierto occidental', year: '1942',
     brief: 'Ataca los depósitos del Eje (A, B, C) con los Hurricane mientras los Kittyhawk mantienen alejados a los Bf 109 y Macchi. Defiende tus aeródromos de los Stuka.',
@@ -55,6 +63,7 @@ export const BATTLES = {
   'europe-combined': {
     front: 'europe', kind: 'combined', map: 'normandy', title: 'Día D: playa de Normandía', year: '1944',
     brief: 'Mar, aire y tierra a la vez. Tus tanques desembarcan bajo el fuego de las baterías costeras; los barcos pueden bombardear la costa y los aviones cubren el cielo. Toma la salida de la playa (A) y el pueblo (B) con los tanques y controla el fondeadero (C) con la flota. Tab salta entre barco, avión y tanque; G selecciona por tipo.',
+    hint: 'A: salida de la playa · B: pueblo · C: fondeadero (naval). Tab cambia entre barco, avión y tanque',
     allies: [['town', 1], ['fletcher', 2], ['pt109', 1], ['p51', 3], ['p47', 2], ['sherman', 3], ['firefly', 1], ['inf_us', 2]],
     enemy: [['z1936', 1], ['sboot', 2], ['u7c', 1], ['bf109g', 2], ['fw190f', 1], ['pz4h', 2], ['panther', 1], ['stug', 1], ['inf_de', 2], ['pak40', 1]],
     statics: [['battery', 3], ['aa', 2]],
@@ -136,6 +145,9 @@ export const MODELS = {
   inf_us: { cls: 'inf', fac: 'us', name: 'Escuadra de fusileros', type: 'Infantería con bazuca', color: 0x5b5a3a, helmet: 0x4b4f30 },
   inf_uk: { cls: 'inf', fac: 'uk', name: 'Sección británica', type: 'Infantería con PIAT', color: 0x9a8762, helmet: 0x6b6340 },
   inf_dak: { cls: 'inf', fac: 'de', name: 'Afrika Korps', type: 'Infantería', color: 0xa38d62, helmet: 0x8f7d55 },
+  inf_jp: { cls: 'inf', fac: 'jp', name: 'Sección de infantería', type: 'Infantería con cargas antitanque', color: 0x7c7350, helmet: 0x6b6648 },
+  at_jp: { cls: 'atgun', fac: 'jp', name: 'Cañón Tipo 1 (47 mm)', type: 'Cañón antitanque', color: 0x6d6a48, gun: 2.8 },
+  chiha: { cls: 'tank', fac: 'jp', name: 'Tipo 97 Chi-Ha', type: 'Carro medio', color: 0x6d6a48, L: 5.5, W: 2.3, H: 2.2, tur: 'cast', gun: 1.4, gr: 0.075, wheels: 6, wr: 0.3, glacis: 0.3, stats: { hp: 190, max: 21, gun: { range: 380, rof: 3, dmg: 36 }, armor: [1.05, 1.35, 1.7] } },
   inf_de: { cls: 'inf', fac: 'de', name: 'Grupo de granaderos', type: 'Infantería con Panzerschreck', color: 0x5d6253, helmet: 0x4c5148 },
   at_us: { cls: 'atgun', fac: 'us', name: 'Cañón AT 57 mm M1', type: 'Cañón antitanque', color: 0x4b5320, gun: 3.2 },
   at_uk: { cls: 'atgun', fac: 'uk', name: 'Cañón de 6 libras', type: 'Cañón antitanque', color: 0xb9a27a, gun: 3.0 },

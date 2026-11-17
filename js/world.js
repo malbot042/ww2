@@ -15,6 +15,7 @@ export const MAPCFG = {
   pacific_air: { theme: 'tropical', gen: 'tropical', ext: 4800, N: 320, bounds: 1650, zoneS: 720, zoneR: 0, spawn: 1380, sites: true },
   europe_sea: { theme: 'channel', gen: 'channelSea', ext: 4800, N: 320, bounds: 1500, zoneS: 760, zoneR: 260, spawn: 1050 },
   europe_air: { theme: 'channel', gen: 'channelAir', ext: 4800, N: 320, bounds: 1650, zoneS: 720, zoneR: 0, spawn: 1380, sites: true },
+  atoll: { theme: 'tropical', gen: 'atoll', ext: 4800, N: 360, bounds: 1550, zoneS: 0, zoneR: 200, spawn: 1000, combined: true },
   normandy: { theme: 'channel', gen: 'normandy', ext: 4800, N: 360, bounds: 1550, zoneS: 0, zoneR: 210, spawn: 1000, combined: true },
   europe_land: { theme: 'bocage', gen: 'bocage', ext: 3600, N: 360, bounds: 1150, zoneS: 520, zoneR: 175, spawn: 780 },
   africa_land: { theme: 'desert', gen: 'desert', ext: 3600, N: 300, bounds: 1150, zoneS: 540, zoneR: 175, spawn: 780 },
@@ -97,6 +98,22 @@ function makeHeightFn(cfg, seed) {
     };
   }
   let extra = {};
+  if (gen === 'atoll') { // atolón alargado (Betio): playa sur, aeródromo en el centro, arrecife alrededor
+    const RX = 950, RZ = 330, CZ = -220;
+    const v = (x, z) => 1 - Math.hypot(x / RX, (z - CZ) / RZ) * (1 + N.fbm(x * 0.003, z * 0.003, 3) * 0.16);
+    fn = (x, z) => {
+      const s = v(x, z); let h = -38 + N.fbm(x * 0.001, z * 0.001, 3) * 5;
+      if (s > -0.45) h = Math.max(h, s < 0 ? lerp(-38, -1.2, Math.pow((s + 0.45) / 0.45, 1.6)) : s < 0.07 ? lerp(-1.2, 1.4, s / 0.07) : 1.4 + smooth(0.07, 0.6, s) * 5 + N.fbm(x * 0.01, z * 0.01, 2) * 0.8);
+      return h;
+    };
+    const shoreS = x => CZ + RZ * Math.sqrt(Math.max(0, 1 - (x / RX) ** 2)) * 0.95;
+    zones.length = 0; zones.push([-380, shoreS(-380) - 110], [380, CZ - 40], [0, shoreS(0) + 560]);
+    extra = {
+      coast: shoreS,
+      spawns: { A: { sea: [0, shoreS(0) + 1050], air: [0, 1450], land: x => [x * 0.8, shoreS(x * 0.8) - 12] }, E: { land: [150, CZ - 60], sea: [1350, CZ + 250], air: [0, -1500] } },
+      statics: { battery: [-700, -150, 500].map(x => [x, shoreS(x) - 150]), aa: [[-300, CZ - 80], [520, CZ - 120]] },
+    };
+  }
   if (gen === 'normandy') {
     const cz = x => 300 + N.fbm(x * 0.0011, 4.4, 3) * 110;
     fn = (x, z) => {

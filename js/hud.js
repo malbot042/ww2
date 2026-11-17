@@ -41,7 +41,7 @@ function weaponLines(e) {
     const agl = Math.round(e.p.y - G.map.gy(e.p.x, e.p.z));
     L.push(['↑ picar · ↓ subir', `<b class="${agl < 30 ? 'bad blink' : ''}">Altitud ${agl} m${agl < 30 ? ' ¡BAJO!' : ''}</b>`]);
   }
-  else if (e.cls === 'inf') { L.push(['Espacio · Fusiles', '<b class="ok">AUTO</b>'], [`Shift · ${e.fac === 'de' ? 'Panzerschreck' : e.fac === 'uk' ? 'PIAT' : 'Bazuca'}` + cnt('rocket'), cd(e.cd.rocket, 'rocket')]); L.push(['Soldados', `<b>${Math.ceil(e.hp / e.s.hp * 6)}/6</b>`]); }
+  else if (e.cls === 'inf') { L.push(['Espacio · Fusiles', '<b class="ok">AUTO</b>'], [`Shift · ${e.fac === 'de' ? 'Panzerschreck' : e.fac === 'uk' ? 'PIAT' : e.fac === 'jp' ? 'Carga antitanque' : 'Bazuca'}` + cnt('rocket'), cd(e.cd.rocket, 'rocket')]); L.push(['Soldados', `<b>${Math.ceil(e.hp / e.s.hp * 6)}/6</b>`]); }
   else if (e.dom === 'land') { L.push(['Espacio · Cañón', aim(e.cd.main)], ammoLine()); if (e.cls === 'tank') L.push(['Shift · Humo', cd(e.cd.smoke)]); }
   // averías y control de daños
   const m = e.mods, chips = [];

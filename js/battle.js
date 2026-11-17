@@ -129,8 +129,8 @@ export function startBattle(key, demo = false, opts = {}) {
   // defensas fijas (baterías costeras y antiaéreos)
   if (b.statics && map.extra && map.extra.statics) {
     const st = map.extra.statics;
-    (st.battery || []).forEach(([x0, z0]) => { const [x, z] = findNear(x0, z0, wantLand); spawnBattery('E', 'de', x, z, 0); });
-    (st.aa || []).forEach(([x0, z0]) => { const [x, z] = findNear(x0, z0, wantLand); spawnAA('E', 'de', x, z); });
+    (st.battery || []).forEach(([x0, z0]) => { const [x, z] = findNear(x0, z0, wantLand); spawnBattery('E', b.staticFac || 'de', x, z, 0); });
+    (st.aa || []).forEach(([x0, z0]) => { const [x, z] = findNear(x0, z0, wantLand); spawnAA('E', b.staticFac || 'de', x, z); });
   }
   // jugador
   const pref = naval ? 'destroyer' : air ? 'fighter' : 'tank';
