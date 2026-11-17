@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { loadSave, saveOptions, savedCampaign, saveCampaign, record, recordOf, clearSave } from './save.js';
 import { initTouch, updateTouch } from './touch.js';
 import { updateGamepads, PAD_HELP } from './gamepad.js';
 import { applyQuality, autoQuality, updateFps, QUALITY } from './quality.js';
@@ -167,6 +168,9 @@ function buildFrontMenu() {
       <span class="fd">Elige cualquiera de los ${Object.keys(MODELS).length} modelos, coloca blancos fijos o enemigos con IA y prueba armas, blindajes, cámaras y controles.</span>
       <span class="fb"><i>Naval</i><i>Aérea</i><i>Tanques</i></span>
     </button>`;
+  const sc = savedCampaign();
+  $('contCamp').innerHTML = sc ? `<button class="btn" id="btnCont">Continuar campaña</button><span>${FRONTS[sc.front].name} · batalla ${sc.i + 1} de ${sc.list.length} · ${sc.score} pts${sc.unlocked.length ? ' · ' + sc.unlocked.length + (sc.unlocked.length === 1 ? ' unidad desbloqueada' : ' unidades desbloqueadas') : ''}</span><button class="ghost" id="btnDrop">Descartar</button>` : '';
+  if (sc) { $('btnCont').onclick = () => { initAudio(); applyVolumes(); G.campaign = JSON.parse(JSON.stringify(sc)); toDeploy(G.campaign.list[G.campaign.i], true); }; $('btnDrop').onclick = () => { saveCampaign(null); buildFrontMenu(); }; }
   $('fronts').querySelectorAll('.front').forEach(b => b.onclick = () => { initAudio(); applyVolumes(); if (b.dataset.test) launch('test'); else buildBattleMenu(b.dataset.front); });
 }
 function buildBattleMenu(fk) {
@@ -177,10 +181,11 @@ function buildBattleMenu(fk) {
       <div class="bh"><span class="bk">${i + 1}. ${KIND_NAME[k]}</span><span class="bt">${b.title}, ${b.year}</span></div>
       <p>${b.brief}</p>
       <div class="ros"><div><h4>Aliados (10)</h4><ul>${rosterHtml(b.allies)}</ul></div><div><h4>${f.enemyName} (10)</h4><ul>${rosterHtml(b.enemy)}</ul></div></div>
+      ${recordOf(key) ? `<p class="rec">Récord: <b>${recordOf(key).best}</b> pts · ${recordOf(key).wins} victoria${recordOf(key).wins === 1 ? '' : 's'} en ${recordOf(key).plays} partida${recordOf(key).plays === 1 ? '' : 's'}</p>` : ''}
       <button class="btn" data-key="${key}">Desplegar</button>
     </div>`; }).join('') + (f.battles.length > 1 ? `<div class="battle camp"><div class="bh"><span class="bk">Campaña</span><span class="bt">Las ${f.battles.length} batallas seguidas</span></div><p>${f.battles.map(k => KIND_NAME[k]).join(' → ')}. Las unidades que sobreviven ganan veteranía (★ Regular, ★★ Veterano, ★★★ Élite: más blindaje, precisión y cadencia), cada victoria da puntos extra de despliegue y desbloquea ${UNLOCKS[fk].map(k => MODELS[k].name).join(' y ')}. Si pierdes una batalla, la campaña termina.</p><button class="btn" data-camp="${fk}">Empezar campaña</button></div>` : '');
   $('battles').querySelectorAll('[data-key]').forEach(b => b.onclick = () => toDeploy(b.dataset.key));
-  $('battles').querySelectorAll('[data-camp]').forEach(b => b.onclick = () => { G.campaign = newCampaign(fk, f.battles.map(k => `${fk}-${k}`)); toDeploy(G.campaign.list[0], true); });
+  $('battles').querySelectorAll('[data-camp]').forEach(b => b.onclick = () => { G.campaign = newCampaign(fk, f.battles.map(k => `${fk}-${k}`)); saveCampaign(G.campaign); toDeploy(G.campaign.list[0], true); });
   show('scrBattle');
 }
 let lastOpts = {};
@@ -218,19 +223,21 @@ function showResults(res) {
   const score = Math.round(G.tickets.A + G.stats.kills * 50 - G.stats.lost * 20 + (win ? 500 : 0));
   if (G.campaign) G.campaign.score += score;
   const camp = endCampaignBattle(win);
+  const newRec = b.kind !== 'test' && record(G.battleKey, score, win);
   $('resTitle').textContent = win ? 'Victoria' : 'Derrota';
   $('resTitle').className = win ? 'win' : 'lose';
   $('resSub').textContent = `${KIND_NAME[b.kind]} · ${b.title}, ${b.year}`;
   $('resStats').innerHTML = [
     ['Duración', `${Math.floor(G.time / 60)} min ${Math.floor(G.time % 60)} s`],
     ['Enemigos destruidos', `${G.stats.kills}`], ['Unidades perdidas', `${G.stats.lost}`],
-    ['Puntos de batalla', `${Math.ceil(G.tickets.A)} contra ${Math.ceil(G.tickets.E)}`], ['Puntuación', `${score}`],
+    ['Puntos de batalla', `${Math.ceil(G.tickets.A)} contra ${Math.ceil(G.tickets.E)}`], ['Puntuación', `${score}${newRec ? ' · ¡nuevo récord!' : ''}`],
     ...(G.campaign ? [['Campaña acumulada', `${G.campaign.score}`]] : []),
     ...(camp ? [['Veteranos en la fuerza', `${camp.nVet}`], ...(camp.bonus ? [['Puntos extra de despliegue', `+${camp.bonus}`]] : []), ...(camp.unlocked ? [['Nueva unidad disponible', camp.unlocked]] : []), ...camp.promos.slice(0, 6).map(p => ['Ascenso', p])] : []),
   ].map(([a, v]) => `<div><span>${a}</span><b>${v}</b></div>`).join('');
   const c = G.campaign, next = c && win && c.i + 1 < c.list.length ? c.list[c.i + 1] : null;
   $('resNext').classList.toggle('hide', !next);
   if (next) { $('resNext').textContent = `Siguiente: ${KIND_NAME[BATTLES[next].kind]}`; $('resNext').onclick = () => { c.i++; toDeploy(next, true); }; }
+  if (c) saveCampaign(next ? { ...c, i: c.i + 1 } : null);
   if (c && (!win || !next)) { $('resSub').textContent += win ? ' · Campaña completada' : ' · Campaña terminada'; }
   $('resRetry').onclick = () => { if (c) { c.score -= score; restoreSnapshot(); } launch(G.battleKey, !!c, lastOpts); };
   $('resMenu').onclick = () => { G.campaign = null; toMenu(); };
@@ -238,7 +245,7 @@ function showResults(res) {
   $('resReplay').onclick = () => { $('results').classList.add('hide'); $('replayTag').classList.remove('hide'); startReplay(() => { $('replayTag').classList.add('hide'); show('results'); }); };
   show('results');
 }
-function toMenu() { endPlacement(); sandboxHide(); hudHide(); G.running = false; show('scrFront'); startDemo(); }
+function toMenu() { endPlacement(); sandboxHide(); hudHide(); G.running = false; buildFrontMenu(); show('scrFront'); startDemo(); }
 $('backFront').onclick = () => show('scrFront');
 $('backBattle').onclick = () => show('scrBattle');
 initDeployUI();
@@ -270,6 +277,8 @@ function doSupport(kind) {
 G.onSupport = (side, kind, p) => { if (!G.demo) { if (side === 'E') RADIO.incoming(kind); else RADIO.support(kind); } if (side === 'E' && !G.demo) { if (kind === 'barrage') flash('¡Artillería enemiga!', 'Busca la marca de humo y apártate', 2); else if (kind === 'air') flash('¡Ataque aéreo enemigo!', '', 1.6); } };
 initSoundUI();
 G.opts = G.opts || { cine: true, fps: false, quality: autoQuality() };
+loadSave(); G.onOptions = saveOptions; initSoundUI();
+$('optCine').checked = G.opts.cine;
 applyQuality(G.opts.quality);
 function qualUI() { for (const id of ['optQual', 'optQual2']) { const el = $(id); el.innerHTML = Object.entries(QUALITY).map(([k, q]) => `<option value="${k}" ${k === G.opts.quality ? 'selected' : ''}>${q.n}</option>`).join(''); el.onchange = () => { G.opts.quality = el.value; applyQuality(el.value); qualUI(); G.onOptions && G.onOptions(); }; } $('optFps').checked = G.opts.fps; }
 qualUI();

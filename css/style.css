@@ -183,3 +183,4 @@ em.vet{font-style:normal;color:#f2c94c}.sqn i.rk{font-style:normal;color:#f2c94c
 #touch button.on{transform:scale(.93);filter:brightness(1.4)}
 body.touchui #orders{display:none}body.touchui #squad{max-height:38vh!important}
 @media (max-height:520px){body.touchui #squad,body.touchui #support{display:none}body.touchui #unit{transform:scale(.78);transform-origin:top left}body.touchui #right{transform:scale(.7);transform-origin:top right}#touch .joy{width:120px;height:120px;left:18px;bottom:18px}}
+#contCamp{display:flex;gap:14px;align-items:center;margin:18px 0 6px;flex-wrap:wrap}#contCamp:empty{display:none}#contCamp span{opacity:.85;font-size:14px}p.rec{font-size:13px;color:#f2c94c;margin:6px 0 0}
