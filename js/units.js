@@ -25,6 +25,7 @@ function mkEnt(o) {
   }, o);
   e.hp = e.s.hp; e.r = ud.r || e.s.r || 6;
   e.ammo = { ...(e.s.ammo || {}) }; e.ammoMax = { ...(e.s.ammo || {}) };
+  if (e.s.hangar) { e.hangar = e.s.hangar; e.planeKey = o.m.plane; e.cd.launch = 2; }
   e.mesh.rotation.order = 'YXZ';
   return e;
 }
@@ -605,6 +606,7 @@ export function controlPlayer(e, dt) {
   }
   if (e.dom === 'sea') {
     driveShip(e, thr, steer, dt);
+    if (e.cls === 'carrier') { fireAA(e); if (f2) launchPlane(e); e.target = null; return; }
     if (once('KeyC')) { if (e.cls === 'sub') toggleDive(e); else if (e.s.dc) dropDC(e); }
     if (K('KeyC') && e.s.dc && e.cls !== 'sub') dropDC(e);
     const filt = targetFilter(e), rng = e.cls === 'sub' ? 900 : weaponRange(e);
@@ -761,6 +763,8 @@ function think(e) {
   }
   // rearme: volver a la base cuando se acaba la munición
   if (needsRearm(e)) e.rearming = true; else if (e.rearming && ammoFrac(e) > 0.85) e.rearming = false;
+  const home = e.home && G.ents.find(x => x.id === e.home && x.alive);
+  if (home && (e.rearming || e.hp < e.s.hp * 0.4)) { e.goal = home.p.clone(); e.alt = home.top + 30; e.landing = home; } else e.landing = null;
   if (e.rearming && G.bases && G.bases[e.side] && G.bases[e.side][e.dom]) { e.goal = G.bases[e.side][e.dom].clone(); if (needsRearm(e) && e.cls !== 'bomber') e.target = null; if (e.cls === 'bomber' && e.ammo.bomb < 1) e.target = null; }
   // submarino: caza de submarinos con cargas de profundidad
   if (e.s.dc) {
@@ -785,9 +789,34 @@ export function aiUnit(e, dt) {
   else if (e.dom === 'air') aiPlane(e, t, goal, dt);
   else aiStatic(e, dt);
 }
+export function launchPlane(e) {
+  if (!e.hangar || e.cd.launch > 0 || !e.alive) return null;
+  const f = fwdOf(e), at = e.p.clone().addScaledVector(f, e.hl * 0.8);
+  const p = spawnUnit(e.planeKey, e.side, at.x, at.z, e.h);
+  p.p.y = e.top + 2; p.vy = 6; p.speed = p.s.max * 0.8; p.home = e.id;
+  p.order = { type: 'escort', lead: e.id };
+  if (e.side === 'A') { p.slot = G.ents.filter(x => x.side === 'A').length; G.selection.add(p); }
+  e.hangar--; e.cd.launch = 5;
+  G.onMsg && e === G.player && G.onMsg('Avión en el aire', `${p.name} · quedan ${e.hangar} en el hangar`);
+  return p;
+}
+// aterrizaje: el avión vuelve al hangar (reparado y rearmado)
+export function recoverPlane(p, c) {
+  if (!p.alive || !c || !c.alive) return false;
+  p.alive = false; p.gone = true; p.mesh.visible = false; c.hangar++;
+  if (p === G.player) { G.player = c; G.onMsg && G.onMsg('Aterrizaje completado', 'Vuelves al mando del portaaviones'); }
+  return true;
+}
 function aiShip(e, t, goal, dt) {
   let ang = angTo(e, goal), thr = 0.9;
   const dg = dist2(e.p, goal);
+  if (e.cls === 'carrier') {
+    const own = G.ents.filter(x => x.alive && x.home === e.id).length;
+    if (own < 3 && e.hangar > 0) launchPlane(e);
+    const foe = G.ents.find(o => o.alive && o.side !== e.side && o.dom === 'sea' && !o.submerged && o.cls !== 'carrier' && dist2(o.p, e.p) < 950);
+    if (foe) { ang = angTo(e, foe.p) + Math.PI; thr = 1; } else if (dg < 150) { thr = 0.3; ang = angTo(e, goal) + Math.PI / 2; }
+    ang = avoid(e, ang); driveShip(e, thr, steerTo(e, ang), dt); fireAA(e); return;
+  }
   if (e.cls === 'sub') {
     if (!e.submerged && e.battery > 0.6 && (t || dg < 900)) toggleDive(e);
     if (e.submerged && e.battery < 0.12) { toggleDive(e); e.ai.esc = 8; }
@@ -918,6 +947,8 @@ export function updateUnits(dt) {
     if (!e.alive) continue;
     updateMods(e, dt);
     if (!e.alive) continue;
+    if (e.landing && e.landing.alive && dist2(e.p, e.landing.p) < 70) { recoverPlane(e, e.landing); continue; }
+    if (e === G.player && e.dom === 'air' && G.keysOnce.has('KeyL')) { const c = G.ents.find(x => x.alive && x.cls === 'carrier' && x.side === e.side && dist2(x.p, e.p) < 120 && e.p.y - x.top < 60); if (c) recoverPlane(e, c); else G.onMsg && G.onMsg('No hay portaaviones debajo', 'Acércate a menos de 120 m y baja de 60 m'); }
     if (e.cls === 'inf') { const n = Math.ceil(e.hp / e.s.hp * 6); e.mesh.userData.soldiers.forEach((so, i) => so.visible = i < n); }
     if (e.dom !== 'static' && e.cls !== 'inf' && e.hp < e.s.hp * 0.5 && Math.random() < 0.35) FX.trailSmoke(e.p.clone().setY(e.p.y + (e.dom === 'air' ? 0 : e.top * 0.6)), e.hp < e.s.hp * 0.25, e.dom === 'sea' ? 1.6 : 1);
     if (e.dom === 'static' && e.hp < e.s.hp * 0.6 && Math.random() < 0.2) FX.fire(e.p.clone().setY(e.p.y + 3), 1.4);

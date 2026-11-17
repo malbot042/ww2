@@ -23,8 +23,8 @@ export const BATTLES = {
   'pacific-naval': {
     front: 'pacific', kind: 'naval', map: 'pacific_sea', title: 'Islas Salomón', year: '1942',
     brief: 'Controla los tres pasos entre islas (A, B, C). Los destructores japoneses llevan torpedos Long Lance de largo alcance: pon tus cañones de costado y usa los submarinos para emboscar.',
-    allies: [['baltimore', 1], ['fletcher', 5], ['gato', 2], ['pt109', 2]],
-    enemy: [['takao', 1], ['kagero', 7], ['i15', 2]],
+    allies: [['yorktown', 1], ['baltimore', 1], ['fletcher', 5], ['gato', 2], ['pt109', 2]],
+    enemy: [['akagi', 1], ['takao', 1], ['kagero', 7], ['i15', 2]],
   },
   'pacific-air': {
     front: 'pacific', kind: 'air', map: 'pacific_air', title: 'Midway', year: '1942',
@@ -107,6 +107,7 @@ export const CLS = {
   atgun: { dom: 'land', hp: 120, max: 1.6, acc: 3, turn: 0.45, value: 12, gun: { range: 540, rof: 3.4, dmg: 82 }, armor: [0.85, 1.2, 1.5], tsp: 0.7, ammo: { ap: 40, he: 20 }, soft: true },
   site: { dom: 'static', hp: 1000, value: 150 },
   aa: { dom: 'static', hp: 90, value: 4, flak: { range: 420, rof: 1.2, dmg: 15 } },
+  carrier: { dom: 'sea', hp: 2000, max: 30, acc: 4, turn: 0.3, len: 110, beam: 13, fb: 6, value: 120, aa: { range: 340, rof: 0.08, dmg: 3 }, hangar: 6 },
   merchant: { dom: 'sea', hp: 600, max: 18, acc: 4, turn: 0.35, len: 56, beam: 8, fb: 3.5, value: 35, aa: { range: 220, rof: 0.35, dmg: 2 } },
   battery: { dom: 'static', hp: 650, value: 40, main: { range: 950, rof: 5, dmg: 38, hs: 300, n: 1 } },
 };
@@ -122,6 +123,8 @@ export const MODELS = {
   takao: { cls: 'cruiser', fac: 'jp', name: 'IJN Takao', type: 'Crucero pesado', hull: 0x595f63, sup: 0x6e7478, deck: 0x7a5a3e, turrets: [0.37, 0.29, 0.21, -0.26, -0.35], tw: 2, funnels: [0.0], bigBridge: true, stats: { torp: { n: 4, cd: 30, dmg: 180 }, main: { range: 960, rof: 3.8, dmg: 40, hs: 320, n: 2 } } },
   town: { cls: 'cruiser', fac: 'uk', name: 'HMS Belfast (Town)', type: 'Crucero ligero', hull: 0x7f888c, sup: 0xadb4b7, deck: 0x6b6a64, turrets: [0.33, 0.23, -0.25, -0.34], tw: 3, funnels: [0.05, -0.08], stats: { main: { range: 940, rof: 3.2, dmg: 34, hs: 320, n: 3 } } },
   hipper: { cls: 'cruiser', fac: 'de', name: 'Admiral Hipper', type: 'Crucero pesado', hull: 0x868d91, sup: 0xa4aaad, deck: 0x9a7d5d, turrets: [0.33, 0.24, -0.25, -0.34], tw: 2, funnels: [0.0], bigBridge: true, stats: { torp: { n: 4, cd: 30, dmg: 150 }, main: { range: 980, rof: 3.8, dmg: 46, hs: 320, n: 2 } } },
+  yorktown: { cls: 'carrier', fac: 'us', name: 'USS Yorktown', type: 'Portaaviones', hull: 0x4b5864, sup: 0x8b949a, deck: 0x7a6a50, plane: 'wildcat' },
+  akagi: { cls: 'carrier', fac: 'jp', name: 'IJN Akagi', type: 'Portaaviones', hull: 0x595f63, sup: 0x6e7478, deck: 0x8a6a48, plane: 'zero', islandPort: true },
   gato: { cls: 'sub', fac: 'us', name: 'USS Wahoo (Gato)', type: 'Submarino', hull: 0x2c3237, sup: 0x3a4045, deck: 0x34393d },
   i15: { cls: 'sub', fac: 'jp', name: 'I-15 (Tipo B1)', type: 'Submarino', hull: 0x2e3133, sup: 0x3b3e40, deck: 0x35383a, stats: { torp: { n: 3, cd: 16, dmg: 190 } } },
   tclass: { cls: 'sub', fac: 'uk', name: 'HMS Tally-Ho (Clase T)', type: 'Submarino', hull: 0x4a5257, sup: 0x5a6267, deck: 0x50575b },

@@ -229,6 +229,7 @@ function command(side) {
   const sorted = units.slice().sort((a, b) => a.id - b.id);
   for (const e of sorted) {
     if (mixed && e.dom === 'air') continue;
+    if (e.cls === 'carrier') { e.order = { type: 'hold', x: G.bases[side].sea ? G.bases[side].sea.x : e.p.x, z: G.bases[side].sea ? G.bases[side].sea.z : e.p.z }; continue; }
     if (e.cls === 'atgun') { if (e.order.type !== 'hold') e.order = { type: 'hold', x: e.p.x, z: e.p.z }; continue; }
     let best = -1, bs = -1e9;
     zs.forEach((z, k) => { if (mixed && z.dom !== e.dom) return; const sc = w[k] / (cnt[k] + 1) - e.p.distanceTo(z.pos) / 2500 + (e.order.type === 'zone' && e.order.k === k ? 0.25 : 0); if (sc > bs) { bs = sc; best = k; } });

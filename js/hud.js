@@ -34,11 +34,13 @@ function weaponLines(e) {
   const aim = v => A.ap !== undefined && n('ap') + n('he') < 1 ? '<b class="bad">SIN MUNICIÓN</b>' : v > 0 ? '<b>' + v.toFixed(1) + ' s</b>' : !e.target ? '<b>SIN BLANCO</b>' : e.aimReady ? '<b class="ok">LISTO</b>' : '<b class="warn">APUNTANDO</b>';
   const ammoLine = () => A.ap !== undefined ? [`N · Munición`, `<b class="sel ${e.ammoSel === 'ap' ? 'on' : ''}">AP ${n('ap')}</b> <b class="sel ${e.ammoSel === 'he' ? 'on' : ''}">HE ${n('he')}</b>`] : null;
   if (e.cls === 'destroyer' || e.cls === 'cruiser') { L.push(['Espacio · Artillería', aim(e.cd.main)], ammoLine()); if (s.torp) L.push(['Shift · Torpedos' + cnt('torp'), cd(e.cd.torp, 'torp')]); if (s.dc) L.push(['C · Cargas de profundidad' + cnt('dc'), cd(e.cd.dc, 'dc')]); }
+  else if (e.cls === 'carrier') { L.push(['Shift · Lanzar avión', `<b class="${e.hangar ? 'ok' : 'bad'}">${e.hangar} en hangar${e.cd.launch > 0 ? ' · ' + e.cd.launch.toFixed(0) + ' s' : ''}</b>`], ['Antiaéreos', '<b class="ok">AUTO</b>']); }
   else if (e.cls === 'pt') { L.push(['Espacio · Ametralladoras', '<b class="ok">AUTO</b>']); L.push(['Shift · Torpedos' + cnt('torp'), cd(e.cd.torp, 'torp')]); }
   else if (e.cls === 'sub') { L.push(['Espacio · Torpedos (proa)' + cnt('torp'), cd(e.cd.torp, 'torp')]); L.push(['Shift · Cañón de cubierta' + cnt('deck'), e.submerged ? '<b>—</b>' : cd(e.cd.main, 'deck')]); L.push(['C · ' + (e.submerged ? 'Emerger' : 'Sumergirse'), `<b class="${e.battery < 0.25 ? 'bad' : ''}">Batería ${Math.round(e.battery * 100)}%</b>`]); }
   else if (e.dom === 'air') {
     L.push(['Espacio · Ametralladoras' + cnt('guns'), n('guns') < 1 ? '<b class="bad">AGOTADO</b>' : '<b class="ok">AUTO</b>'], ['Shift · Bomba' + cnt('bomb'), cd(e.cd.bomb, 'bomb')]);
     const agl = Math.round(e.p.y - G.map.gy(e.p.x, e.p.z));
+    if (G.ents.some(c => c.alive && c.cls === 'carrier' && c.side === e.side)) L.push(['L · Aterrizar en el portaaviones', '<b>baja de 60 m sobre él</b>']);
     L.push(['↑ picar · ↓ subir', `<b class="${agl < 30 ? 'bad blink' : ''}">Altitud ${agl} m${agl < 30 ? ' ¡BAJO!' : ''}</b>`]);
   }
   else if (e.cls === 'inf') { L.push(['Espacio · Fusiles', '<b class="ok">AUTO</b>'], [`Shift · ${e.fac === 'de' ? 'Panzerschreck' : e.fac === 'uk' ? 'PIAT' : e.fac === 'jp' ? 'Carga antitanque' : 'Bazuca'}` + cnt('rocket'), cd(e.cd.rocket, 'rocket')]); L.push(['Soldados', `<b>${Math.ceil(e.hp / e.s.hp * 6)}/6</b>`]); }

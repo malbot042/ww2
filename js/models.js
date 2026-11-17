@@ -268,6 +268,23 @@ function buildATGun(m) {
   return g;
 }
 
+function buildCarrier(m) {
+  const c = CLS.carrier, L = c.len, B = c.beam, F = c.fb, g = new THREE.Group();
+  const hullM = mat(m.hull, { r: 0.6 }), supM = mat(m.sup, { r: 0.6 }), deckM = mat(m.deck, { r: 0.85, m: 0 }), dk = mat(DARK), wh = mat(0xe8e6de, { r: 0.8 });
+  const hg = extrudeUp(hullShape(L, B, 0.25), F + 3); hg.translate(0, -3, 0); g.add(new THREE.Mesh(hg, hullM));
+  g.add(box(B * 1.45, 1, L * 1.04, hullM, 0, F + 1.6, 0)); // galería bajo la cubierta
+  g.add(box(B * 1.4, 0.4, L * 1.02, deckM, 0, F + 2.3, 0)); // cubierta de vuelo
+  for (let k = -5; k <= 5; k++) g.add(box(0.5, 0.05, L * 0.05, wh, 0, F + 2.52, k * L * 0.09)); // línea central
+  g.add(box(B * 1.3, 0.05, 0.5, wh, 0, F + 2.52, L * 0.49), box(B * 1.3, 0.05, 0.5, wh, 0, F + 2.52, -L * 0.49));
+  for (const z of [0.18, -0.28]) g.add(box(B * 0.55, 0.06, B * 0.55, mat(0x5e5141), 0, F + 2.52, z * L)); // ascensores
+  const sx = (m.islandPort ? -1 : 1) * B * 0.6;
+  g.add(box(B * 0.22, 6, L * 0.16, supM, sx, F + 5.5, L * 0.05), box(B * 0.2, 3, L * 0.08, supM, sx, F + 10, L * 0.07));
+  g.add(cyl(1.3, 1.4, 7, dk, 12, sx, F + 9, -L * 0.04), cyl(0.15, 0.2, 10, dk, 6, sx, F + 15, L * 0.08));
+  // aviones aparcados en la popa
+  for (let k = 0; k < 4; k++) { const pg = new THREE.Group(); pg.add(box(1.2, 0.8, 6, supM), box(9, 0.3, 1.6, supM, 0, 0.1, 0.6), box(3.2, 0.2, 0.8, supM, 0, 0.2, -2.4)); pg.position.set((k % 2 ? 1 : -1) * B * 0.3, F + 3, -L * 0.36 + Math.floor(k / 2) * 9); g.add(pg); }
+  g.userData = { turrets: [], hw: B * 0.72, hl: L / 2, top: F + 12 };
+  return g;
+}
 function buildMerchant(m) {
   const c = CLS.merchant, L = c.len, B = c.beam, F = c.fb, g = new THREE.Group();
   const hullM = mat(m.hull, { r: 0.7 }), supM = mat(m.sup, { r: 0.6 }), deckM = mat(m.deck, { r: 0.9, m: 0 }), dk = mat(DARK);
@@ -293,7 +310,7 @@ export function buildBattery(fac) {
 }
 export function buildModel(key) {
   const m = MODELS[key], dom = CLS[m.cls].dom;
-  const g = m.cls === 'merchant' ? buildMerchant(m) : dom === 'sea' ? buildShip(m) : dom === 'air' ? buildPlane(m) : m.cls === 'inf' ? buildInfantry(m) : m.cls === 'atgun' ? buildATGun(m) : buildTank(m);
+  const g = m.cls === 'merchant' ? buildMerchant(m) : m.cls === 'carrier' ? buildCarrier(m) : dom === 'sea' ? buildShip(m) : dom === 'air' ? buildPlane(m) : m.cls === 'inf' ? buildInfantry(m) : m.cls === 'atgun' ? buildATGun(m) : buildTank(m);
   g.traverse(o => { if (o.isMesh && !(o.material instanceof THREE.MeshBasicMaterial)) { o.castShadow = true; o.receiveShadow = true; } });
   return g;
 }

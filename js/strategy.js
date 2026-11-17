@@ -82,6 +82,8 @@ export function resetStrategy() {
 }
 export function updateStrategy(dt) {
   if (!G.cp) return;
+  // el portaaviones vivo es la base aérea móvil de su bando
+  for (const c of G.ents) if (c.cls === 'carrier' && c.alive && G.bases && G.bases[c.side]) G.bases[c.side].air = c.p;
   const b = G.battle;
   // ingresos: base + objetivos controlados (o instalaciones vivas en batallas aéreas)
   for (const s of ['A', 'E']) {
