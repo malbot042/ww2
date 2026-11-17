@@ -4,6 +4,7 @@ import { MODELS, specOf, CLS } from './data.js';
 import { buildModel, buildSite, buildAA, buildBattery } from './models.js';
 import * as FX from './fx.js';
 import { clamp, rnd, angDiff, V3 } from './util.js';
+const seen = (e, o) => !G.fog || o['vis' + e.side] !== false;
 
 const GRAV = 60;
 let uid = 1;
@@ -111,7 +112,7 @@ function playerScore(e, o, d, range) {
   return sc;
 }
 function candidates(e, filt, range) {
-  return G.ents.filter(o => o.alive && o.side !== e.side && !o.falling && filt(o) && o.p.distanceTo(e.p) <= range && !(e.dom === 'land' && smokeBlocks(e.p, o.p)));
+  return G.ents.filter(o => o.alive && o.side !== e.side && !o.falling && filt(o) && seen(e, o) && o.p.distanceTo(e.p) <= range && !(e.dom === 'land' && smokeBlocks(e.p, o.p)));
 }
 export function lockTarget(e, o) { e.lock = o; e.target = o; }
 function playerTarget(e, filt, range) {
@@ -133,7 +134,7 @@ export function weaponRange(e) {
 export function pickTarget(e, filter, range, preferAim = false) {
   let best = null, bs = 1e9;
   for (const o of G.ents) {
-    if (!o.alive || o.side === e.side || o.falling || !filter(o)) continue;
+    if (!o.alive || o.side === e.side || o.falling || !filter(o) || !seen(e, o)) continue;
     const d = o.p.distanceTo(e.p); if (d > range) continue;
     if (e.dom === 'land' && smokeBlocks(e.p, o.p)) continue;
     let sc = d;
@@ -215,6 +216,7 @@ export function kill(e, by) {
   if (!e.alive) return;
   e.alive = false; e.hp = 0;
   G.tickets[e.side] = Math.max(0, G.tickets[e.side] - e.s.value);
+  if (G.cp && !e.support) G.cp[e.side === 'A' ? 'E' : 'A'] += e.s.value * 0.6;
   if (e.side === 'E') G.stats.kills++; else if (e.dom !== 'static' || e.cls === 'site') G.stats.lost++;
   G.onKill && G.onKill(e, by);
   const p = e.p.clone();
@@ -236,7 +238,9 @@ function proj(kind, owner, from, v, o = {}) {
   const m = new THREE.Mesh(PG[kind], kind === 'bomb' || kind === 'torp' || kind === 'dc' ? PM.dark : kind === 'naval' ? PM.naval : PM[owner.side]);
   m.position.copy(from); G.unitsGroup.add(m);
   const q = Object.assign({ kind, side: owner.side, owner, m, p: m.position, v, dmg: 10, life: 3, grav: 0, age: 0 }, o);
-  m.lookAt(tmp.copy(from).add(v)); G.projs.push(q); return q;
+  m.lookAt(tmp.copy(from).add(v)); G.projs.push(q);
+  if (kind !== 'torp' && kind !== 'dc') owner.revealT = 2;
+  return q;
 }
 function removeProj(i) { const q = G.projs[i]; G.unitsGroup.remove(q.m); G.projs.splice(i, 1); }
 export function clearProjs() { for (let i = G.projs.length - 1; i >= 0; i--) removeProj(i); }
@@ -569,7 +573,7 @@ function flyPlane(e, thr, steer, dt) {
   const f = fwdOf(e);
   e.p.x += f.x * e.speed * dt; e.p.z += f.z * e.speed * dt;
   const b = G.map.bounds + 150;
-  if (Math.abs(e.p.x) > b || Math.abs(e.p.z) > b) { const back = Math.atan2(-e.p.x, -e.p.z); e.h += clamp(angDiff(back, e.h), -s.turn * dt * 1.2, s.turn * dt * 1.2); e.bank = 0.8 * Math.sign(angDiff(back, e.h)); }
+  if (!e.leaving && (Math.abs(e.p.x) > b || Math.abs(e.p.z) > b)) { const back = Math.atan2(-e.p.x, -e.p.z); e.h += clamp(angDiff(back, e.h), -s.turn * dt * 1.2, s.turn * dt * 1.2); e.bank = 0.8 * Math.sign(angDiff(back, e.h)); }
   e.mesh.rotation.y = e.h; e.mesh.rotation.z = -e.bank; e.mesh.rotation.x = -Math.atan2(e.vy, e.speed);
   if (e.mesh.userData.prop) e.mesh.userData.prop.rotation.z += dt * 50;
   // choque contra el suelo o el agua
@@ -653,13 +657,27 @@ function avoid(e, ang) {
   for (const d of [0.4, 0.8, 1.2, 1.7, 2.3, 3.0]) { if (free(ang + d * e.ai.dir)) return ang + d * e.ai.dir; if (free(ang - d * e.ai.dir)) { e.ai.dir *= -1; return ang + d * e.ai.dir; } }
   return ang + Math.PI;
 }
+export function formationOffset(i, sp, kind = G.formation) {
+  const row = Math.floor(i / 2) + 1, side = i % 2 ? 1 : -1;
+  if (kind === 'línea') return [side * row * sp * 0.9, -sp * 0.3];
+  if (kind === 'columna') return [0, -(i + 1) * sp * 0.85];
+  return [side * row * sp * 0.75, -row * sp * 0.6]; // cuña
+}
 function formationPoint(e, leader, sp) {
-  const i = e.slot || 0, row = Math.floor(i / 2) + 1, side = i % 2 ? 1 : -1;
-  const lx = side * row * sp * 0.75, lz = -row * sp * 0.6;
+  const [lx, lz] = formationOffset(e.slot || 0, sp, leader === G.player ? G.formation : 'cuña');
   const r = V3(Math.cos(leader.h), 0, -Math.sin(leader.h)), f = V3(Math.sin(leader.h), 0, Math.cos(leader.h));
   return leader.p.clone().addScaledVector(r, lx).addScaledVector(f, lz);
 }
-function nearestEnemy(e, filt) { let b = null, bd = 1e9; for (const o of G.ents) { if (!o.alive || o.side === e.side || o.falling || !filt(o)) continue; const d = dist2(o.p, e.p); if (d < bd) { bd = d; b = o; } } return b; }
+function nearestEnemy(e, filt) {
+  let b = null, bd = 1e9;
+  for (const o of G.ents) {
+    if (!o.alive || o.side === e.side || o.falling || !filt(o)) continue;
+    let p = o.p;
+    if (!seen(e, o)) { const t = o['seen' + e.side]; if (t === undefined || G.time - t > 30) continue; p = o['last' + e.side]; }
+    const d = dist2(p, e.p); if (d < bd) { bd = d; b = { p, alive: true }; }
+  }
+  return b;
+}
 const anchorCache = new Map();
 export function clearAnchors() { anchorCache.clear(); }
 function domOK(e, x, z) { const h = G.map.h(x, z); return e.dom === 'land' ? h > 1 : h < -6; }
@@ -695,12 +713,30 @@ export function orderPoint(e) {
       return at(z.pos.x, z.pos.z, G.map.cfg.zoneR * 0.5);
     }
     case 'escort': { const L = G.ents.find(x => x.id === o.lead && x.alive); return L ? formationPoint(e, L, 50) : null; }
-    case 'hold': case 'move': return anchorFor(e, o.x, o.z);
+    case 'hold': return anchorFor(e, o.x, o.z);
+    case 'move': return anchorFor(e, o.x + (o.ox || 0), o.z + (o.oz || 0));
+    case 'route': { const p = o.pts[Math.min(o.i, o.pts.length - 1)]; return anchorFor(e, p.x + (o.ox || 0), p.z + (o.oz || 0)); }
+    case 'strike': return e.leaving ? V3(e.p.x + Math.sin(e.h) * 3000, 0, e.p.z + Math.cos(e.h) * 3000) : e.strike.clone();
     case 'attack': { const t = nearestEnemy(e, e.dom === 'air' ? (e.cls === 'bomber' ? o2 => o2.dom !== 'air' && !o2.submerged : isPlane) : targetFilter(e)); return t ? anchorFor(e, t.p.x, t.p.z) : null; }
   }
   return null;
 }
+const ARRIVE = { land: 30, sea: 90, air: 140, static: 10 };
+function orderDone(e) {
+  const o = e.order;
+  if (o.type === 'route') return o.i >= o.pts.length;
+  if (o.type === 'move') return e.goal && dist2(e.p, e.goal) < ARRIVE[e.dom];
+  if (o.type === 'zone') {
+    if (G.battle.kind === 'air') { const s = (e.side === 'A' ? G.sitesE : G.sitesA)[o.k]; return !s || !s.alive; }
+    const z = G.objectives[o.k]; return z && z.owner === e.side && dist2(e.p, z.pos) < G.map.cfg.zoneR;
+  }
+  return false;
+}
 function think(e) {
+  // rutas: avanzar al siguiente punto; colas: pasar a la siguiente orden
+  if (e.order.type === 'route' && e.goal && dist2(e.p, e.goal) < ARRIVE[e.dom]) e.order.i++;
+  if (e.queue && e.queue.length && orderDone(e)) { e.order = e.queue.shift(); }
+  else if (e.order.type === 'route' && e.order.i >= e.order.pts.length) { const p = e.order.pts[e.order.pts.length - 1]; e.order = { type: 'hold', x: p.x + (e.order.ox || 0), z: p.z + (e.order.oz || 0) }; }
   const leash = e.order.type === 'move' ? 0 : e.order.type === 'hold' ? 0.9 : 1.6;
   e.goal = orderPoint(e);
   if (!e.goal) { if (e.order.type === 'follow') { e.order = { type: 'attack' }; e.goal = orderPoint(e); } }
@@ -713,6 +749,16 @@ function think(e) {
     // si el objetivo de la orden cayó, buscar el siguiente
     if (!e.target && e.order.type === 'zone' && G.battle.kind === 'air') { e.order = { type: 'attack' }; }
   } else e.target = engageR ? pickTarget(e, targetFilter(e), engageR) : null;
+  // apoyo aéreo: bombardear el punto marcado y marcharse
+  if (e.support) {
+    if (!e.leaving && e.ammo.bomb >= 1) e.target = { p: e.strike, vel: V3(), hw: 8, alive: true, dom: 'land', fake: true };
+    else { e.leaving = true; e.target = null; }
+  }
+  // retirada para reparar cuando la unidad está muy dañada (solo IA)
+  if (e !== G.player && G.bases && G.bases[e.side] && G.bases[e.side][e.dom] && e.dom !== 'static' && e.cls !== 'atgun' && !e.support) {
+    if (e.hp < e.s.hp * 0.3) e.retreating = true; else if (e.hp > e.s.hp * 0.7) e.retreating = false;
+    if (e.retreating) e.goal = G.bases[e.side][e.dom].clone();
+  }
   // rearme: volver a la base cuando se acaba la munición
   if (needsRearm(e)) e.rearming = true; else if (e.rearming && ammoFrac(e) > 0.85) e.rearming = false;
   if (e.rearming && G.bases && G.bases[e.side] && G.bases[e.side][e.dom]) { e.goal = G.bases[e.side][e.dom].clone(); if (needsRearm(e) && e.cls !== 'bomber') e.target = null; if (e.cls === 'bomber' && e.ammo.bomb < 1) e.target = null; }
@@ -789,6 +835,15 @@ function aiTank(e, t, goal, dt) {
   if ((sx || sz) && thr) ang = Math.atan2(Math.sin(ang) + sx * 1.2, Math.cos(ang) + sz * 1.2);
   if (thr > 0) ang = avoid(e, ang);
   if (e.blocked > 1.5) { e.ai.esc = 1.2; e.blocked = 0; e.ai.dir *= -1; }
+  // flanqueo: la mitad de los tanques busca el lateral del blanco si su frontal es más fuerte
+  if (e.cls === 'tank' && t && t.cls === 'tank' && e.id % 2 && !e.retreating && e.order.type !== 'hold' && t.s.armor[0] < 0.8) {
+    const d = dist2(e.p, t.p);
+    if (d < r * 1.2) {
+      const sx = Math.cos(t.h), sz = -Math.sin(t.h), side = ((e.p.x - t.p.x) * sx + (e.p.z - t.p.z) * sz) >= 0 ? 1 : -1;
+      const fp = V3(t.p.x + sx * side * r * 0.55 - Math.sin(t.h) * r * 0.1, 0, t.p.z + sz * side * r * 0.55 - Math.cos(t.h) * r * 0.1);
+      if (dist2(e.p, fp) > 40) { ang = angTo(e, fp); thr = 0.9; }
+    }
+  }
   if (e.cls === 'atgun') { // emplazado: solo gira para encarar al blanco
     if (dg > 40 && !t) thr = 0.6; else thr = 0;
     if (t) ang = angTo(e, t.p);
@@ -885,7 +940,7 @@ function updateMods(e, dt) {
     e.repairing -= dt;
     if (e.repairing <= 0) { e.repairing = 0; m.engine = m.rudder = m.controls = m.turret = false; m.tracks = 0; if (e === G.player && G.onMsg) G.onMsg('Reparación completada', 'Motor, timón, mandos y orugas operativos'); }
   }
-  const b = G.bases && G.bases[e.side] && G.bases[e.side][e.dom];
+  const b = !e.support && G.bases && G.bases[e.side] && G.bases[e.side][e.dom];
   e.atBase = false;
   if (b && Math.hypot(e.p.x - b.x, e.p.z - b.z) < BASE_R[e.dom]) {
     e.atBase = true;

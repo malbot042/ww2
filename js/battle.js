@@ -4,6 +4,8 @@ import { BATTLES, MODELS, CLS } from './data.js';
 import { buildWorld } from './world.js';
 import { spawnUnit, spawnSite, spawnAA, spawnBattery, clearProjs, clearAnchors } from './units.js';
 import { resetFx } from './fx.js';
+import { updateVision, updateStrategy, resetStrategy } from './strategy.js';
+import { formationOffset } from './units.js';
 import { V3, clamp, canvasTex } from './util.js';
 
 let markers = null, icons = new Map(), iconTex = {}, lines = null, selRings = new Map(), cmdT = { A: 0, E: 0 }, deadT = 0;
@@ -47,9 +49,10 @@ function labelTex(txt, color) {
 }
 
 // ---------- preparar batalla ----------
-export function startBattle(key, demo = false) {
+export function startBattle(key, demo = false, opts = {}) {
   clearBattle();
   const b = BATTLES[key]; G.battle = b; G.battleKey = key; G.demo = demo;
+  G.roster = opts.roster || b.allies; G.fog = !demo && b.kind !== 'test' && opts.fog !== false;
   const map = buildWorld(b.map);
   const naval = b.kind === 'naval', air = b.kind === 'air', mixed = b.kind === 'combined';
   clearAnchors();
@@ -101,7 +104,8 @@ export function startBattle(key, demo = false) {
     }
     return out;
   };
-  const allies = place(b.allies, 'A'), enemies = place(b.enemy, 'E');
+  const allies = place(G.roster, 'A'), enemies = place(b.enemy, 'E');
+  G.startCount = { A: allies.length, E: enemies.length };
   // cañones antitanque enemigos: ya emplazados junto a los objetivos de tierra
   const landZones = G.objectives.filter(z => z.dom === 'land');
   enemies.filter(e => e.cls === 'atgun').forEach((e, i) => {
@@ -138,6 +142,7 @@ export function startBattle(key, demo = false) {
   // líneas de órdenes
   lines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x9fd0ff, transparent: true, opacity: 0.55, depthTest: false }));
   lines.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(240), 3)); lines.renderOrder = 11; lines.frustumCulled = false; markers.add(lines);
+  resetStrategy();
   G.focus.copy(G.player ? G.player.p : V3(0, 0, sp));
   return { allies, enemies };
 }
@@ -152,16 +157,31 @@ export function removeEntity(e) {
 }
 
 // ---------- órdenes ----------
-const ORDER_TXT = { follow: 'Seguirme', zone: 'Objetivo', attack: 'Ataque libre', hold: 'Mantener', defend: 'Defender', move: 'Mover', escort: 'Escolta' };
-export function orderLabel(o) { return o.type === 'zone' ? `Objetivo ${'ABC'[o.k]}` : ORDER_TXT[o.type] || o.type; }
-export function issueOrder(type, arg = {}) {
-  const sel = [...G.selection].filter(e => e.alive && e !== G.player);
+const ORDER_TXT = { follow: 'Seguirme', zone: 'Objetivo', attack: 'Ataque libre', hold: 'Mantener', defend: 'Defender', move: 'Mover', escort: 'Escolta', route: 'Ruta', strike: 'Ataque a tierra' };
+export function orderLabel(o, q) { const t = o.type === 'zone' ? `Objetivo ${'ABC'[o.k]}` : o.type === 'route' ? `Ruta ${Math.min(o.i + 1, o.pts.length)}/${o.pts.length}` : ORDER_TXT[o.type] || o.type; return q && q.length ? t + ' → ' + q.map(x => x.type === 'zone' ? 'ABC'[x.k] : ORDER_TXT[x.type]).join(' → ') : t; }
+export function issueOrder(type, arg = {}, queued = false) {
+  const sel = [...G.selection].filter(e => e.alive && e !== G.player && !e.support);
   if (!sel.length) return 0;
-  for (const e of sel) {
-    if (type === 'hold') e.order = { type, x: e.p.x, z: e.p.z };
-    else e.order = { type, ...arg };
-    e.ai.think = 0;
+  // desplazamientos de formación alrededor del destino, orientados según la marcha
+  let offs = null;
+  if ((type === 'move' || type === 'route') && sel.length > 1) {
+    const c = V3(); sel.forEach(e => c.add(e.p)); c.divideScalar(sel.length);
+    const dest = type === 'route' ? arg.pt : V3(arg.x, 0, arg.z), h = Math.atan2(dest.x - c.x, dest.z - c.z);
+    const r = V3(Math.cos(h), 0, -Math.sin(h)), f = V3(Math.sin(h), 0, Math.cos(h));
+    offs = sel.map((e, i) => { const sp = e.dom === 'sea' ? 90 : e.dom === 'air' ? 50 : 34; const [lx, lz] = i === 0 ? [0, 0] : formationOffset(i - 1, sp); return [r.x * lx + f.x * lz, r.z * lx + f.z * lz]; });
   }
+  sel.forEach((e, i) => {
+    let o;
+    if (type === 'hold') o = { type, x: e.p.x, z: e.p.z };
+    else if (type === 'route') {
+      if (queued && e.order.type === 'route') { e.order.pts.push(arg.pt); e.ai.think = 0; return; }
+      o = { type: 'route', pts: [arg.pt], i: 0 };
+    } else o = { type, ...arg };
+    if (offs) { o.ox = offs[i][0]; o.oz = offs[i][1]; }
+    if (queued && type !== 'route') { e.queue = e.queue || []; e.queue.push(o); if (e.order.type === 'follow' || e.order.type === 'hold') e.order = e.queue.shift(); }
+    else { e.order = o; e.queue = []; }
+    e.ai.think = 0;
+  });
   return sel.length;
 }
 export function setPlayer(e) {
@@ -187,8 +207,14 @@ function command(side) {
   if (mixed) {
     units.filter(e => e.dom === 'air').forEach((e, i) => { e.order = e.cls === 'bomber' ? { type: 'attack' } : i % 2 ? { type: 'defend' } : { type: 'attack' }; });
   }
-  const enemyNear = zs.map(z => G.ents.filter(e => e.alive && e.side === enemySide && e.dom !== 'static' && e.p.distanceTo(z.pos) < R * 1.8).length);
-  const w = zs.map((z, k) => 1 + (z.owner !== side ? 1.2 : 0) + enemyNear[k] * 0.25);
+  // el mando solo cuenta a los enemigos que ve
+  const vk = 'vis' + side;
+  const enemyNear = zs.map(z => G.ents.filter(e => e.alive && e.side === enemySide && e.dom !== 'static' && e[vk] !== false && e.p.distanceTo(z.pos) < R * 1.8).length);
+  const mine = zs.map(z => G.ents.filter(e => e.alive && e.side === side && e.dom !== 'static' && e.p.distanceTo(z.pos) < R * 1.5).length);
+  // esfuerzo principal: el objetivo que no es nuestro con menos defensa enemiga, o el nuestro amenazado
+  let main = -1, ms = -1e9;
+  zs.forEach((z, k) => { const threatened = z.owner === side && enemyNear[k] > 0; const sc = (z.owner !== side ? 2 : 0) + (threatened ? 2.5 : 0) - enemyNear[k] * 0.4 + (z.owner === enemySide ? 0.5 : 0); if (sc > ms) { ms = sc; main = k; } });
+  const w = zs.map((z, k) => 1 + (z.owner !== side ? 1.2 : 0) + enemyNear[k] * 0.25 + (k === main ? 2.2 : 0) + (z.owner === side && enemyNear[k] > mine[k] ? 1.5 : 0));
   const cnt = [0, 0, 0];
   const sorted = units.slice().sort((a, b) => a.id - b.id);
   for (const e of sorted) {
@@ -207,7 +233,8 @@ export function updateBattle(dt) {
   G.time += dt;
   const b = G.battle;
   // mando IA
-  if (b.kind !== 'test') for (const s of ['A', 'E']) { cmdT[s] -= dt; if (cmdT[s] <= 0) { command(s); cmdT[s] = 12; } }
+  if (b.kind !== 'test') for (const s of ['A', 'E']) { cmdT[s] -= dt; if (cmdT[s] <= 0) { command(s); cmdT[s] = 7; } }
+  updateVision(dt); updateStrategy(dt);
   // zonas
   if (b.kind !== 'air') {
     const R = G.map.cfg.zoneR;
@@ -250,7 +277,7 @@ export function updateBattle(dt) {
 
 // ---------- iconos, anillos de selección y líneas de órdenes ----------
 const ringGeo = new THREE.RingGeometry(0.85, 1, 32);
-function updateMarkers() {
+export function updateMarkers() {
   const far = G.zoom > 650 || G.strategic;
   for (const e of G.ents) {
     let sp = icons.get(e);
@@ -258,11 +285,17 @@ function updateMarkers() {
     const kind = e.cls === 'sub' ? 'sub' : e.dom === 'static' ? (e.cls === 'site' || e.cls === 'battery' ? 'site' : 'aa') : e.dom;
     const tex = icon(e.side, kind, e === G.player);
     if (sp.material.map !== tex) { sp.material.map = tex; sp.material.needsUpdate = true; }
-    sp.visible = far && e.alive && (e.cls !== 'aa');
+    sp.visible = far && e.alive && (e.cls !== 'aa') && !e.gone;
     if (e.cls === 'battery') sp.visible = far && e.alive;
+    sp.material.opacity = 1;
+    if (e.side === 'E' && G.fog && e.alive && e.visA === false) {
+      const t = e.seenA, lp = e.lastA; sp.visible = sp.visible && t !== undefined && G.time - t < 25;
+      if (sp.visible) { sp.position.set(lp.x, Math.max(lp.y, 0) + 8, lp.z); sp.material.opacity = 0.35; }
+      continue;
+    }
     const sz = e === G.player ? 0.034 : e.cls === 'site' ? 0.032 : 0.026; sp.scale.set(sz, sz, 1);
     sp.position.set(e.p.x, Math.max(e.p.y, 0) + 8, e.p.z);
-    sp.material.opacity = e.submerged ? 0.55 : 1;
+    if (e.submerged) sp.material.opacity = 0.55;
     // anillo de selección
     let r = selRings.get(e); const sel = G.selection.has(e) && e.alive && e.side === 'A';
     if (sel && !r) { r = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x9fd0ff, transparent: true, opacity: 0.7, depthTest: false, side: THREE.DoubleSide })); r.rotation.x = -Math.PI / 2; r.renderOrder = 8; markers.add(r); selRings.set(e, r); }
@@ -270,6 +303,10 @@ function updateMarkers() {
   }
   // líneas de órdenes
   const arr = lines.geometry.attributes.position.array; let n = 0;
-  if (far || G.showSel) for (const e of G.selection) { if (!e.alive || n >= 39) continue; const g = e.goal; if (!g || e.order.type === 'follow' || e.order.type === 'attack') continue; arr.set([e.p.x, 6, e.p.z, g.x, 6, g.z], n * 6); n += 1; }
+  if (far || G.showSel) for (const e of G.selection) {
+    if (!e.alive || n >= 39) continue; const g = e.goal; if (!g || e.order.type === 'follow' || e.order.type === 'attack') continue;
+    arr.set([e.p.x, 6, e.p.z, g.x, 6, g.z], n * 6); n += 1;
+    if (e.order.type === 'route') { let a = g; for (let i = e.order.i + 1; i < e.order.pts.length && n < 39; i++) { const p = e.order.pts[i]; arr.set([a.x, 6, a.z, p.x + (e.order.ox || 0), 6, p.z + (e.order.oz || 0)], n * 6); a = V3(p.x + (e.order.ox || 0), 0, p.z + (e.order.oz || 0)); n++; } }
+  }
   lines.geometry.setDrawRange(0, n * 2); lines.geometry.attributes.position.needsUpdate = true;
 }

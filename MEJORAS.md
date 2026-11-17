@@ -55,21 +55,59 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 
 ---
 
-## 2. Más estrategia
+## 2. Más estrategia — ✅ hecho en v0.7
 
-| Mejora | Estado | Notas |
-|---|---|---|
-| **Niebla de guerra** | 🟡 | Ver solo lo que detectan tus unidades: reconocimiento aéreo, radar en barcos, sonar contra submarinos, visión limitada por setos y colinas |
-| Fase de despliegue | ⬜ | Elegir composición con un presupuesto y colocar las unidades antes de empezar |
-| Refuerzos y apoyo por puntos | ⬜ | Ganar puntos con los objetivos para pedir bombardeo naval, un ataque aéreo o refuerzos |
-| Formaciones y rutas | ⬜ | Columna, línea o cuña; rutas con varios puntos (Shift+clic); órdenes encadenadas |
-| IA enemiga más lista | ⬜ | Flanquear, retirarse dañada, concentrar fuerzas y reaccionar a tus movimientos |
+### 2.1 Niebla de guerra ✅
+- Solo ves lo que detectan tus unidades. Cada tipo tiene su alcance:
+  - Destructores y cruceros (radar): 1400 m.
+  - Aviones: hasta 950 m, más cuanto más altos.
+  - Tanques: 560 m.
+  - Infantería: 430 m.
+  - Estación de radar: 1800 m.
+- **Más difíciles de ver:** la infantería quieta (cuerpo a tierra), los cañones antitanque, las lanchas y los submarinos.
+- **Submarinos sumergidos:** solo se detectan con el sonar de los destructores (260 m) o a muy corta distancia.
+- **Línea de visión en tierra:** las colinas y el humo tapan.
+- **Disparar delata la posición** durante 2 s.
+- **Última posición conocida:** una ✕ en el minimapa y un icono atenuado en el mapa táctico durante 25 s. Las zonas que tus unidades no ven aparecen en sombra en el minimapa.
+- **La IA también juega con niebla:** el mando enemigo y sus unidades solo usan lo que ven. Las órdenes de «ataque libre» van a la última posición conocida.
+- Se puede desactivar en la pantalla de despliegue.
+
+### 2.2 Fase de despliegue ✅
+- **Composición con presupuesto:** antes de cada batalla eliges cuántas unidades de cada modelo llevas.
+  - El presupuesto equivale a la composición original.
+  - Los modelos disponibles son los que usa tu bando en ese frente.
+  - Puedes llevar hasta 3 unidades más que el roster original.
+- **Colocación:** con el tiempo detenido, arrastras tus unidades dentro de los círculos azules de tierra y mar, o eliges una disposición:
+  - **1** Línea · **2** Cuña · **3** Columna · **4** Flanco izquierdo · **5** Flanco derecho.
+  - **Enter** comienza la batalla.
+- La campaña y la opción «Repetir» también pasan por el despliegue.
+
+### 2.3 Puntos de mando y apoyo ✅
+- **Cómo se ganan:** cada segundo, más por cada objetivo controlado (o por cada instalación viva en las batallas aéreas), y por cada enemigo destruido.
+- **7 · Artillería o salva naval (60):** marca de humo rojo y, a los 5 s, 16 proyectiles en un radio de 60 m. **Hay fuego amigo.**
+- **8 · Ataque aéreo (90):** dos cazabombarderos (Dauntless, Hurricane o P-47) bombardean el punto y se marchan.
+- **9 · Refuerzo (110):** una unidad nueva del tipo que controlas aparece en tu base.
+- **Dónde apuntan:** al punto bajo el ratón, a tu blanco, al objetivo ordenado o al primer objetivo que no es tuyo.
+- **El enemigo también los usa:** artillería contra grupos de tus unidades, ataques aéreos contra blindados o barcos, y refuerzos cuando pierde fuerzas. Recibes un aviso cuando lo hace.
+
+### 2.4 Formaciones, rutas y órdenes encadenadas ✅
+- **O** cambia la formación entre cuña, línea y columna. Se aplica al seguirte y al mover la escuadra; al mover, la formación se orienta según la dirección de marcha.
+- **Shift + clic derecho** añade puntos de ruta. Las unidades los recorren en orden y luego mantienen la posición.
+- **Shift + 1/2/3** encadena objetivos (por ejemplo, «toma A y luego B»). La siguiente orden empieza cuando el objetivo es tuyo y la unidad está dentro.
+- La escuadra muestra la ruta («Ruta 2/4») o la cadena («Objetivo A → B»). En el mapa táctico se dibujan las rutas.
+
+### 2.5 IA enemiga más lista ✅
+- **Esfuerzo principal:** elige el objetivo que más le conviene atacar o defender y concentra allí sus fuerzas. Defiende los objetivos amenazados.
+- **Reorganización** cada 7 s en lugar de cada 12.
+- **Flanqueo:** la mitad de sus tanques busca el lateral de los blindados con buen frontal.
+- **Retirada:** las unidades por debajo del 30 % de vida vuelven a la base a reparar y regresan al 70 %. Lo hacen también tus unidades controladas por la IA.
+- **Cañones antitanque emplazados** junto a los objetivos.
 
 ## 3. Contenido
 
 | Mejora | Estado | Notas |
 |---|---|---|
-| Batalla combinada en el Pacífico | ⬜ | Desembarco en un atolón con tanques Chi-Ha y búnkeres |
+| Batalla combinada en el Pacífico | 🟡 | Desembarco en un atolón con tanques Chi-Ha y búnkeres |
 | Batalla combinada en África | ⬜ | Tobruk: puerto, convoyes y asedio |
 | Portaaviones | ⬜ | Lanzar y recuperar escuadrillas; blanco de gran valor |
 | Acorazados | ⬜ | Iowa, Yamato y Bismarck |
@@ -110,3 +148,4 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 | v0.4 | Batalla combinada del Día D; velocidad y selección de blancos |
 | v0.5 | Campo de pruebas; blanco y objetivo marcados en amarillo |
 | v0.6 | Averías por partes, munición AP/HE limitada y bases, altitud real en aviones, infantería y cañones antitanque |
+| v0.7 | Niebla de guerra, despliegue con presupuesto, puntos de mando (artillería, ataque aéreo, refuerzos), formaciones, rutas y órdenes encadenadas, IA más lista |

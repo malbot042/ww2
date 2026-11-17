@@ -46,7 +46,12 @@
   <div id="orders">
     <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Objetivo A·B·C</span>
     <span><kbd>Q</kbd> Seguirme</span><span><kbd>E</kbd> Ataque libre</span><span><kbd>R</kbd> Mantener</span><span><kbd>F</kbd> Defender</span>
-    <span><kbd>N</kbd> Munición</span><span><kbd>K</kbd> Reparar</span><span><kbd>T</kbd> Blanco</span><span><kbd>G</kbd> Grupo</span><span><kbd>Tab</kbd> Cambiar unidad</span><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Cámara</span><span><kbd>V</kbd> Vista: <b id="camName">Cenital</b></span><span><kbd>Z</kbd><kbd>X</kbd> Zoom</span><span><kbd>M</kbd> Mapa</span><span><kbd>P</kbd> Pausa</span>
+    <span><kbd>7</kbd><kbd>8</kbd><kbd>9</kbd> Apoyo</span><span><kbd>O</kbd> Formación</span><span><kbd>N</kbd> Munición</span><span><kbd>K</kbd> Reparar</span><span><kbd>T</kbd> Blanco</span><span><kbd>G</kbd> Grupo</span><span><kbd>Tab</kbd> Cambiar unidad</span><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Cámara</span><span><kbd>V</kbd> Vista: <b id="camName">Cenital</b></span><span><kbd>Z</kbd><kbd>X</kbd> Zoom</span><span><kbd>M</kbd> Mapa</span><span><kbd>P</kbd> Pausa</span>
+  </div>
+  <div id="support" class="panel"></div>
+  <div id="deployHud" class="panel hide">
+    <div class="dh"><b>Fase de despliegue</b><span>Arrastra tus unidades dentro de los círculos azules o elige una disposición. El tiempo está detenido.</span></div>
+    <div class="dpb"><button data-pre="0"><kbd>1</kbd>Línea</button><button data-pre="1"><kbd>2</kbd>Cuña</button><button data-pre="2"><kbd>3</kbd>Columna</button><button data-pre="3"><kbd>4</kbd>Flanco izq.</button><button data-pre="4"><kbd>5</kbd>Flanco der.</button><button class="go" id="dpStart"><kbd>Enter</kbd>¡Comenzar!</button></div>
   </div>
   <div id="msg"></div>
   <div id="hit"></div>
@@ -64,6 +69,19 @@
     <header class="bhead"><button class="ghost" id="backFront">← Frentes</button><div><h2 id="bfName"></h2><p id="bfVs"></p></div></header>
     <div id="battles"></div>
   </section>
+  <section id="scrDeploy" class="scr hide">
+    <header class="bhead"><button class="ghost" id="backBattle">← Batallas</button><div><h2 id="dpTitle"></h2><p id="dpSub"></p></div></header>
+    <div class="dp">
+      <div id="dpList"></div>
+      <aside class="dpr">
+        <div class="bud"><span>Presupuesto</span><b id="dpBud"></b><div class="bar"><i id="dpBar"></i></div></div>
+        <div id="dpSum"></div>
+        <label class="chk"><input type="checkbox" id="optFog" checked> Niebla de guerra: solo ves lo que detectan tus unidades</label>
+        <label class="chk"><input type="checkbox" id="optPlace" checked> Colocar las unidades antes de empezar</label>
+        <div class="row"><button class="ghost" id="dpReset">Composición original</button><button class="btn" id="dpGo">Continuar</button></div>
+      </aside>
+    </div>
+  </section>
   <section id="loading" class="scr hide"><div class="load"><div class="spin"></div><p>Preparando el teatro de operaciones…</p><h2 id="loadTxt"></h2></div></section>
 </div>
 
@@ -78,7 +96,7 @@
         <p><kbd>C</kbd> Sumergirse (submarino) · cargas de profundidad (destructor)</p><p><kbd>N</kbd> Munición perforante (AP) o explosiva (HE)</p><p><kbd>K</kbd> Control de daños: apaga incendios y repara averías</p><p><kbd>T</kbd> Siguiente blanco (fijado) · <kbd>Y</kbd> volver a automático · clic sobre un enemigo para fijarlo</p></div>
       <div><h4>Escuadra</h4>
         <p><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Enviar a objetivo A, B o C</p><p><kbd>Q</kbd> Seguirme en formación</p><p><kbd>E</kbd> Ataque libre</p><p><kbd>R</kbd> Mantener posición</p><p><kbd>F</kbd> Defender lo nuestro</p>
-        <p><kbd>G</kbd> Seleccionar por tipo: todos, barcos, aviones o tanques</p><p><kbd>Tab</kbd> Tomar el mando de otra unidad</p><p><kbd>Esc</kbd> Seleccionar a toda la escuadra</p></div>
+        <p><kbd>Shift</kbd>+<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Encadenar objetivos (A y luego B…)</p><p><kbd>O</kbd> Formación: cuña, línea o columna</p><p><kbd>7</kbd> Artillería · <kbd>8</kbd> Ataque aéreo · <kbd>9</kbd> Refuerzo (puntos de mando; apuntan al ratón, a tu blanco o al objetivo)</p><p>Ratón: <kbd>Shift</kbd>+clic derecho añade puntos de ruta</p><p><kbd>G</kbd> Seleccionar por tipo: todos, barcos, aviones o tanques</p><p><kbd>Tab</kbd> Tomar el mando de otra unidad</p><p><kbd>Esc</kbd> Seleccionar a toda la escuadra</p></div>
       <div><h4>Vista</h4>
         <p><kbd>W</kbd><kbd>S</kbd> Bajar o subir la cámara (de cenital a vista de persecución)</p><p><kbd>A</kbd><kbd>D</kbd> Girar la cámara alrededor de tu unidad</p>
         <p><kbd>V</kbd> Vistas: cenital, desde atrás, laterales y mirando hacia atrás · <kbd>B</kbd> volver a cenital</p>

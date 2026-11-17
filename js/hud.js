@@ -4,6 +4,7 @@ import { FRONTS } from './data.js';
 import { orderLabel } from './battle.js';
 import { bombImpact } from './units.js';
 import { canvasTex } from './util.js';
+import { sightOf, SUPPORT, canUse } from './strategy.js';
 
 const $ = id => document.getElementById(id);
 let msgT = 0, hitT = 0, hurtT = 0, mmBg = null, squadT = 0, feed = [];
@@ -77,10 +78,10 @@ export function orderedZone() {
   const m = Math.max(...c); return m ? c.indexOf(m) : -1;
 }
 function renderSquad(force) {
-  const allies = G.ents.filter(e => e.side === 'A' && e.dom !== 'static');
+  const allies = G.ents.filter(e => e.side === 'A' && e.dom !== 'static' && !e.support);
   $('squad').innerHTML = allies.map(e => {
     const hp = Math.max(0, e.hp / e.s.hp), me = e === G.player, sel = G.selection.has(e);
-    return `<div class="sq ${me ? 'me' : ''} ${sel ? 'sel' : ''} ${e.alive ? '' : 'dead'}" data-id="${e.id}"><div class="sqn">${me ? '▶ ' : ''}${e.name}</div><div class="sqo">${e.alive ? (me ? 'Bajo tu mando' : orderLabel(e.order)) + (e.submerged ? ' · sumergido' : '') : 'Destruido'}</div><div class="bar"><i style="width:${hp * 100}%;background:${hp < 0.35 ? 'var(--red)' : 'var(--hp)'}"></i></div></div>`;
+    return `<div class="sq ${me ? 'me' : ''} ${sel ? 'sel' : ''} ${e.alive ? '' : 'dead'}" data-id="${e.id}"><div class="sqn">${me ? '▶ ' : ''}${e.name}</div><div class="sqo">${e.alive ? (me ? 'Bajo tu mando' : orderLabel(e.order, e.queue)) + (e.retreating ? ' · retirada' : '') + (e.submerged ? ' · sumergido' : '') : 'Destruido'}</div><div class="bar"><i style="width:${hp * 100}%;background:${hp < 0.35 ? 'var(--red)' : 'var(--hp)'}"></i></div></div>`;
   }).join('');
 }
 export function updateHud(dt) {
@@ -91,7 +92,7 @@ export function updateHud(dt) {
     const k = e.s.dispK || 1, kmh = e.dom === 'sea' ? `${Math.round(Math.abs(e.speed) * 0.95 * k)} nudos` : `${Math.round(Math.abs(e.speed) * (e.dom === 'air' ? 3.6 : 1.5) * k)} km/h`;
     $('uW').innerHTML = weaponLines(e) + `<div class="wp"><span>Velocidad</span><b>${kmh}</b></div>` + targetPanel(e);
   }
-  { const u = $('unit'), sq = $('squad'), top = u.offsetTop + u.offsetHeight + 8; if (sq.dataset.top != top) { sq.style.top = top + 'px'; sq.style.maxHeight = `calc(100vh - ${top + 70}px)`; sq.dataset.top = top; } }
+  { const u = $('unit'), sq = $('squad'), sp = $('support'), top = u.offsetTop + u.offsetHeight + 8, bot = (sp.offsetHeight ? sp.offsetHeight + 96 : 70); const key = top + ':' + bot; if (sq.dataset.k !== key) { sq.style.top = top + 'px'; sq.style.maxHeight = `calc(100vh - ${top + bot}px)`; sq.dataset.k = key; } }
   // tickets
   const t = G.tickets, mx = G.ticketsMax;
   $('tkA').textContent = Math.ceil(t.A); $('tkE').textContent = Math.ceil(t.E);
@@ -100,7 +101,7 @@ export function updateHud(dt) {
   for (const z of G.objectives) { const el = $('z' + z.k); if (el) el.className = 'z ' + (z.owner === 'A' ? 'a' : z.owner === 'E' ? 'e' : '') + (z.na && z.ne ? ' c' : '') + (z.k === ordK ? ' ord' : ''); }
   if (G.battle.kind === 'air') $('zones').innerHTML = `<span class="zl a">${G.sitesA.filter(s => s.alive).length}/3</span><span class="zl">Instalaciones</span><span class="zl e">${G.sitesE.filter(s => s.alive).length}/3</span>`;
   $('clock').textContent = `${Math.floor(G.time / 60)}:${String(Math.floor(G.time % 60)).padStart(2, '0')}`;
-  squadT -= dt; if (squadT <= 0) { renderSquad(); squadT = 0.3; }
+  squadT -= dt; if (squadT <= 0) { renderSquad(); renderSupport(); squadT = 0.3; }
   if (msgT > 0) { msgT -= dt; if (msgT <= 0) $('msg').style.opacity = 0; }
   if (hitT > 0) { hitT -= dt; if (hitT <= 0) $('hit').style.opacity = 0; }
   if (hurtT > 0) { hurtT -= dt; if (hurtT <= 0) $('vig').style.opacity = 0; }
@@ -124,14 +125,34 @@ function buildMinimap() {
   }
   g.putImageData(img, 0, 0); mmBg = c;
 }
+let fogCv = null;
+function fogCanvas(S) { if (!fogCv || fogCv.width !== S) { fogCv = document.createElement('canvas'); fogCv.width = fogCv.height = S; } return fogCv; }
+// panel de apoyo (puntos de mando)
+function renderSupport() {
+  if (!G.cp) return;
+  const sea = G.battle.kind === 'naval';
+  const btn = (k, i) => { const s = SUPPORT[k], ok = canUse('A', k), cd = G.supCd.A[k] > 0 ? ` ${Math.ceil(G.supCd.A[k])} s` : ''; return `<button class="sup ${ok ? '' : 'off'}" data-sup="${k}"><kbd>${7 + i}</kbd>${k === 'barrage' && sea ? s.nameSea : s.name}<i>${s.cost}${cd}</i></button>`; };
+  $('support').innerHTML = `<div class="cp"><span>Puntos de mando</span><b>${Math.floor(G.cp.A)}</b></div>${['barrage', 'air', 'reinf'].map(btn).join('')}`;
+}
 export function worldToMM(x, z) { const B = G.map.bounds + 100, S = $('mm').width; return [(x + B) / (2 * B) * S, (z + B) / (2 * B) * S]; }
 function drawMinimap() {
   const cv = $('mm'), g = cv.getContext('2d'), S = cv.width;
   g.drawImage(mmBg, 0, 0, S, S);
+  if (G.fog) { // zonas fuera de la vista de tus unidades, en sombra
+    const fc = fogCanvas(S), f = fc.getContext('2d');
+    f.globalCompositeOperation = 'source-over'; f.clearRect(0, 0, S, S); f.fillStyle = 'rgba(8,10,12,0.55)'; f.fillRect(0, 0, S, S);
+    f.globalCompositeOperation = 'destination-out';
+    for (const e of G.ents) { if (!e.alive || e.side !== 'A') continue; const [x, y] = worldToMM(e.p.x, e.p.z), r = sightOf(e) / (2 * (G.map.bounds + 100)) * S; const gr = f.createRadialGradient(x, y, r * 0.7, x, y, r); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); f.fillStyle = gr; f.beginPath(); f.arc(x, y, r, 0, 7); f.fill(); }
+    g.drawImage(fc, 0, 0);
+  }
   g.font = 'bold 12px "Barlow Condensed",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
   for (const z of G.objectives) { const [x, y] = worldToMM(z.pos.x, z.pos.z), r = G.map.cfg.zoneR / (2 * (G.map.bounds + 100)) * S; g.strokeStyle = z.owner === 'A' ? '#4a90e8' : z.owner === 'E' ? '#e0503f' : '#ddd'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke(); g.fillStyle = '#fff'; g.fillText(z.name, x, y); }
   for (const e of G.ents) {
-    if (!e.alive || e.cls === 'aa') continue;
+    if (!e.alive || e.cls === 'aa' || e.gone) continue;
+    if (e.side === 'E' && G.fog && e.visA === false) { // última posición conocida
+      if (e.seenA !== undefined && G.time - e.seenA < 25) { const [x, y] = worldToMM(e.lastA.x, e.lastA.z); g.strokeStyle = 'rgba(255,82,70,0.6)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x - 3, y - 3); g.lineTo(x + 3, y + 3); g.moveTo(x + 3, y - 3); g.lineTo(x - 3, y + 3); g.stroke(); }
+      continue;
+    }
     const [x, y] = worldToMM(e.p.x, e.p.z);
     g.fillStyle = e === G.player ? '#ffffff' : e.side === 'A' ? '#5aa2ff' : '#ff5246';
     g.globalAlpha = e.submerged ? 0.5 : 1;

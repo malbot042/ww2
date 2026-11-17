@@ -5,6 +5,9 @@ import { updateWorld } from './world.js';
 import { startBattle, updateBattle, issueOrder, setPlayer, orderLabel } from './battle.js';
 import { lockTarget, targetFilter, MOD_NAME } from './units.js';
 import { initSandbox, sandboxStart, sandboxHide, sandboxHit } from './sandbox.js';
+import { openDeploy, initDeployUI, beginPlacement, endPlacement, placeUnit, applyPreset, PRESETS } from './deploy.js';
+import { useSupport, updateVision, SUPPORT } from './strategy.js';
+import { updateMarkers } from './battle.js';
 import { updateUnits, updateProjs, spawnUnit } from './units.js';
 import { initFx, updateFx, initAudio, setEngine } from './fx.js';
 import { hudInit, hudHide, updateHud, flash, hitMark, hurt, addFeed, initAimMarkers, updateAimMarkers } from './hud.js';
@@ -115,8 +118,9 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min((now - last) / 1000, 0.05); last = now;
   if (G.map) {
-    const sim = G.running && !G.paused;
+    const sim = G.running && !G.paused && !G.deploying;
     if (sim || G.demo) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); }
+    else if (G.deploying) { updateVision(dt); updateMarkers(); }
     updateWorld(dt); updateCamera(dt);
     if (G.running) { updateHud(dt); updateAimMarkers(); const p = G.player; if (p && p.alive) setEngine(p.dom, Math.abs(p.speed) / p.s.max, !G.paused); }
     else { updateAimMarkers(); setEngine('sea', 0, false); }
@@ -126,7 +130,7 @@ function frame(now) {
 }
 
 // ---------- menús ----------
-function show(id) { for (const s of ['scrFront', 'scrBattle', 'results', 'pause', 'loading']) $(s).classList.toggle('hide', s !== id); $('menu').classList.toggle('hide', !['scrFront', 'scrBattle', 'loading'].includes(id)); }
+function show(id) { for (const s of ['scrFront', 'scrBattle', 'scrDeploy', 'results', 'pause', 'loading']) $(s).classList.toggle('hide', s !== id); $('menu').classList.toggle('hide', !['scrFront', 'scrBattle', 'scrDeploy', 'loading'].includes(id)); }
 function rosterHtml(list) { return list.map(([k, n]) => `<li><b>${n}×</b> ${MODELS[k].name} <span>${MODELS[k].type}</span></li>`).join(''); }
 function buildFrontMenu() {
   $('fronts').innerHTML = Object.entries(FRONTS).map(([k, f]) => `
@@ -152,16 +156,23 @@ function buildBattleMenu(fk) {
       <div class="ros"><div><h4>Aliados (10)</h4><ul>${rosterHtml(b.allies)}</ul></div><div><h4>${f.enemyName} (10)</h4><ul>${rosterHtml(b.enemy)}</ul></div></div>
       <button class="btn" data-key="${key}">Desplegar</button>
     </div>`; }).join('') + (f.battles.length > 1 ? `<div class="battle camp"><div class="bh"><span class="bk">Campaña</span><span class="bt">Las ${f.battles.length} batallas seguidas</span></div><p>${f.battles.map(k => KIND_NAME[k]).join(' → ')}. La puntuación se acumula; si pierdes una batalla, la campaña termina.</p><button class="btn" data-camp="${fk}">Empezar campaña</button></div>` : '');
-  $('battles').querySelectorAll('[data-key]').forEach(b => b.onclick = () => launch(b.dataset.key));
-  $('battles').querySelectorAll('[data-camp]').forEach(b => b.onclick = () => { G.campaign = { front: fk, list: f.battles.map(k => `${fk}-${k}`), i: 0, score: 0 }; launch(G.campaign.list[0], true); });
+  $('battles').querySelectorAll('[data-key]').forEach(b => b.onclick = () => toDeploy(b.dataset.key));
+  $('battles').querySelectorAll('[data-camp]').forEach(b => b.onclick = () => { G.campaign = { front: fk, list: f.battles.map(k => `${fk}-${k}`), i: 0, score: 0 }; toDeploy(G.campaign.list[0], true); });
   show('scrBattle');
 }
-function launch(key, keepCampaign = false) {
+let lastOpts = {};
+function toDeploy(key, keepCampaign = false) {
+  if (!keepCampaign) G.campaign = null;
+  openDeploy(key, (roster, fog, place) => launch(key, true, { roster, fog, place }));
+  show('scrDeploy');
+}
+function launch(key, keepCampaign = false, opts = {}) {
+  lastOpts = opts;
   if (!keepCampaign) G.campaign = null;
   show('loading'); $('loadTxt').textContent = `${BATTLES[key].title}, ${BATTLES[key].year}`;
   setTimeout(() => {
     G.running = false; G.paused = false; G.strategic = false;
-    startBattle(key, false);
+    startBattle(key, false, opts);
     const p = G.player; G.targetZoom = G.zoom = ZOOM_DEF[p.dom];
     G.cam.preset = 0; G.cam.pitch = 1.1; G.cam.yaw = 0; G.cam.ang = 0; G.cam.rel = false; $('camName').textContent = 'Cenital';
     hudInit(); show(null); $('menu').classList.add('hide');
@@ -169,6 +180,7 @@ function launch(key, keepCampaign = false) {
     $('top').classList.toggle('hide', test);
     if (test) { initSandbox({ flash, onPlayerChange: e => { G.targetZoom = ZOOM_DEF[e.dom]; } }); sandboxStart(); } else sandboxHide();
     G.running = true;
+    if (opts.place && G.battle.kind !== 'test') { beginPlacement(); flash('Fase de despliegue', 'Coloca tus unidades y pulsa Enter para comenzar', 4); return; }
     flash(G.battle.kind === 'test' ? 'Campo de pruebas' : `${BATTLES[key].title}, ${BATTLES[key].year}`, G.battle.kind === 'test' ? 'Elige unidad y blancos en el panel de la derecha' : G.battle.kind === 'combined' ? 'A: salida de la playa · B: pueblo · C: fondeadero (naval). Tab cambia entre barco, avión y tanque' : G.battle.kind === 'air' ? 'Pulsa 1, 2 o 3 para enviar tu escuadrilla contra las instalaciones A, B o C' : 'Pulsa 1, 2 o 3 para enviar tu escuadra a los objetivos A, B o C', 5);
   }, 60);
 }
@@ -192,14 +204,43 @@ function showResults(res) {
   ].map(([a, v]) => `<div><span>${a}</span><b>${v}</b></div>`).join('');
   const c = G.campaign, next = c && win && c.i + 1 < c.list.length ? c.list[c.i + 1] : null;
   $('resNext').classList.toggle('hide', !next);
-  if (next) { $('resNext').textContent = `Siguiente: ${KIND_NAME[BATTLES[next].kind]}`; $('resNext').onclick = () => { c.i++; launch(next, true); }; }
+  if (next) { $('resNext').textContent = `Siguiente: ${KIND_NAME[BATTLES[next].kind]}`; $('resNext').onclick = () => { c.i++; toDeploy(next, true); }; }
   if (c && (!win || !next)) { $('resSub').textContent += win ? ' · Campaña completada' : ' · Campaña terminada'; }
-  $('resRetry').onclick = () => { if (c) { c.score -= score; } launch(G.battleKey, !!c); };
+  $('resRetry').onclick = () => { if (c) { c.score -= score; } launch(G.battleKey, !!c, lastOpts); };
   $('resMenu').onclick = () => { G.campaign = null; toMenu(); };
   show('results');
 }
-function toMenu() { sandboxHide(); hudHide(); G.running = false; show('scrFront'); startDemo(); }
+function toMenu() { endPlacement(); sandboxHide(); hudHide(); G.running = false; show('scrFront'); startDemo(); }
 $('backFront').onclick = () => show('scrFront');
+$('backBattle').onclick = () => show('scrBattle');
+initDeployUI();
+function startFromDeploy() {
+  if (!G.deploying) return;
+  endPlacement();
+  const b = G.battle; flash(`${b.title}, ${b.year}`, b.kind === 'air' ? '1, 2, 3 instalaciones · 7 8 9 apoyo con puntos de mando' : '1, 2, 3 objetivos · Shift+número para encadenar · 7 8 9 apoyo', 4);
+}
+$('dpStart').onclick = ev => { startFromDeploy(); ev.target.blur(); };
+document.querySelectorAll('#deployHud [data-pre]').forEach(bt => bt.onclick = ev => { applyPreset(+bt.dataset.pre); flash(PRESETS[+bt.dataset.pre], '', 0.8); ev.currentTarget.blur(); });
+$('support').addEventListener('click', ev => { const bt = ev.target.closest('[data-sup]'); if (bt) doSupport(bt.dataset.sup); });
+// punto de apoyo: bajo el ratón, tu blanco, el objetivo ordenado o el foco de la cámara
+let mouseXY = null, mouseT = 0;
+addEventListener('mousemove', ev => { mouseXY = [ev.clientX, ev.clientY]; mouseT = performance.now(); });
+function supportPoint() {
+  if (mouseXY && performance.now() - mouseT < 4000 && ev0(mouseXY)) { const p = groundAt(mouseXY[0], mouseXY[1]); if (p) return p; }
+  const P = G.player; if (P && P.target && P.target.alive) return P.target.p.clone();
+  const ord = [...G.selection].find(e => e.alive && e.order.type === 'zone'); if (ord && G.objectives[ord.order.k]) return G.objectives[ord.order.k].pos.clone();
+  const z = G.objectives.find(z => z.owner !== 'A'); if (z) return z.pos.clone();
+  return G.focus.clone();
+}
+const ev0 = ([x, y]) => { const el = document.elementFromPoint(x, y); return el === canvas; };
+function doSupport(kind) {
+  if (!G.running || G.deploying || G.battle.kind === 'test' && kind === 'reinf' && false) return;
+  const s = SUPPORT[kind], pt = kind === 'reinf' ? null : supportPoint();
+  if (useSupport('A', kind, pt)) flash(kind === 'barrage' ? (G.battle.kind === 'naval' ? s.nameSea : s.name) : s.name, kind === 'reinf' ? 'Una unidad nueva llega a la base' : kind === 'barrage' ? 'Impacto en 5 s: aléjate de la marca de humo' : 'Dos aviones en camino', 2);
+  else flash(`${s.name} no disponible`, G.cp && G.cp.A < s.cost ? `Necesitas ${s.cost} puntos de mando` : 'En espera', 1.4);
+}
+G.onSupport = (side, kind, p) => { if (side === 'E' && !G.demo) { if (kind === 'barrage') flash('¡Artillería enemiga!', 'Busca la marca de humo y apártate', 2); else if (kind === 'air') flash('¡Ataque aéreo enemigo!', '', 1.6); } };
+const FORMS = ['cuña', 'línea', 'columna']; G.formation = 'cuña';
 
 // ---------- entrada ----------
 const ZONE_KEYS = { Digit1: 0, Digit2: 1, Digit3: 2 };
@@ -208,8 +249,19 @@ addEventListener('keydown', ev => {
   if (!G.keys[ev.code]) G.keysOnce.add(ev.code);
   G.keys[ev.code] = true;
   if (!G.running) { if (ev.code === 'Escape' && !$('pause').classList.contains('hide')) togglePause(); return; }
+  if (G.deploying) {
+    const pre = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4 }[ev.code];
+    if (pre !== undefined) { applyPreset(pre); flash(PRESETS[pre], '', 0.8); }
+    if (ev.code === 'Enter' || ev.code === 'NumpadEnter') startFromDeploy();
+    if (ev.code === 'KeyZ') G.targetZoom = clamp(G.targetZoom / 1.25, 110, 2600); if (ev.code === 'KeyX') G.targetZoom = clamp(G.targetZoom * 1.25, 110, 2600);
+    return;
+  }
   const c = ev.code;
-  if (c in ZONE_KEYS) { const n = issueOrder('zone', { k: ZONE_KEYS[c] }); if (n) flash(G.battle.kind === 'air' ? `Atacar instalación ${'ABC'[ZONE_KEYS[c]]}` : `Objetivo ${'ABC'[ZONE_KEYS[c]]}`, `${n} unidades en camino`); }
+  if (c in ZONE_KEYS) { const q = ev.shiftKey, n = issueOrder('zone', { k: ZONE_KEYS[c] }, q); if (n) flash((q ? 'Encadenado: ' : '') + (G.battle.kind === 'air' ? `Atacar instalación ${'ABC'[ZONE_KEYS[c]]}` : `Objetivo ${'ABC'[ZONE_KEYS[c]]}`), q ? 'Irán cuando completen la orden actual' : `${n} unidades en camino`); }
+  else if (c === 'Digit7') doSupport('barrage');
+  else if (c === 'Digit8') doSupport('air');
+  else if (c === 'Digit9') doSupport('reinf');
+  else if (c === 'KeyO') { G.formation = FORMS[(FORMS.indexOf(G.formation) + 1) % FORMS.length]; flash(`Formación: ${G.formation}`, 'Al seguirte y al mover la escuadra', 1.4); }
   else if (c === 'KeyQ') { const n = issueOrder('follow'); if (n) flash('Seguidme', `${n} unidades en formación`); }
   else if (c === 'KeyE') { const n = issueOrder('attack'); if (n) flash('Ataque libre', `${n} unidades buscan al enemigo`); }
   else if (c === 'KeyR') { const n = issueOrder('hold'); if (n) flash('Mantener posición', `${n} unidades`); }
@@ -226,7 +278,7 @@ addEventListener('keydown', ev => {
 });
 addEventListener('keyup', ev => { G.keys[ev.code] = false; });
 addEventListener('blur', () => { G.keys = {}; });
-function allWingmen() { return G.ents.filter(e => e.alive && e.side === 'A' && e.dom !== 'static' && e !== G.player); }
+function allWingmen() { return G.ents.filter(e => e.alive && e.side === 'A' && e.dom !== 'static' && e !== G.player && !e.support); }
 function selectAll() { G.selection = new Set(allWingmen()); G.showSel = false; }
 const ZOOM_DEF = { land: 240, sea: 330, air: 380 };
 function takeControl(next) {
@@ -235,7 +287,7 @@ function takeControl(next) {
   if (prevDom !== next.dom) G.targetZoom = ZOOM_DEF[next.dom];
 }
 function cycleUnit(dir) {
-  const list = G.ents.filter(e => e.alive && e.side === 'A' && e.dom !== 'static'); if (list.length < 2) return;
+  const list = G.ents.filter(e => e.alive && e.side === 'A' && e.dom !== 'static' && !e.support); if (list.length < 2) return;
   const i = list.indexOf(G.player); takeControl(list[(i + dir + list.length) % list.length]);
 }
 // selección por tipo (G): todas → barcos → aviones → tanques
@@ -265,7 +317,14 @@ function screenOf(e) { const v = e.p.clone(); v.y = Math.max(v.y, 0); v.project(
 let drag = null;
 canvas.addEventListener('contextmenu', ev => ev.preventDefault());
 canvas.addEventListener('wheel', ev => { if (!G.running) return; G.targetZoom = clamp(G.targetZoom * (ev.deltaY > 0 ? 1.15 : 1 / 1.15), 110, 2600); ev.preventDefault(); }, { passive: false });
-canvas.addEventListener('mousedown', ev => { if (!G.running) return; if (ev.button === 0) drag = { x: ev.clientX, y: ev.clientY }; });
+let dragUnit = null;
+canvas.addEventListener('mousedown', ev => {
+  if (!G.running) return;
+  if (G.deploying && ev.button === 0) { let best = null, bd = 30; for (const e of G.ents) { if (!e.alive || e.side !== 'A' || e.dom === 'air' || e.dom === 'static') continue; const [sx, sy] = screenOf(e); const d = Math.hypot(sx - ev.clientX, sy - ev.clientY); if (d < bd) { bd = d; best = e; } } dragUnit = best; return; }
+  if (ev.button === 0) drag = { x: ev.clientX, y: ev.clientY };
+});
+addEventListener('mousemove', ev => { if (dragUnit) { const p = groundAt(ev.clientX, ev.clientY); if (p) placeUnit(dragUnit, p.x, p.z); } });
+addEventListener('mouseup', () => { dragUnit = null; });
 addEventListener('mousemove', ev => { if (!drag) return; const b = $('selbox'); const x0 = Math.min(drag.x, ev.clientX), y0 = Math.min(drag.y, ev.clientY); Object.assign(b.style, { display: 'block', left: x0 + 'px', top: y0 + 'px', width: Math.abs(ev.clientX - drag.x) + 'px', height: Math.abs(ev.clientY - drag.y) + 'px' }); });
 addEventListener('mouseup', ev => {
   if (!drag || ev.button !== 0) return;
@@ -292,7 +351,8 @@ canvas.addEventListener('mouseup', ev => {
   // ¿clic en un objetivo?
   if (G.battle.kind !== 'air') { const z = G.objectives.find(z => z.pos.distanceTo(V3(p.x, z.pos.y, p.z)) < G.map.cfg.zoneR); if (z) { const n = issueOrder('zone', { k: z.k }); if (n) flash(`Objetivo ${z.name}`, `${n} unidades en camino`); return; } }
   else { const k = G.sitesE.findIndex(s => s.alive && Math.hypot(s.p.x - p.x, s.p.z - p.z) < 80); if (k >= 0) { const n = issueOrder('zone', { k }); if (n) flash(`Atacar instalación ${'ABC'[k]}`, `${n} aviones`); return; } }
-  const n = issueOrder('move', { x: p.x, z: p.z }); if (n) flash('Mover', `${n} unidades`, 1.2);
+  if (ev.shiftKey) { const n = issueOrder('route', { pt: V3(p.x, 0, p.z) }, true); if (n) flash('Punto de ruta añadido', 'Shift+clic derecho para más puntos', 1.2); return; }
+  const n = issueOrder('move', { x: p.x, z: p.z }); if (n) flash('Mover', `${n} unidades en formación ${G.formation}`, 1.2);
 });
 $('squad').addEventListener('click', ev => { const el = ev.target.closest('.sq'); if (!el) return; const e = G.ents.find(x => x.id === +el.dataset.id); if (!e || !e.alive || e === G.player) return; if (ev.shiftKey) { G.selection.has(e) ? G.selection.delete(e) : G.selection.add(e); } else G.selection = new Set([e]); G.showSel = true; });
 $('squad').addEventListener('dblclick', ev => { const el = ev.target.closest('.sq'); if (!el) return; const e = G.ents.find(x => x.id === +el.dataset.id); if (e && e.alive) setPlayer(e); });

@@ -59,7 +59,9 @@ Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin punt
 | **A D** | Girar la cámara alrededor de tu unidad |
 | **V** | Vistas: cenital, desde atrás, lateral izquierdo, lateral derecho y mirando hacia atrás (B vuelve a cenital) |
 | Z X / rueda | Zoom |
-| 1 2 3 | Enviar la escuadra seleccionada al objetivo A, B o C |
+| 1 2 3 | Enviar la escuadra seleccionada al objetivo A, B o C · con **Shift**, encadenar (A y luego B…) |
+| 7 · 8 · 9 | Apoyo con puntos de mando: artillería · ataque aéreo · refuerzo |
+| O | Formación: cuña, línea o columna |
 | Q · E · R · F | Seguirme · Ataque libre · Mantener posición · Defender |
 | G | Seleccionar por tipo: todos, barcos, aviones o tanques |
 | Tab | Tomar el mando de otra unidad |
@@ -67,7 +69,7 @@ Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin punt
 | P | Pausa táctica (puedes seguir dando órdenes) |
 | Esc | Seleccionar a toda la escuadra |
 
-**Ratón (opcional):** arrastra para seleccionar unidades, haz clic derecho sobre un objetivo o un punto del mapa para darles una orden y doble clic sobre una unidad para tomar su mando.
+**Ratón (opcional):** arrastra para seleccionar unidades, **Shift + clic derecho** para añadir puntos de ruta, haz clic derecho sobre un objetivo o un punto del mapa para darles una orden y doble clic sobre una unidad para tomar su mando.
 
 ## Averías, munición y altitud (v0.6)
 - **Averías por partes:**
@@ -78,6 +80,12 @@ Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin punt
 - **Munición limitada:** AP contra blindados y barcos, HE contra infantería, cañones y defensas (cambias con **N**). Para rearmarte y reparar, vuelve a tu **base**, el círculo verde con **R**.
 - **Aviones con altitud real:** picar da velocidad, subir la quita, y puedes estrellarte. Desde arriba las bombas se dispersan más.
 - **Infantería con bazuca o Panzerschreck y cañones antitanque** en El Alamein, el Bocage y el Día D. Los tanques tienen ametralladora coaxial automática.
+
+## Estrategia (v0.7)
+- **Despliegue:** antes de cada batalla eliges la composición con un presupuesto y colocas tus unidades (1–5 disposiciones rápidas, arrastrar con el ratón, Enter para empezar).
+- **Niebla de guerra:** solo ves lo que detectan tus unidades (radar, sonar, línea de visión). Se puede desactivar en el despliegue.
+- **Puntos de mando:** se ganan controlando objetivos y destruyendo enemigos, y se gastan en artillería (7), ataque aéreo (8) o refuerzos (9). El enemigo también los usa.
+- **Formaciones, rutas y órdenes encadenadas,** y un mando enemigo que concentra fuerzas, flanquea y se retira a reparar.
 
 La hoja de ruta completa está en [MEJORAS.md](MEJORAS.md).
 
@@ -102,6 +110,8 @@ js/battle.js      preparación de la batalla, objetivos, puntos, mando enemigo y
 js/hud.js         HUD, minimapa y marcadores de puntería
 js/fx.js          partículas (humo, fuego, espuma) y audio sintetizado
 js/sandbox.js     campo de pruebas
+js/strategy.js    niebla de guerra, puntos de mando y apoyo
+js/deploy.js      fase de despliegue (composición y colocación)
 v1.html           primer prototipo (v0.1)
 ```
 Con `#debug` en la URL queda disponible `window.__ww2` para pruebas automáticas.
