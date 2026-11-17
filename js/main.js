@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { G } from './state.js';
 import { FRONTS, BATTLES, KIND_NAME, MODELS } from './data.js';
 import { updateWorld } from './world.js';
+import { updateEnv, launchFlare, envLabel } from './env.js';
 import { startBattle, updateBattle, issueOrder, setPlayer, orderLabel } from './battle.js';
 import { lockTarget, targetFilter, MOD_NAME } from './units.js';
 import { initSandbox, sandboxStart, sandboxHide, sandboxHit } from './sandbox.js';
@@ -104,12 +105,12 @@ function updateCamera(dt) {
   camTarget.copy(G.focus);
   if (ct < 1 && p && !G.strategic && !G.demo) { const k = 1 - ct; camTarget.x += Math.sin(p.h) * D * 0.25 * k * Math.cos(c.yaw); camTarget.z += Math.cos(p.h) * D * 0.25 * k * Math.cos(c.yaw); camTarget.y += (p.dom === 'air' ? 4 : p.top || 4) * k; }
   camera.lookAt(camTarget);
-  if (scene.fog) { const low = 1 - Math.min(1, ct); scene.fog.near = G.zoom * (1.4 - low * 0.6) + low * 150; scene.fog.far = G.zoom * (G.strategic ? 5 : 3.6) + 800 + low * 900; }
+  if (scene.fog) { const low = 1 - Math.min(1, ct); scene.fog.near = G.zoom * (1.4 - low * 0.6) + low * 150; scene.fog.far = G.zoom * (G.strategic ? 5 : 3.6) + 800 + low * 900; const fk = G.strategic ? Math.max(0.6, G.env?.fogK ?? 1) : (G.env?.fogK ?? 1); scene.fog.near *= fk * fk; scene.fog.far *= fk; }
   // sombras alrededor del foco
   const half = clamp(G.zoom * 0.95, 140, 1400);
   const sc = sun.shadow.camera;
   if (sc.right !== half) { sc.left = -half; sc.right = half; sc.top = half; sc.bottom = -half; sc.updateProjectionMatrix(); }
-  sun.position.copy(G.focus).addScaledVector(SUN_DIR, 1800); sun.target.position.copy(G.focus);
+  sun.position.copy(G.focus).addScaledVector(G.env?.sunDir || SUN_DIR, 1800); sun.target.position.copy(G.focus);
 }
 
 // ---------- bucle ----------
@@ -121,7 +122,7 @@ function frame(now) {
     const sim = G.running && !G.paused && !G.deploying;
     if (sim || G.demo) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); }
     else if (G.deploying) { updateVision(dt); updateMarkers(); }
-    updateWorld(dt); updateCamera(dt);
+    updateWorld(dt); if (sim || G.demo) updateEnv(dt); updateCamera(dt);
     if (G.running) { updateHud(dt); updateAimMarkers(); const p = G.player; if (p && p.alive) setEngine(p.dom, Math.abs(p.speed) / p.s.max, !G.paused); }
     else { updateAimMarkers(); setEngine('sea', 0, false); }
   }
@@ -163,7 +164,7 @@ function buildBattleMenu(fk) {
 let lastOpts = {};
 function toDeploy(key, keepCampaign = false) {
   if (!keepCampaign) G.campaign = null;
-  openDeploy(key, (roster, fog, place) => launch(key, true, { roster, fog, place }));
+  openDeploy(key, (roster, fog, place, env) => launch(key, true, { roster, fog, place, env }));
   show('scrDeploy');
 }
 function launch(key, keepCampaign = false, opts = {}) {

@@ -54,8 +54,11 @@ let smoke, glow;
 const C = h => new THREE.Color(h);
 const COL = { fire: C(0xff9a3a), fire2: C(0xffd27a), flash: C(0xfff2c4), smoke: C(0x3a3836), smokeL: C(0x8d8a84), white: C(0xf4f7f8), foam: C(0xe8f0f0), dust: C(0xb9a27c), flak: C(0x1e1e1e), smokeW: C(0xdedcd6), red: C(0xff5030), wood: C(0x4a3a2a) };
 
+let softTex = null;
+export const glowTex = () => softTex;
 export function initFx() {
   const soft = canvasTex(64, (g, s) => { const gr = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.4, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, s, s); });
+  softTex = soft;
   const puff = canvasTex(128, (g, s) => {
     for (let k = 0; k < 22; k++) { const x = s / 2 + (Math.random() - 0.5) * s * 0.42, y = s / 2 + (Math.random() - 0.5) * s * 0.42, r = s * (0.1 + Math.random() * 0.2); const sh = 190 + Math.random() * 65; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(${sh},${sh},${sh},0.5)`); gr.addColorStop(1, `rgba(${sh},${sh},${sh},0)`); g.fillStyle = gr; g.fillRect(0, 0, s, s); }
   });
@@ -144,7 +147,7 @@ export function sfx(kind, p, s = 1) {
   if (vol < 0.03) return;
   const t = AC.currentTime;
   if (kind === 'gun') { if (t - lastGun < 0.04) return; lastGun = t; }
-  const cfg = { boom: [520, 0.7, 1.4, 55], cannon: [900, 0.5, 0.6, 70], big: [500, 0.8, 1.2, 40], gun: [2600, 0.12, 0.07, 0], splash: [1400, 0.25, 0.7, 0], thud: [600, 0.35, 0.5, 60], flak: [1100, 0.3, 0.35, 0], torp: [400, 0.3, 0.6, 50], bomb: [350, 0.2, 0.6, 0] }[kind];
+  const cfg = { boom: [520, 0.7, 1.4, 55], cannon: [900, 0.5, 0.6, 70], big: [500, 0.8, 1.2, 40], gun: [2600, 0.12, 0.07, 0], splash: [1400, 0.25, 0.7, 0], thud: [600, 0.35, 0.5, 60], flak: [1100, 0.3, 0.35, 0], torp: [400, 0.3, 0.6, 50], bomb: [350, 0.2, 0.6, 0], thunder: [160, 0.9, 3.2, 28] }[kind];
   if (!cfg) return;
   const src = AC.createBufferSource(); src.buffer = noiseBuf;
   const f = AC.createBiquadFilter(), g = AC.createGain();

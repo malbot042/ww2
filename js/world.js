@@ -411,6 +411,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
   return G.map;
 }
 
+export const worldRefs = () => ({ sky, water, clouds });
 export function updateWorld(dt) {
   if (!water) return;
   const u = water.material.uniforms;

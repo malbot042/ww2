@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { launchFlare } from './env.js';
 import { G } from './state.js';
 import { MODELS, specOf, CLS } from './data.js';
 import { buildModel, buildSite, buildAA, buildBattery } from './models.js';
@@ -363,7 +364,7 @@ function fireNaval(e, t) {
     if (Math.abs(angDiff(want, base)) > 2.55 || Math.abs(angDiff(want, e.tYaw[i])) > 0.08) continue;
     const from = turretWorld(e, i); from.y += 1.2;
     for (let b = 0; b < (s.n || 1); b++) {
-      const d = dist2(from, aimP), err = d * (e === G.player ? 0.02 : 0.03) + 4;
+      const d = dist2(from, aimP), err = (d * (e === G.player ? 0.02 : 0.03) + 4) * (G.env ? G.env.errK : 1);
       const tp = aimP.clone().add(V3(rnd(-1, 1) * err, 0, rnd(-1, 1) * err * 1.6));
       const dx = tp.x - from.x, dz = tp.z - from.z, dd = Math.hypot(dx, dz), T = dd / s.hs;
       const ty = t.dom === 'sea' ? 1.5 : t.p.y + 1.5, vy = (ty - from.y + 0.5 * GRAV * T * T) / T;
@@ -383,7 +384,7 @@ function fireTank(e, t) {
   const d = from.distanceTo(tp), sp = 520;
   tp.addScaledVector(t.vel, d / sp);
   const moving = Math.abs(e.speed) / e.s.max;
-  const err = (e === G.player ? 0.004 : 0.008) + moving * 0.018 + d / 60000;
+  const err = ((e === G.player ? 0.004 : 0.008) + moving * 0.018 + d / 60000) * (G.env ? G.env.errK : 1);
   const dir = tp.sub(from).normalize().add(V3(rnd(-err, err), rnd(-err, err) * 0.4, rnd(-err, err))).normalize();
   proj('ap', e, from, dir.multiplyScalar(sp), { dmg: s.dmg, life: s.range / sp * 1.15, ammo: am });
   if (am !== 'x') e.ammo[am]--;
@@ -603,6 +604,11 @@ export function controlPlayer(e, dt) {
   const steer = K('ArrowLeft') ? 1 : K('ArrowRight') ? -1 : 0;
   const f1 = K('Space') || K('ControlRight'), f2 = K('ShiftLeft') || K('ShiftRight'), once = c => G.keysOnce.has(c);
   e.thr = thr; e.steer = steer;
+  if (once('KeyJ') && G.env && G.env.dark) {
+    if (e.flares === undefined) e.flares = 4;
+    if (e.flares > 0) { const t = e.lock && e.lock.alive ? e.lock.p : e.p.clone().add(fwdOf(e).clone().multiplyScalar(e.dom === 'air' ? 250 : 380)); launchFlare(e, t); e.flares--; G.onMsg && G.onMsg('Bengala lanzada', `Ilumina la zona unos 25 s · quedan ${e.flares}`); }
+    else G.onMsg && G.onMsg('Sin bengalas', '');
+  }
   if (once('KeyK')) { if (startRepair(e)) G.onMsg && G.onMsg('Control de daños', 'Fuego extinguido; reparando averías…'); else if (G.onMsg) G.onMsg(e.cd.rep > 0 ? `Control de daños en ${Math.ceil(e.cd.rep)} s` : 'Sin averías que reparar', ''); }
   if (once('KeyN') && e.ammo.ap !== undefined) { e.ammoSel = e.ammoSel === 'ap' ? 'he' : 'ap'; G.onMsg && G.onMsg(e.ammoSel === 'ap' ? 'Munición perforante (AP)' : 'Munición explosiva (HE)', e.ammoSel === 'ap' ? 'Contra blindados y barcos' : 'Contra infantería, cañones, defensas y costa'); }
   if (e.dom === 'air') {

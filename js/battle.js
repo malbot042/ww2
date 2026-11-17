@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { G } from './state.js';
 import { BATTLES, MODELS, CLS } from './data.js';
 import { buildWorld } from './world.js';
+import { applyEnv } from './env.js';
 import { spawnUnit, spawnSite, spawnAA, spawnBattery, clearProjs, clearAnchors } from './units.js';
 import { resetFx } from './fx.js';
 import { updateVision, updateStrategy, resetStrategy } from './strategy.js';
@@ -54,6 +55,7 @@ export function startBattle(key, demo = false, opts = {}) {
   const b = BATTLES[key]; G.battle = b; G.battleKey = key; G.demo = demo;
   G.roster = opts.roster || b.allies; G.fog = !demo && b.kind !== 'test' && opts.fog !== false;
   const map = buildWorld(b.map);
+  applyEnv(demo || b.kind === 'test' ? {} : opts.env || b.env || {});
   const naval = b.kind === 'naval', air = b.kind === 'air', mixed = b.kind === 'combined';
   clearAnchors();
   const wantSea = (x, z) => map.h(x, z) < -12 && map.h(x + 40, z) < -8 && map.h(x - 40, z) < -8 && map.h(x, z + 60) < -8 && map.h(x, z - 60) < -8;

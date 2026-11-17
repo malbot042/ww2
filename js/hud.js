@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { envLabel } from './env.js';
 import { G } from './state.js';
 import { FRONTS } from './data.js';
 import { orderLabel } from './battle.js';
@@ -15,6 +16,7 @@ export function hudInit() {
   feed = []; $('feed').innerHTML = '';
   const b = G.battle;
   $('tkNameE').textContent = FRONTS[b.front].enemyName;
+  $('envTag').textContent = envLabel();
   $('zones').innerHTML = b.kind === 'air' ? '<span class="zl">Instalaciones</span>' : G.objectives.map(z => `<span class="z" id="z${z.k}">${z.name}</span>`).join('');
   renderSquad(true);
 }
@@ -45,6 +47,7 @@ function weaponLines(e) {
   }
   else if (e.cls === 'inf') { L.push(['Espacio · Fusiles', '<b class="ok">AUTO</b>'], [`Shift · ${e.fac === 'de' ? 'Panzerschreck' : e.fac === 'uk' ? 'PIAT' : e.fac === 'jp' ? 'Carga antitanque' : 'Bazuca'}` + cnt('rocket'), cd(e.cd.rocket, 'rocket')]); L.push(['Soldados', `<b>${Math.ceil(e.hp / e.s.hp * 6)}/6</b>`]); }
   else if (e.dom === 'land') { L.push(['Espacio · Cañón', aim(e.cd.main)], ammoLine()); if (e.cls === 'tank') L.push(['Shift · Humo', cd(e.cd.smoke)]); }
+  if (G.env && G.env.dark && e.dom !== 'static') L.push(['J · Bengala', `<b class="${e.flares === 0 ? 'bad' : 'ok'}">${e.flares ?? 4} restantes</b>`]);
   // averías y control de daños
   const m = e.mods, chips = [];
   if (m.fire > 0) chips.push(`<span class="mod fire">Incendio ${Math.ceil(m.fire)} s</span>`);

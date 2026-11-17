@@ -5,6 +5,7 @@ import { BATTLES, MODELS, CLS } from './data.js';
 import { spawnUnit, damage, anchorFor } from './units.js';
 import * as FX from './fx.js';
 import { V3, rnd, clamp } from './util.js';
+import { litByFlare } from './env.js';
 
 // ---------- NIEBLA DE GUERRA ----------
 export function sightOf(e) {
@@ -38,8 +39,12 @@ const smokeOn = (a, b) => G.smokes.some(s => {
 function canSee(e, o) {
   const d = Math.hypot(o.p.x - e.p.x, o.p.z - e.p.z);
   if (o.submerged) return (e.s.dc && d < 260) || d < 110;
-  let r = sightOf(e);
-  if (o.dom === 'air') r = Math.max(r, 1000);
+  const E = G.env, radar = e.cls === 'destroyer' || e.cls === 'cruiser' || e.cls === 'battleship' || e.cls === 'carrier';
+  const k = E ? (radar && o.dom === 'sea' ? Math.max(0.85, E.sightK) : E.sightK) : 1;
+  // bengalas y reflectores delatan a quien está debajo (o al que enciende el reflector)
+  if (E && E.dark && (o.lit || litByFlare(o)) && d < 1800) return true;
+  let r = sightOf(e) * k;
+  if (o.dom === 'air') r = Math.max(r, 1000 * k);
   else if (e.dom === 'air') r = Math.min(r, 750 + (e.p.y - G.map.gy(e.p.x, e.p.z)) * 1.5);
   if (o.cls === 'inf') r *= Math.abs(o.speed) < 1 ? 0.55 : 0.75;
   else if (o.cls === 'atgun') r *= 0.65;
