@@ -254,7 +254,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
   const wmat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false,
     uniforms: {
-      t: { value: 0 }, depthTex: { value: depthTex }, ext: { value: ext },
+      t: { value: 0 }, amp: { value: 1 }, depthTex: { value: depthTex }, ext: { value: ext },
       sunDir: { value: new THREE.Vector3(-0.45, 0.8, 0.35).normalize() }, sunCol: { value: new THREE.Color(th.sun) },
       shallow: { value: new THREE.Color(th.shallow) }, deep: { value: new THREE.Color(th.deep) },
       skyH: { value: new THREE.Color(th.sky) }, skyZ: { value: new THREE.Color(th.skyZ) },
@@ -262,7 +262,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     },
     vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
     fragmentShader: `
-      uniform float t, ext, fogN, fogF; uniform sampler2D depthTex; uniform vec3 sunDir, sunCol, shallow, deep, skyH, skyZ, fogC; varying vec3 vW;
+      uniform float t, amp, ext, fogN, fogF; uniform sampler2D depthTex; uniform vec3 sunDir, sunCol, shallow, deep, skyH, skyZ, fogC; varying vec3 vW;
       float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
       float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y); }
       float waves(vec2 p){ float h=0.0;
@@ -270,7 +270,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
         h += sin(dot(p, vec2(0.07,-0.043)) + t*2.3)*0.18; h += noise(p*0.09 + t*0.18)*0.7 + noise(p*0.27 - t*0.25)*0.35 + noise(p*0.8 + t*0.6)*0.12; return h; }
       void main(){
         vec2 p = vW.xz; float e = 0.6; float h0 = waves(p);
-        vec3 n = normalize(vec3(-(waves(p+vec2(e,0.0))-h0)/e*0.55, 1.0, -(waves(p+vec2(0.0,e))-h0)/e*0.55));
+        vec3 n = normalize(vec3(-(waves(p+vec2(e,0.0))-h0)/e*0.55*amp, 1.0, -(waves(p+vec2(0.0,e))-h0)/e*0.55*amp));
         vec3 V = normalize(cameraPosition - vW);
         vec2 uv = (p + ext*0.5) / ext; float depth = texture2D(depthTex, clamp(uv, 0.0, 1.0)).r * 42.5;
         if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) depth = 40.0;
@@ -278,6 +278,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
         float fres = pow(1.0 - max(dot(n, V), 0.0), 4.0);
         vec3 R = reflect(-V, n); vec3 sky = mix(skyH, skyZ, clamp(R.y, 0.0, 1.0));
         vec3 col = mix(base, sky, 0.10 + 0.55*fres);
+        col = mix(col, vec3(0.86, 0.9, 0.92), smoothstep(1.5, 2.0, h0) * clamp(amp - 1.1, 0.0, 1.0) * 0.55); // borregos con mar gruesa
         col *= 0.78 + 0.32*max(dot(n, sunDir), 0.0);
         col += sunCol * pow(max(dot(R, sunDir), 0.0), 220.0) * 2.2;
         float fz = smoothstep(2.0, 0.15, depth); float fn = noise(p*0.32 + vec2(t*0.35, -t*0.28)) * 0.6 + noise(p*1.1 - t*0.5)*0.4;

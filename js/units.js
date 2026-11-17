@@ -368,7 +368,7 @@ function fireNaval(e, t) {
     if (Math.abs(angDiff(want, base)) > 2.55 || Math.abs(angDiff(want, e.tYaw[i])) > 0.08) continue;
     const from = turretWorld(e, i); from.y += 1.2;
     for (let b = 0; b < (s.n || 1); b++) {
-      const d = dist2(from, aimP), err = (d * (e === G.player ? 0.02 : 0.03) + 4) * (G.env ? G.env.errK : 1) * (e.accK || 1);
+      const d = dist2(from, aimP), err = (d * (e === G.player ? 0.02 : 0.03) + 4) * (G.env ? G.env.errK * (e.dom === 'sea' ? 1 + 0.3 * G.env.seaState : 1) : 1) * (e.accK || 1);
       const tp = aimP.clone().add(V3(rnd(-1, 1) * err, 0, rnd(-1, 1) * err * 1.6));
       const dx = tp.x - from.x, dz = tp.z - from.z, dd = Math.hypot(dx, dz), T = dd / s.hs;
       const ty = t.dom === 'sea' ? 1.5 : t.p.y + 1.5, vy = (ty - from.y + 0.5 * GRAV * T * T) / T;
@@ -541,16 +541,19 @@ function driveShip(e, thr, steer, dt) {
   if (okSurface(e, nx, nz) && okSurface(e, nx + f.x * pr, nz + f.z * pr)) { e.p.x = nx; e.p.z = nz; e.blocked = Math.max(0, e.blocked - dt); }
   else { e.speed *= Math.pow(0.2, dt); e.blocked += dt; if (!okSurface(e, e.p.x, e.p.z)) { e.p.x -= f.x * 2; e.p.z -= f.z * 2; } }
   const t = G.time;
-  const ty = e.submerged ? -3.8 : Math.sin(t * 0.9 + e.id) * 0.18 + (e.sinkY || 0);
+  // estado de la mar: los barcos pequeños cabecean y balancean mucho más que los grandes
+  const ss = G.env ? G.env.seaState : 0.6, sz = clamp(60 / (s.len || 60), 0.5, 2.5), sea = e.submerged ? 0 : ss;
+  const ty = e.submerged ? -3.8 : Math.sin(t * 0.9 + e.id) * (0.18 + 0.35 * sea * sz) + (e.sinkY || 0);
   e.p.y += (ty - e.p.y) * Math.min(1, dt * (e.submerged ? 0.8 : 3));
   e.mesh.rotation.y = e.h;
-  e.mesh.rotation.z = steer * 0.06 * Math.min(1, Math.abs(e.speed) / s.max) + Math.sin(t * 0.7 + e.id) * 0.012 + (e.listA || 0);
-  e.mesh.rotation.x = Math.sin(t * 0.55 + e.id * 2) * 0.008 - (e.speed / s.max) * 0.01 + (e.trimA || 0);
+  e.mesh.rotation.z = steer * 0.06 * Math.min(1, Math.abs(e.speed) / s.max) + Math.sin(t * 0.7 + e.id) * 0.012 + Math.sin(t * (0.8 + 0.3 * sz) + e.id) * 0.03 * sea * sz + (e.listA || 0);
+  e.mesh.rotation.x = Math.sin(t * 0.55 + e.id * 2) * 0.008 - (e.speed / s.max) * 0.01 + Math.sin(t * (1.0 + 0.35 * sz) + e.id * 2) * 0.016 * sea * sz + (e.trimA || 0);
   // estela
   if (Math.abs(e.speed) > 3 && e.p.y > -2) {
     const back = V3(-f.x, 0, -f.z), side = V3(Math.cos(e.h), 0, -Math.sin(e.h));
     if (Math.random() < 0.8) FX.wake(e.p.clone().addScaledVector(back, e.hl * 0.85), back, side, Math.abs(e.speed), e.hw);
     if (Math.random() < 0.5) FX.bowWave(e.p.clone().addScaledVector(f, e.hl * 0.95), side, Math.abs(e.speed));
+    if (sea > 1 && Math.abs(e.speed) > 6 && Math.random() < dt * 2.5 * sea) FX.splash(e.p.clone().addScaledVector(f, e.hl * 0.9).setY(1), 0.35 * sea * Math.min(1.6, sz)); // rociones de proa
   } else if (e.submerged && Math.abs(e.speed) > 3 && Math.random() < 0.4) FX.bubbles(e.p.clone().addScaledVector(f, -e.hl));
 }
 function driveTank(e, thr, steer, dt) {

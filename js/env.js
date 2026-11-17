@@ -42,6 +42,7 @@ export function applyEnv(env = {}) {
   if (sky) { const u = sky.material.uniforms; u.hc.value.copy(fogC); u.zc.value.copy(skyZ); u.sd.value.copy(E.sunDir); u.sc.value.copy(sun.color).multiplyScalar(weather === 'clear' ? 1 : 0.2); }
   if (water) {
     const u = water.material.uniforms, dk = E.dark * 0.7 + (weather === 'storm' ? 0.3 : 0);
+    u.amp.value = 0.6 + E.seaState * 0.7;
     u.skyH.value.copy(fogC); u.skyZ.value.copy(skyZ); u.fogC.value.copy(fogC); u.sunDir.value.copy(E.sunDir);
     u.sunCol.value.copy(sun.color).multiplyScalar(weather === 'clear' ? (time === 'night' ? 0.35 : 1) : 0.25);
     u.shallow.value.lerp(C(0x000000), dk); u.deep.value.lerp(C(0x000000), dk * 0.8);
