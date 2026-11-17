@@ -3,6 +3,7 @@ import { G } from './state.js';
 import { FRONTS } from './data.js';
 import { orderLabel } from './battle.js';
 import { bombImpact } from './units.js';
+import { canvasTex } from './util.js';
 
 const $ = id => document.getElementById(id);
 let msgT = 0, hitT = 0, hurtT = 0, mmBg = null, squadT = 0, feed = [];
@@ -50,6 +51,11 @@ function targetPanel(e) {
     <div class="tgn">${t.name}<i>${t.m.type || ''}</i></div><div class="bar"><i style="width:${hp * 100}%;background:${hp < 0.35 ? 'var(--red)' : '#d9a441'}"></i></div>${extra}
     <div class="tgk"><kbd>T</kbd> siguiente · <kbd>Y</kbd> automático · clic para fijar</div></div>`;
 }
+// objetivo A/B/C al que va la mayor parte de la selección
+export function orderedZone() {
+  const c = [0, 0, 0]; for (const e of G.selection) if (e.alive && e.order.type === 'zone') c[e.order.k]++;
+  const m = Math.max(...c); return m ? c.indexOf(m) : -1;
+}
 function renderSquad(force) {
   const allies = G.ents.filter(e => e.side === 'A' && e.dom !== 'static');
   $('squad').innerHTML = allies.map(e => {
@@ -70,7 +76,8 @@ export function updateHud(dt) {
   const t = G.tickets, mx = G.ticketsMax;
   $('tkA').textContent = Math.ceil(t.A); $('tkE').textContent = Math.ceil(t.E);
   $('barA').style.width = (t.A / mx * 100) + '%'; $('barE').style.width = (t.E / mx * 100) + '%';
-  for (const z of G.objectives) { const el = $('z' + z.k); if (el) el.className = 'z ' + (z.owner === 'A' ? 'a' : z.owner === 'E' ? 'e' : '') + (z.na && z.ne ? ' c' : ''); }
+  const ordK = orderedZone();
+  for (const z of G.objectives) { const el = $('z' + z.k); if (el) el.className = 'z ' + (z.owner === 'A' ? 'a' : z.owner === 'E' ? 'e' : '') + (z.na && z.ne ? ' c' : '') + (z.k === ordK ? ' ord' : ''); }
   if (G.battle.kind === 'air') $('zones').innerHTML = `<span class="zl a">${G.sitesA.filter(s => s.alive).length}/3</span><span class="zl">Instalaciones</span><span class="zl e">${G.sitesE.filter(s => s.alive).length}/3</span>`;
   $('clock').textContent = `${Math.floor(G.time / 60)}:${String(Math.floor(G.time % 60)).padStart(2, '0')}`;
   squadT -= dt; if (squadT <= 0) { renderSquad(); squadT = 0.3; }
@@ -113,18 +120,36 @@ function drawMinimap() {
     else { g.save(); g.translate(x, y); g.rotate(-e.h); g.fillRect(-1.8, -4, 3.6, 8); g.restore(); }
     g.globalAlpha = 1;
   }
+  // objetivo ordenado en amarillo
+  const ok = orderedZone();
+  if (ok >= 0) {
+    if (G.battle.kind === 'air') { const s = G.sitesE[ok]; if (s) { const [x, y] = worldToMM(s.p.x, s.p.z); g.strokeStyle = '#ffd23a'; g.lineWidth = 2.5; g.strokeRect(x - 8, y - 8, 16, 16); } }
+    else { const z = G.objectives[ok]; if (z) { const [x, y] = worldToMM(z.pos.x, z.pos.z), r = G.map.cfg.zoneR / (2 * (G.map.bounds + 100)) * S + 3; g.strokeStyle = '#ffd23a'; g.lineWidth = 2.5; g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke(); } }
+  }
+  // blanco seleccionado en amarillo
+  const P = G.player, T = P && P.alive && P.target && P.target.alive && P.dom !== 'air' ? P.target : null;
+  if (T) {
+    const [px, py] = worldToMM(P.p.x, P.p.z), [tx, ty] = worldToMM(T.p.x, T.p.z);
+    g.strokeStyle = '#ffd23a'; g.lineWidth = 1.5; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(px, py); g.lineTo(tx, ty); g.stroke(); g.setLineDash([]);
+    g.lineWidth = 2.5; g.beginPath(); g.arc(tx, ty, 7, 0, 7); g.stroke();
+  }
   // encuadre de la cámara
   const [cx, cy] = worldToMM(G.focus.x, G.focus.z), w = G.zoom * 1.1 / (2 * (G.map.bounds + 100)) * S;
   g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 1; g.strokeRect(cx - w, cy - w * 0.75, w * 2, w * 1.5);
 }
 
 // ---------- indicadores 3D: mira de bombas y guía de torpedos ----------
-let bombRing, torpLine, tgtRing;
+let bombRing, torpLine, tgtRing, tgtMark;
+const YEL = 0xffd23a;
 export function initAimMarkers() {
   bombRing = new THREE.Mesh(new THREE.RingGeometry(5, 6.5, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthTest: false, side: THREE.DoubleSide }));
   bombRing.rotation.x = -Math.PI / 2; bombRing.renderOrder = 13; G.scene.add(bombRing);
   tgtRing = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 4), new THREE.MeshBasicMaterial({ color: 0xff5a3a, transparent: true, opacity: 0.9, depthTest: false, side: THREE.DoubleSide }));
   tgtRing.rotation.x = -Math.PI / 2; tgtRing.renderOrder = 13; G.scene.add(tgtRing);
+  // marcador amarillo sobre el blanco (visible con cualquier cámara y zoom)
+  const tex = canvasTex(64, g => { g.fillStyle = '#ffd23a'; g.strokeStyle = 'rgba(0,0,0,0.7)'; g.lineWidth = 4; g.beginPath(); g.moveTo(8, 10); g.lineTo(56, 10); g.lineTo(32, 50); g.closePath(); g.stroke(); g.fill(); });
+  tgtMark = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, sizeAttenuation: false, depthTest: false, transparent: true }));
+  tgtMark.scale.set(0.028, 0.028, 1); tgtMark.renderOrder = 14; tgtMark.center.set(0.5, 0); G.scene.add(tgtMark);
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
   torpLine = new THREE.Line(g, new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 12, gapSize: 10, transparent: true, opacity: 0.6, depthTest: false }));
   torpLine.renderOrder = 13; torpLine.frustumCulled = false; G.scene.add(torpLine);
@@ -134,8 +159,12 @@ export function updateAimMarkers() {
   bombRing.visible = ok && e.dom === 'air';
   if (bombRing.visible) { const ip = bombImpact(e); bombRing.position.set(ip.x, ip.y + 0.5, ip.z); bombRing.material.opacity = e.cd.bomb <= 0 ? 0.85 : 0.25; }
   const t = ok && e.target && e.target.alive ? e.target : null;
-  tgtRing.visible = !!t && e.dom !== 'air';
-  if (t) { tgtRing.material.color.setHex(e.lock ? 0xffd040 : 0xff5a3a); tgtRing.material.opacity = e.aimReady && e.cd.main <= 0 ? 0.6 + 0.4 * Math.sin(performance.now() / 90) : 0.8; }
+  tgtRing.visible = tgtMark.visible = !!t && e.dom !== 'air';
+  if (t) {
+    tgtRing.material.color.setHex(YEL); tgtRing.material.opacity = e.aimReady && e.cd.main <= 0 ? 0.6 + 0.4 * Math.sin(performance.now() / 90) : e.lock ? 0.95 : 0.7;
+    tgtMark.position.set(t.p.x, Math.max(t.p.y, 0) + (t.top || 6) + 4 + Math.sin(performance.now() / 200) * 1.5, t.p.z);
+    tgtMark.material.opacity = e.lock ? 1 : 0.8;
+  }
   if (t) { const s = Math.max(t.hl, t.hw) * 1.5 + 4; tgtRing.scale.set(s, s, s); tgtRing.rotation.z += 0.02; tgtRing.position.set(t.p.x, Math.max(t.p.y, 0) + 1, t.p.z); }
   torpLine.visible = ok && e.dom === 'sea' && !!e.s.torp && (e.cls === 'sub' || !e.target || e.cls === 'pt');
   if (torpLine.visible) { const a = torpLine.geometry.attributes.position.array; a[0] = e.p.x + Math.sin(e.h) * e.hl; a[1] = 0.5; a[2] = e.p.z + Math.cos(e.h) * e.hl; a[3] = e.p.x + Math.sin(e.h) * 800; a[4] = 0.5; a[5] = e.p.z + Math.cos(e.h) * 800; torpLine.geometry.attributes.position.needsUpdate = true; torpLine.computeLineDistances(); }

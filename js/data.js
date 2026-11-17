@@ -59,6 +59,11 @@ export const BATTLES = {
     enemy: [['z1936', 1], ['sboot', 2], ['u7c', 1], ['bf109g', 2], ['fw190f', 1], ['pz4h', 2], ['panther', 1], ['stug', 1]],
     statics: [['battery', 3], ['aa', 2]],
   },
+  'test': {
+    front: 'europe', kind: 'test', map: 'normandy', title: 'Campo de pruebas', year: '',
+    brief: 'Sin puntos ni derrota. Elige cualquier unidad del catálogo, añade blancos o enemigos y prueba armas, blindajes y cámaras.',
+    allies: [['sherman', 1]], enemy: [],
+  },
   'europe-land': {
     front: 'europe', kind: 'land', map: 'europe_land', title: 'Bocage normando', year: '1944',
     brief: 'Toma los cruces de caminos (A, B, C). Panther y Tiger destrozan a cualquier Sherman de frente: usa a los Firefly y al M10 para el trabajo duro y flanquea entre los setos.',

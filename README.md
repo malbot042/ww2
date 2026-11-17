@@ -28,6 +28,17 @@ Los objetivos A (salida de la playa) y B (pueblo) los capturan los tanques; el C
 - **Aérea:** Wildcat, Zero, Dauntless, Val, Kittyhawk, Hurricane, Bf 109 F/G, Macchi C.202, Stuka, P-51D, P-47 y Fw 190 F.
 - **Tanques:** Sherman, Firefly, Cromwell, M10, Grant, Crusader, Panzer III, Panzer IV F2/H, M13/40, Panther, StuG III y Tiger I.
 
+## Campo de pruebas
+Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin puntos ni derrota. Desde el panel de la derecha puedes:
+- Ser **cualquier unidad** del catálogo, incluidas las del Eje.
+- Añadir enemigos o aliados de cualquier modelo, también baterías costeras y antiaéreos. Los enemigos pueden ser **pasivos**, quietos o en movimiento, o tener la IA activada.
+- Colocar **blancos fijos** adaptados a tu unidad: tanques orientados de distintas formas para probar el blindaje, barcos para practicar disparar de costado, aviones para practicar la puntería.
+- Reparar tu unidad, activar la **invulnerabilidad** y ver el **daño de cada impacto**, con el lado y el multiplicador de blindaje.
+
+## Marcas en amarillo
+- **Blanco seleccionado:** anillo y flecha amarilla sobre él en el mapa 3D (visible con cualquier cámara y zoom), círculo y línea discontinua en el minimapa, y panel del blanco con borde amarillo en el HUD.
+- **Objetivo ordenado:** el objetivo A, B o C (o la instalación, en las batallas aéreas) al que va la mayor parte de tu selección se resalta en amarillo en la barra superior, en el minimapa y en el anillo del mapa.
+
 ## Cómo se gana
 - **Naval y tanques:** cada bando tiene 600 puntos. Si controlas más objetivos (A, B, C) que el enemigo, él pierde puntos cada segundo. Cada unidad destruida también resta puntos a su bando.
 - **Aérea:** cada bando tiene 3 instalaciones (aeródromo, depósito y radar) protegidas por antiaéreos. Gana quien destruye las del rival o agota sus puntos.
@@ -76,6 +87,7 @@ js/units.js       movimiento, armas, proyectiles, daño e IA de las unidades
 js/battle.js      preparación de la batalla, objetivos, puntos, mando enemigo y órdenes
 js/hud.js         HUD, minimapa y marcadores de puntería
 js/fx.js          partículas (humo, fuego, espuma) y audio sintetizado
+js/sandbox.js     campo de pruebas
 v1.html           primer prototipo (v0.1)
 ```
 Con `#debug` en la URL queda disponible `window.__ww2` para pruebas automáticas.

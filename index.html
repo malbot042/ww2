@@ -30,7 +30,19 @@
     <div class="tk e"><div class="tb"><i id="barE"></i></div><b id="tkE">600</b><span class="tn" id="tkNameE">Eje</span></div>
     <div id="clock">0:00</div>
   </div>
-  <div id="right"><canvas id="mm" width="220" height="220"></canvas><div id="feed"></div></div>
+  <div id="right"><canvas id="mm" width="220" height="220"></canvas>
+    <div class="panel hide" id="sandbox">
+      <h4>Campo de pruebas</h4>
+      <label>Tu unidad<select id="sbMe"></select></label>
+      <label>Unidad a añadir<select id="sbUnit"></select></label>
+      <div class="r2"><button id="sbEnemy">+ Enemigo</button><button id="sbAlly">+ Aliado</button></div>
+      <label class="chk"><input type="checkbox" id="sbPassive" checked> Enemigos pasivos (no disparan)</label>
+      <label class="chk"><input type="checkbox" id="sbMove"> Blancos en movimiento</label>
+      <div class="r2"><button id="sbTargets">Blancos fijos</button><button id="sbClear">Limpiar</button></div>
+      <div class="r2"><button id="sbRepair">Reparar</button><label class="chk"><input type="checkbox" id="sbGod"> Invulnerable</label></div>
+      <div id="sbInfo"></div>
+    </div>
+    <div id="feed"></div></div>
   <div id="orders">
     <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Objetivo A·B·C</span>
     <span><kbd>Q</kbd> Seguirme</span><span><kbd>E</kbd> Ataque libre</span><span><kbd>R</kbd> Mantener</span><span><kbd>F</kbd> Defender</span>

@@ -4,6 +4,7 @@ import { FRONTS, BATTLES, KIND_NAME, MODELS } from './data.js';
 import { updateWorld } from './world.js';
 import { startBattle, updateBattle, issueOrder, setPlayer, orderLabel } from './battle.js';
 import { lockTarget, targetFilter } from './units.js';
+import { initSandbox, sandboxStart, sandboxHide, sandboxHit } from './sandbox.js';
 import { updateUnits, updateProjs } from './units.js';
 import { initFx, updateFx, initAudio, setEngine } from './fx.js';
 import { hudInit, hudHide, updateHud, flash, hitMark, hurt, addFeed, initAimMarkers, updateAimMarkers } from './hud.js';
@@ -31,7 +32,7 @@ initFx(); initAimMarkers();
 // ---------- callbacks del juego ----------
 G.onMsg = (a, b) => flash(a, b);
 G.onHurt = () => hurt();
-G.onHit = (e, zone, mult) => { if (zone === null) return hitMark('Impacto'); hitMark(['Impacto frontal', 'Impacto lateral', 'Impacto trasero'][zone] + (mult < 0.8 ? ' · blindaje resiste' : mult > 1.3 ? ' · ¡crítico!' : ''), mult < 0.8); };
+G.onHit = (e, zone, mult, dmg) => { if (G.battle && G.battle.kind === 'test') sandboxHit(e, zone, mult, dmg); if (zone === null) return hitMark('Impacto'); hitMark(['Impacto frontal', 'Impacto lateral', 'Impacto trasero'][zone] + (mult < 0.8 ? ' · blindaje resiste' : mult > 1.3 ? ' · ¡crítico!' : ''), mult < 0.8); };
 G.onKill = (e, by) => {
   if (G.demo) return;
   const who = by ? (by === G.player ? 'Tú' : by.name) : '';
@@ -128,8 +129,13 @@ function buildFrontMenu() {
       <span class="fy">${f.years}</span><span class="fn">${f.name}</span><span class="fv">${f.vs}</span>
       <span class="fd">${f.desc}</span>
       <span class="fb">${f.battles.map(b => `<i>${KIND_NAME[b]}</i>`).join('')}</span>
-    </button>`).join('');
-  $('fronts').querySelectorAll('.front').forEach(b => b.onclick = () => { initAudio(); buildBattleMenu(b.dataset.front); });
+    </button>`).join('') + `
+    <button class="front f-test" data-test="1">
+      <span class="fy">Sin puntos ni derrota</span><span class="fn">Campo de pruebas</span><span class="fv">Mar, playa y tierra</span>
+      <span class="fd">Elige cualquiera de los ${Object.keys(MODELS).length} modelos, coloca blancos fijos o enemigos con IA y prueba armas, blindajes, cámaras y controles.</span>
+      <span class="fb"><i>Naval</i><i>Aérea</i><i>Tanques</i></span>
+    </button>`;
+  $('fronts').querySelectorAll('.front').forEach(b => b.onclick = () => { initAudio(); if (b.dataset.test) launch('test'); else buildBattleMenu(b.dataset.front); });
 }
 function buildBattleMenu(fk) {
   const f = FRONTS[fk];
@@ -154,12 +160,15 @@ function launch(key, keepCampaign = false) {
     const p = G.player; G.targetZoom = G.zoom = ZOOM_DEF[p.dom];
     G.cam.preset = 0; G.cam.pitch = 1.1; G.cam.yaw = 0; G.cam.ang = 0; G.cam.rel = false; $('camName').textContent = 'Cenital';
     hudInit(); show(null); $('menu').classList.add('hide');
+    const test = G.battle.kind === 'test';
+    $('top').classList.toggle('hide', test);
+    if (test) { initSandbox({ flash, onPlayerChange: e => { G.targetZoom = ZOOM_DEF[e.dom]; } }); sandboxStart(); } else sandboxHide();
     G.running = true;
-    flash(`${BATTLES[key].title}, ${BATTLES[key].year}`, G.battle.kind === 'combined' ? 'A: salida de la playa · B: pueblo · C: fondeadero (naval). Tab cambia entre barco, avión y tanque' : G.battle.kind === 'air' ? 'Pulsa 1, 2 o 3 para enviar tu escuadrilla contra las instalaciones A, B o C' : 'Pulsa 1, 2 o 3 para enviar tu escuadra a los objetivos A, B o C', 5);
+    flash(G.battle.kind === 'test' ? 'Campo de pruebas' : `${BATTLES[key].title}, ${BATTLES[key].year}`, G.battle.kind === 'test' ? 'Elige unidad y blancos en el panel de la derecha' : G.battle.kind === 'combined' ? 'A: salida de la playa · B: pueblo · C: fondeadero (naval). Tab cambia entre barco, avión y tanque' : G.battle.kind === 'air' ? 'Pulsa 1, 2 o 3 para enviar tu escuadrilla contra las instalaciones A, B o C' : 'Pulsa 1, 2 o 3 para enviar tu escuadra a los objetivos A, B o C', 5);
   }, 60);
 }
 function startDemo() {
-  const keys = Object.keys(BATTLES); const key = keys[(Math.random() * keys.length) | 0];
+  const keys = Object.keys(BATTLES).filter(k => k !== 'test'); const key = keys[(Math.random() * keys.length) | 0];
   G.running = false; startBattle(key, true); G.zoom = G.targetZoom = 950;
 }
 function showResults(res) {
@@ -184,7 +193,7 @@ function showResults(res) {
   $('resMenu').onclick = () => { G.campaign = null; toMenu(); };
   show('results');
 }
-function toMenu() { hudHide(); G.running = false; show('scrFront'); startDemo(); }
+function toMenu() { sandboxHide(); hudHide(); G.running = false; show('scrFront'); startDemo(); }
 $('backFront').onclick = () => show('scrFront');
 
 // ---------- entrada ----------

@@ -156,7 +156,8 @@ export function damage(e, dmg, by, dir, kind) {
     zone = c > 0.62 ? 0 : c < -0.62 ? 2 : 1; mult = e.s.armor[zone];
   }
   e.hp -= dmg * mult;
-  if (by === G.player && G.onHit) G.onHit(e, zone, mult);
+  if (by === G.player && G.onHit) G.onHit(e, zone, mult, dmg * mult, kind);
+  if (e === G.player && G.godMode) { G.shake = Math.max(G.shake, 0.5); return; }
   if (e === G.player) { G.shake = Math.max(G.shake, 0.8 + dmg / 40); G.onHurt && G.onHurt(); }
   if (e.hp <= 0) kill(e, by);
 }
@@ -578,6 +579,13 @@ function think(e) {
   }
 }
 export function aiUnit(e, dt) {
+  if (e.passive) { // blanco de pruebas: se mueve en línea/círculo sin disparar
+    if (e.dom === 'air') flyPlane(e, 0, 0.35, dt);
+    else if (e.dom === 'sea') driveShip(e, e.passiveMove ? 0.4 : 0, e.passiveMove ? 0.15 : 0, dt);
+    else if (e.dom === 'land') driveTank(e, e.passiveMove ? 0.5 : 0, 0, dt);
+    if (e.dom === 'land' && e.blocked > 0.5) { e.h += Math.PI; e.blocked = 0; }
+    return;
+  }
   e.ai.think -= dt; if (e.ai.think <= 0) { e.ai.think = 0.25 + rnd(0, 0.15); think(e); }
   if (e.ai.esc > 0) e.ai.esc -= dt;
   const t = e.target, goal = e.goal || e.p;

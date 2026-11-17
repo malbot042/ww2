@@ -29,9 +29,9 @@ button:focus-visible{outline:3px solid var(--paper);outline-offset:2px}
 .wp b{color:var(--paper);font-weight:600;white-space:nowrap}.wp b.ok{color:#a9d36e}.wp b.bad{color:#ff7a6a}
 .wp b.warn{color:#ffc14d}
 .tg{border-top:1px solid var(--line);margin-top:8px;padding-top:6px}
-.tg.lock .tgh span{color:#ffd040}
+.tg{border-left:3px solid #ffd23a;padding-left:8px;margin-left:-2px}.tg.empty{border-left-color:var(--line)}.tg .tgh span{color:#ffd23a}.tg:not(.lock) .tgh span{opacity:.8}
 .tgh{display:flex;justify-content:space-between;font-size:13px;opacity:.85}.tgh b{color:var(--paper)}
-.tgn{font-size:18px;font-weight:700;color:#ffb39f;line-height:1.1;margin-top:2px}.tgn i{font-style:normal;font-weight:500;font-size:13px;opacity:.7;margin-left:6px}
+.tgn{font-size:18px;font-weight:700;color:#ffd23a;line-height:1.1;margin-top:2px}.tgn i{font-style:normal;font-weight:500;font-size:13px;opacity:.7;margin-left:6px}
 .tgk{font-size:12px;opacity:.65;margin-top:4px}.tgk kbd{font-size:11px}
 #squad{top:236px;left:12px;width:250px;display:flex;flex-direction:column;gap:3px;max-height:calc(100vh - 300px);overflow:auto;pointer-events:auto}
 #squad .sq{padding:2px 8px 3px;font-size:13px;cursor:pointer;opacity:.85;display:grid;grid-template-columns:1fr auto;column-gap:6px}
@@ -49,6 +49,7 @@ button:focus-visible{outline:3px solid var(--paper);outline-offset:2px}
 #zones{display:flex;gap:6px;align-items:center}
 .z{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:17px;color:#fff;border:2px solid #bbb;background:rgba(0,0,0,.35)}
 .z.a{border-color:var(--blue);background:rgba(74,144,232,.45)}.z.e{border-color:var(--red);background:rgba(208,71,59,.45)}.z.c{animation:pulse .6s infinite alternate;border-color:#ffc040}
+.z.ord{box-shadow:0 0 0 3px #ffd23a}
 @keyframes pulse{to{transform:scale(1.12)}}
 .zl{font-size:14px;font-weight:600}.zl.a{color:#8ec0ff;font-size:18px}.zl.e{color:#ff8f84;font-size:18px}
 #clock{font-size:15px;opacity:.75;margin-left:4px}
@@ -112,3 +113,16 @@ button:focus-visible{outline:3px solid var(--paper);outline-offset:2px}
 #resStats div{background:rgba(29,31,23,.06);border-radius:4px;padding:8px 12px;display:flex;flex-direction:column}#resStats span{font-size:13px;opacity:.7}#resStats b{font:800 24px "Barlow Condensed",sans-serif}
 .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
 @media(max-width:900px){#fronts{grid-template-columns:1fr}.front{min-height:0;padding-top:130px}.help{grid-template-columns:1fr}#squad{display:none}#orders{display:none}#mm{width:150px;height:150px}#unit{width:220px}.tb{width:60px}}
+
+/* ---------- campo de pruebas ---------- */
+#right{pointer-events:none}#right>*{pointer-events:auto}
+#sandbox{width:220px;padding:10px 12px;font-size:14px;display:flex;flex-direction:column;gap:6px}
+#sandbox h4{margin:0;font-size:18px;color:var(--paper)}
+#sandbox label{display:flex;flex-direction:column;gap:2px;font-size:13px}
+#sandbox select{font:500 14px Barlow,sans-serif;background:#2b2d24;color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:5px;min-height:34px}
+#sandbox .r2{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center}
+#sandbox button{font-weight:700;font-size:15px;background:rgba(239,231,207,.12);color:var(--paper);border:1px solid var(--line);border-radius:3px;min-height:34px}
+#sandbox button:hover{background:rgba(239,231,207,.22)}#sandbox #sbEnemy{border-color:rgba(208,71,59,.7)}#sandbox #sbAlly{border-color:rgba(74,144,232,.7)}
+#sandbox label.chk{flex-direction:row;align-items:center;gap:6px}
+#sbInfo{font-size:13px;opacity:.85;border-top:1px solid var(--line);padding-top:6px;min-height:34px}#sbInfo b{color:#ffd27a;font-size:16px}
+.front.f-test{background:#23251d}.f-test::before{background:repeating-linear-gradient(45deg,#3a3d2c 0 14px,#2f3224 14px 28px),#2f3224}

@@ -56,7 +56,7 @@ export function startBattle(key, demo = false) {
   const wantSea = (x, z) => map.h(x, z) < -12 && map.h(x + 40, z) < -8 && map.h(x - 40, z) < -8 && map.h(x, z + 60) < -8 && map.h(x, z - 60) < -8;
   const wantLand = (x, z) => map.h(x, z) > 1.5;
   // objetivos
-  if (!air) {
+  if (!air && b.kind !== 'test') {
     map.zones.forEach((zn, k) => {
       const zdom = mixed ? (map.h(zn.x, zn.z) > 0 ? 'land' : 'sea') : naval ? 'sea' : 'land';
       const [x, z] = findNear(zn.x, zn.z, zdom === 'sea' ? wantSea : wantLand);
@@ -66,7 +66,7 @@ export function startBattle(key, demo = false) {
       const lab = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex('ABC'[k], '#bbbbbb'), sizeAttenuation: false, depthTest: false, transparent: true })); lab.scale.set(0.05, 0.05, 1); lab.position.set(x, pos.y + 30, z); lab.renderOrder = 10; markers.add(lab);
       G.objectives.push({ k, pos, owner: null, prog: 0, ring, lab, name: 'ABC'[k], dom: zdom });
     });
-  } else {
+  } else if (air) {
     const [fa, fe] = b.sites;
     const mk = (arr, side, fac, list) => arr.forEach(([sx, sz], i) => {
       const [x, z] = findNear(sx, sz, (x, z) => map.h(x, z) > 3 && map.h(x + 45, z + 45) > 1 && map.h(x - 45, z - 45) > 1 && map.h(x + 45, z - 45) > 1 && map.h(x - 45, z + 45) > 1);
@@ -120,6 +120,15 @@ export function startBattle(key, demo = false) {
   lines.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(240), 3)); lines.renderOrder = 11; lines.frustumCulled = false; markers.add(lines);
   G.focus.copy(G.player ? G.player.p : V3(0, 0, sp));
   return { allies, enemies };
+}
+
+// ---------- quitar entidades (campo de pruebas) ----------
+export function removeEntity(e) {
+  G.unitsGroup.remove(e.mesh);
+  G.ents = G.ents.filter(x => x !== e);
+  G.selection.delete(e);
+  const sp = icons.get(e); if (sp) { markers.remove(sp); icons.delete(e); }
+  const r = selRings.get(e); if (r) { markers.remove(r); selRings.delete(e); }
 }
 
 // ---------- órdenes ----------
@@ -177,7 +186,7 @@ export function updateBattle(dt) {
   G.time += dt;
   const b = G.battle;
   // mando IA
-  for (const s of ['A', 'E']) { cmdT[s] -= dt; if (cmdT[s] <= 0) { command(s); cmdT[s] = 12; } }
+  if (b.kind !== 'test') for (const s of ['A', 'E']) { cmdT[s] -= dt; if (cmdT[s] <= 0) { command(s); cmdT[s] = 12; } }
   // zonas
   if (b.kind !== 'air') {
     const R = G.map.cfg.zoneR;
@@ -193,14 +202,15 @@ export function updateBattle(dt) {
       if (prev !== z.owner && G.onZone) G.onZone(z, prev);
       if (z.owner === 'A') a++; if (z.owner === 'E') e++;
       const col = z.owner === 'A' ? 0x4a90e8 : z.owner === 'E' ? 0xe0503f : (na && ne ? 0xffc040 : 0xcccccc);
-      z.ring.material.color.setHex(col); z.ring.material.opacity = 0.35 + (na && ne ? Math.sin(G.time * 6) * 0.2 + 0.2 : 0.15);
+      const ordered = G.selection.size && [...G.selection].filter(u => u.alive && u.order.type === 'zone' && u.order.k === z.k).length * 2 > [...G.selection].filter(u => u.alive).length;
+      z.ring.material.color.setHex(ordered ? 0xffd23a : col); z.ring.material.opacity = 0.35 + (na && ne ? Math.sin(G.time * 6) * 0.2 + 0.2 : 0.15);
       if (z.lastCol !== col) { z.lab.material.map = labelTex(z.name, '#' + col.toString(16).padStart(6, '0')); z.lastCol = col; }
     }
     if (a > e) G.tickets.E = Math.max(0, G.tickets.E - (a - e) * 1.3 * dt);
     if (e > a) G.tickets.A = Math.max(0, G.tickets.A - (e - a) * 1.3 * dt);
   }
   // final
-  if (!G.over && !G.demo) {
+  if (!G.over && !G.demo && b.kind !== 'test') {
     const mob = s => G.ents.some(u => u.alive && u.side === s && u.dom !== 'static');
     const sitesDead = s => b.kind === 'air' && (s === 'A' ? G.sitesA : G.sitesE).every(x => !x.alive);
     let res = null;
