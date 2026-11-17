@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { updateDamageFx } from './damagefx.js';
 import { newCampaign, endCampaignBattle, restoreSnapshot, UNLOCKS } from './campaign.js';
 import { G } from './state.js';
 import { FRONTS, BATTLES, KIND_NAME, MODELS } from './data.js';
@@ -121,7 +122,7 @@ function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.05); last = now;
   if (G.map) {
     const sim = G.running && !G.paused && !G.deploying;
-    if (sim || G.demo) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); }
+    if (sim || G.demo) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); }
     else if (G.deploying) { updateVision(dt); updateMarkers(); }
     updateWorld(dt); if (sim || G.demo) updateEnv(dt); updateCamera(dt);
     if (G.running) { updateHud(dt); updateAimMarkers(); const p = G.player; if (p && p.alive) setEngine(p.dom, Math.abs(p.speed) / p.s.max, !G.paused); }
@@ -364,4 +365,4 @@ $('squad').addEventListener('dblclick', ev => { const el = ev.target.closest('.s
 // ---------- arranque ----------
 buildFrontMenu(); show('scrFront'); startDemo();
 requestAnimationFrame(frame);
-if (location.hash === '#debug') window.__ww2 = { G, launch, startBattle, spawn: spawnUnit, step(dt) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); }, issueOrder, setPlayer };
+if (location.hash === '#debug') window.__ww2 = { G, launch, startBattle, spawn: spawnUnit, step(dt) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); }, issueOrder, setPlayer };

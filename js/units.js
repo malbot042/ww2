@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { updateDamageLook, onKillFx, crater } from './damagefx.js';
 import { gainXp } from './campaign.js';
 import { launchFlare } from './env.js';
 import { G } from './state.js';
@@ -221,7 +222,7 @@ export function kill(e, by) {
   G.tickets[e.side] = Math.max(0, G.tickets[e.side] - e.s.value);
   if (G.cp && !e.support) G.cp[e.side === 'A' ? 'E' : 'A'] += e.s.value * 0.6;
   if (e.side === 'E') G.stats.kills++; else if (e.dom !== 'static' || e.cls === 'site') G.stats.lost++;
-  gainXp(by, e);
+  gainXp(by, e); onKillFx(e);
   G.onKill && G.onKill(e, by);
   const p = e.p.clone();
   if (e.dom === 'air') { e.falling = 4; e.spin = rnd(-1, 1) > 0 ? 3 : -3; FX.explosion(p, 1); return; }
@@ -271,7 +272,7 @@ export function updateProjs(dt) {
       }
     } else if (q.kind === 'bomb') {
       if (p.y <= surf) {
-        const w = ground < 0; if (w) FX.splash(p, 2.4); FX.explosion(V3(p.x, surf, p.z), w ? 1 : 1.8, { dust: !w, debris: !w });
+        const w = ground < 0; if (w) FX.splash(p, 2.4); else crater(p.x, p.z, q.rad / 30); FX.explosion(V3(p.x, surf, p.z), w ? 1 : 1.8, { dust: !w, debris: !w });
         for (const e of G.ents) if (e.alive && e.side !== q.side && e.dom !== 'air') { const d = dist2(e.p, p) - Math.min(e.hw, 25); if (d < q.rad) damage(e, q.dmg * (d < 4 ? 1 : 1 - d / q.rad * 0.6), q.owner); }
         done = true;
       }
@@ -297,8 +298,8 @@ export function updateProjs(dt) {
         }
       }
       if (!done && p.y <= surf) {
-        if (q.kind === 'naval') { if (ground < 0) { FX.splash(V3(p.x, 0, p.z), q.dmg > 80 ? 2.8 : q.dmg > 40 ? 1.8 : 1.2); for (const e of G.ents) if (e.alive && e.side !== q.side && e.dom === 'sea' && !e.submerged && dist2(e.p, p) < e.hl * 0.6 + 8) damage(e, q.dmg * 0.12, q.owner, null, 'near'); } else { FX.dirt(V3(p.x, surf, p.z), 1.2); for (const e of G.ents) if (e.alive && e.side !== q.side && (e.dom === 'land' || e.dom === 'static')) { const d = dist2(e.p, p) - e.hw; if (d < 10) damage(e, q.dmg * 0.6 * (1 - Math.max(0, d) / 12), q.owner, null, 'he'); } } }
-        else if (q.kind === 'ap') { FX.dirt(V3(p.x, surf, p.z), q.ammo === 'he' ? 0.9 : 0.6); if (q.ammo === 'he' || q.ammo === 'rocket') splashHE(q, V3(p.x, surf, p.z), null); }
+        if (q.kind === 'naval') { if (ground < 0) { FX.splash(V3(p.x, 0, p.z), q.dmg > 80 ? 2.8 : q.dmg > 40 ? 1.8 : 1.2); for (const e of G.ents) if (e.alive && e.side !== q.side && e.dom === 'sea' && !e.submerged && dist2(e.p, p) < e.hl * 0.6 + 8) damage(e, q.dmg * 0.12, q.owner, null, 'near'); } else { FX.dirt(V3(p.x, surf, p.z), 1.2); crater(p.x, p.z, q.dmg > 80 ? 0.9 : 0.6); for (const e of G.ents) if (e.alive && e.side !== q.side && (e.dom === 'land' || e.dom === 'static')) { const d = dist2(e.p, p) - e.hw; if (d < 10) damage(e, q.dmg * 0.6 * (1 - Math.max(0, d) / 12), q.owner, null, 'he'); } } }
+        else if (q.kind === 'ap') { FX.dirt(V3(p.x, surf, p.z), q.ammo === 'he' ? 0.9 : 0.6); if (q.ammo === 'he' || q.ammo === 'rocket') crater(p.x, p.z, 0.4); if (q.ammo === 'he' || q.ammo === 'rocket') splashHE(q, V3(p.x, surf, p.z), null); }
         else if (Math.random() < 0.25) { if (ground < 0) FX.splash(V3(p.x, 0, p.z), 0.25); }
         done = true;
       }
@@ -539,11 +540,11 @@ function driveShip(e, thr, steer, dt) {
   if (okSurface(e, nx, nz) && okSurface(e, nx + f.x * pr, nz + f.z * pr)) { e.p.x = nx; e.p.z = nz; e.blocked = Math.max(0, e.blocked - dt); }
   else { e.speed *= Math.pow(0.2, dt); e.blocked += dt; if (!okSurface(e, e.p.x, e.p.z)) { e.p.x -= f.x * 2; e.p.z -= f.z * 2; } }
   const t = G.time;
-  const ty = e.submerged ? -3.8 : Math.sin(t * 0.9 + e.id) * 0.18;
+  const ty = e.submerged ? -3.8 : Math.sin(t * 0.9 + e.id) * 0.18 + (e.sinkY || 0);
   e.p.y += (ty - e.p.y) * Math.min(1, dt * (e.submerged ? 0.8 : 3));
   e.mesh.rotation.y = e.h;
-  e.mesh.rotation.z = steer * 0.06 * Math.min(1, Math.abs(e.speed) / s.max) + Math.sin(t * 0.7 + e.id) * 0.012;
-  e.mesh.rotation.x = Math.sin(t * 0.55 + e.id * 2) * 0.008 - (e.speed / s.max) * 0.01;
+  e.mesh.rotation.z = steer * 0.06 * Math.min(1, Math.abs(e.speed) / s.max) + Math.sin(t * 0.7 + e.id) * 0.012 + (e.listA || 0);
+  e.mesh.rotation.x = Math.sin(t * 0.55 + e.id * 2) * 0.008 - (e.speed / s.max) * 0.01 + (e.trimA || 0);
   // estela
   if (Math.abs(e.speed) > 3 && e.p.y > -2) {
     const back = V3(-f.x, 0, -f.z), side = V3(Math.cos(e.h), 0, -Math.sin(e.h));
@@ -991,6 +992,7 @@ function aiStatic(e, dt) {
 export function updateUnits(dt) {
   for (const e of G.ents) {
     if (!e.alive) { updateWreck(e, dt); continue; }
+    updateDamageLook(e, dt);
     const rk = e.rofK || 1; for (const k in e.cd) e.cd[k] -= dt * rk;
     if (e.detected > 0) e.detected -= dt;
     if (e.cls === 'sub') { e.battery = clamp(e.battery + (e.submerged ? -dt / 50 : dt / 28), 0, 1); if (e.submerged && e.battery <= 0) toggleDive(e); }
