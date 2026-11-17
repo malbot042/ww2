@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { gainXp } from './campaign.js';
 import { launchFlare } from './env.js';
 import { G } from './state.js';
 import { MODELS, specOf, CLS } from './data.js';
@@ -220,6 +221,7 @@ export function kill(e, by) {
   G.tickets[e.side] = Math.max(0, G.tickets[e.side] - e.s.value);
   if (G.cp && !e.support) G.cp[e.side === 'A' ? 'E' : 'A'] += e.s.value * 0.6;
   if (e.side === 'E') G.stats.kills++; else if (e.dom !== 'static' || e.cls === 'site') G.stats.lost++;
+  gainXp(by, e);
   G.onKill && G.onKill(e, by);
   const p = e.p.clone();
   if (e.dom === 'air') { e.falling = 4; e.spin = rnd(-1, 1) > 0 ? 3 : -3; FX.explosion(p, 1); return; }
@@ -364,7 +366,7 @@ function fireNaval(e, t) {
     if (Math.abs(angDiff(want, base)) > 2.55 || Math.abs(angDiff(want, e.tYaw[i])) > 0.08) continue;
     const from = turretWorld(e, i); from.y += 1.2;
     for (let b = 0; b < (s.n || 1); b++) {
-      const d = dist2(from, aimP), err = (d * (e === G.player ? 0.02 : 0.03) + 4) * (G.env ? G.env.errK : 1);
+      const d = dist2(from, aimP), err = (d * (e === G.player ? 0.02 : 0.03) + 4) * (G.env ? G.env.errK : 1) * (e.accK || 1);
       const tp = aimP.clone().add(V3(rnd(-1, 1) * err, 0, rnd(-1, 1) * err * 1.6));
       const dx = tp.x - from.x, dz = tp.z - from.z, dd = Math.hypot(dx, dz), T = dd / s.hs;
       const ty = t.dom === 'sea' ? 1.5 : t.p.y + 1.5, vy = (ty - from.y + 0.5 * GRAV * T * T) / T;
@@ -384,7 +386,7 @@ function fireTank(e, t) {
   const d = from.distanceTo(tp), sp = 520;
   tp.addScaledVector(t.vel, d / sp);
   const moving = Math.abs(e.speed) / e.s.max;
-  const err = ((e === G.player ? 0.004 : 0.008) + moving * 0.018 + d / 60000) * (G.env ? G.env.errK : 1);
+  const err = ((e === G.player ? 0.004 : 0.008) + moving * 0.018 + d / 60000) * (G.env ? G.env.errK : 1) * (e.accK || 1);
   const dir = tp.sub(from).normalize().add(V3(rnd(-err, err), rnd(-err, err) * 0.4, rnd(-err, err))).normalize();
   proj('ap', e, from, dir.multiplyScalar(sp), { dmg: s.dmg, life: s.range / sp * 1.15, ammo: am });
   if (am !== 'x') e.ammo[am]--;
@@ -989,7 +991,7 @@ function aiStatic(e, dt) {
 export function updateUnits(dt) {
   for (const e of G.ents) {
     if (!e.alive) { updateWreck(e, dt); continue; }
-    for (const k in e.cd) e.cd[k] -= dt;
+    const rk = e.rofK || 1; for (const k in e.cd) e.cd[k] -= dt * rk;
     if (e.detected > 0) e.detected -= dt;
     if (e.cls === 'sub') { e.battery = clamp(e.battery + (e.submerged ? -dt / 50 : dt / 28), 0, 1); if (e.submerged && e.battery <= 0) toggleDive(e); }
     const px = e.p.x, py = e.p.y, pz = e.p.z;

@@ -162,3 +162,4 @@ button:focus-visible{outline:3px solid var(--paper);outline-offset:2px}
 .envsel{display:flex;gap:10px;margin:4px 0 2px}.envsel label{flex:1;display:flex;flex-direction:column;gap:4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.85}
 .envsel select{font:inherit;font-size:14px;text-transform:none;letter-spacing:0;padding:7px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(10,16,22,.7);color:#e9eef2}
 #envTag{font-size:12px;opacity:.75;margin-left:8px;white-space:nowrap}#envTag:empty{display:none}
+em.vet{font-style:normal;color:#f2c94c}.sqn i.rk{font-style:normal;color:#f2c94c;font-size:11px}

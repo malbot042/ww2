@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { applyVeterans } from './campaign.js';
 import { G } from './state.js';
 import { BATTLES, MODELS, CLS } from './data.js';
 import { buildWorld } from './world.js';
@@ -108,6 +109,7 @@ export function startBattle(key, demo = false, opts = {}) {
     return out;
   };
   const allies = place(G.roster, 'A'), enemies = place(b.enemy, 'E');
+  if (!demo) applyVeterans();
   G.startCount = { A: allies.length, E: enemies.length };
   // cañones antitanque enemigos: ya emplazados junto a los objetivos de tierra
   // (los objetivos de tierra más cercanos al despliegue enemigo, y un poco hacia su lado)

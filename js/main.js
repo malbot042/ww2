@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { newCampaign, endCampaignBattle, restoreSnapshot, UNLOCKS } from './campaign.js';
 import { G } from './state.js';
 import { FRONTS, BATTLES, KIND_NAME, MODELS } from './data.js';
 import { updateWorld } from './world.js';
@@ -156,9 +157,9 @@ function buildBattleMenu(fk) {
       <p>${b.brief}</p>
       <div class="ros"><div><h4>Aliados (10)</h4><ul>${rosterHtml(b.allies)}</ul></div><div><h4>${f.enemyName} (10)</h4><ul>${rosterHtml(b.enemy)}</ul></div></div>
       <button class="btn" data-key="${key}">Desplegar</button>
-    </div>`; }).join('') + (f.battles.length > 1 ? `<div class="battle camp"><div class="bh"><span class="bk">Campaña</span><span class="bt">Las ${f.battles.length} batallas seguidas</span></div><p>${f.battles.map(k => KIND_NAME[k]).join(' → ')}. La puntuación se acumula; si pierdes una batalla, la campaña termina.</p><button class="btn" data-camp="${fk}">Empezar campaña</button></div>` : '');
+    </div>`; }).join('') + (f.battles.length > 1 ? `<div class="battle camp"><div class="bh"><span class="bk">Campaña</span><span class="bt">Las ${f.battles.length} batallas seguidas</span></div><p>${f.battles.map(k => KIND_NAME[k]).join(' → ')}. Las unidades que sobreviven ganan veteranía (★ Regular, ★★ Veterano, ★★★ Élite: más blindaje, precisión y cadencia), cada victoria da puntos extra de despliegue y desbloquea ${UNLOCKS[fk].map(k => MODELS[k].name).join(' y ')}. Si pierdes una batalla, la campaña termina.</p><button class="btn" data-camp="${fk}">Empezar campaña</button></div>` : '');
   $('battles').querySelectorAll('[data-key]').forEach(b => b.onclick = () => toDeploy(b.dataset.key));
-  $('battles').querySelectorAll('[data-camp]').forEach(b => b.onclick = () => { G.campaign = { front: fk, list: f.battles.map(k => `${fk}-${k}`), i: 0, score: 0 }; toDeploy(G.campaign.list[0], true); });
+  $('battles').querySelectorAll('[data-camp]').forEach(b => b.onclick = () => { G.campaign = newCampaign(fk, f.battles.map(k => `${fk}-${k}`)); toDeploy(G.campaign.list[0], true); });
   show('scrBattle');
 }
 let lastOpts = {};
@@ -194,6 +195,7 @@ function showResults(res) {
   const b = G.battle, win = res === 'win';
   const score = Math.round(G.tickets.A + G.stats.kills * 50 - G.stats.lost * 20 + (win ? 500 : 0));
   if (G.campaign) G.campaign.score += score;
+  const camp = endCampaignBattle(win);
   $('resTitle').textContent = win ? 'Victoria' : 'Derrota';
   $('resTitle').className = win ? 'win' : 'lose';
   $('resSub').textContent = `${KIND_NAME[b.kind]} · ${b.title}, ${b.year}`;
@@ -202,12 +204,13 @@ function showResults(res) {
     ['Enemigos destruidos', `${G.stats.kills}`], ['Unidades perdidas', `${G.stats.lost}`],
     ['Puntos de batalla', `${Math.ceil(G.tickets.A)} contra ${Math.ceil(G.tickets.E)}`], ['Puntuación', `${score}`],
     ...(G.campaign ? [['Campaña acumulada', `${G.campaign.score}`]] : []),
+    ...(camp ? [['Veteranos en la fuerza', `${camp.nVet}`], ...(camp.bonus ? [['Puntos extra de despliegue', `+${camp.bonus}`]] : []), ...(camp.unlocked ? [['Nueva unidad disponible', camp.unlocked]] : []), ...camp.promos.slice(0, 6).map(p => ['Ascenso', p])] : []),
   ].map(([a, v]) => `<div><span>${a}</span><b>${v}</b></div>`).join('');
   const c = G.campaign, next = c && win && c.i + 1 < c.list.length ? c.list[c.i + 1] : null;
   $('resNext').classList.toggle('hide', !next);
   if (next) { $('resNext').textContent = `Siguiente: ${KIND_NAME[BATTLES[next].kind]}`; $('resNext').onclick = () => { c.i++; toDeploy(next, true); }; }
   if (c && (!win || !next)) { $('resSub').textContent += win ? ' · Campaña completada' : ' · Campaña terminada'; }
-  $('resRetry').onclick = () => { if (c) { c.score -= score; } launch(G.battleKey, !!c, lastOpts); };
+  $('resRetry').onclick = () => { if (c) { c.score -= score; restoreSnapshot(); } launch(G.battleKey, !!c, lastOpts); };
   $('resMenu').onclick = () => { G.campaign = null; toMenu(); };
   show('results');
 }

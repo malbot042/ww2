@@ -1,5 +1,6 @@
 // Fase de despliegue: composición con presupuesto y colocación de unidades
 import * as THREE from 'three';
+import { vetCount } from './campaign.js';
 import { G } from './state.js';
 import { BATTLES, FRONTS, MODELS, CLS, specOf, KIND_NAME, FAC_NAME } from './data.js';
 import { anchorFor } from './units.js';
@@ -15,13 +16,14 @@ function poolFor(key) {
   const b = BATTLES[key], doms = new Set(b.allies.map(([k]) => CLS[MODELS[k].cls].dom)), set = new Set();
   for (const bk of FRONTS[b.front].battles) BATTLES[`${b.front}-${bk}`].allies.forEach(([k]) => set.add(k));
   b.allies.forEach(([k]) => set.add(k));
+  if (G.campaign) G.campaign.unlocked.forEach(k => set.add(k));
   return [...set].filter(k => doms.has(CLS[MODELS[k].cls].dom) && MODELS[k].cls !== 'merchant');
 }
 export function openDeploy(key, onGo) {
   const b = BATTLES[key], counts = {};
   const pool = poolFor(key);
   pool.forEach(k => counts[k] = 0); b.allies.forEach(([k, n]) => counts[k] = n);
-  const budget = b.allies.reduce((s, [k, n]) => s + costOf(k) * n, 0), maxN = b.allies.reduce((s, [, n]) => s + n, 0) + 3;
+  const budget = b.allies.reduce((s, [k, n]) => s + costOf(k) * n, 0) + (G.campaign ? G.campaign.bonus : 0), maxN = b.allies.reduce((s, [, n]) => s + n, 0) + 3;
   state = { key, counts, budget, maxN, pool, onGo };
   $('dpTitle').textContent = `${b.title}, ${b.year}`;
   $('dpSub').textContent = `${KIND_NAME[b.kind]} · Elige tu fuerza dentro del presupuesto (máximo ${maxN} unidades)`;
@@ -35,7 +37,7 @@ function render() {
   $('dpList').innerHTML = Object.entries(byDom).map(([d, ks]) => `<h4>${DOM_NAME[d]}</h4>` + ks.map(k => {
     const m = MODELS[k], c = costOf(k), s = specOf(k), canAdd = used + c <= budget && n < maxN;
     const stat = s.dom === 'sea' ? `${s.hp} pv · ${Math.round(s.max * s.dispK)} nudos` : s.dom === 'air' ? `${s.hp} pv · ${Math.round(s.max * 3.6)} km/h` : s.gun ? `${s.hp} pv · cañón ${s.gun.dmg}` : `${s.hp} pv`;
-    return `<div class="dpu ${counts[k] ? 'on' : ''}"><div class="dpn"><b>${m.name}</b><span>${m.type} · ${FAC_NAME[m.fac]} · ${stat}</span></div><div class="dpc">${c}</div>
+    return `<div class="dpu ${counts[k] ? 'on' : ''}"><div class="dpn"><b>${m.name}</b><span>${m.type} · ${FAC_NAME[m.fac]} · ${stat}${vetCount(k) ? ` · <em class="vet">★ ${vetCount(k)} veterano${vetCount(k) > 1 ? 's' : ''}</em>` : ''}${G.campaign && G.campaign.unlocked.includes(k) ? ' · <em class="vet">nueva</em>' : ''}</span></div><div class="dpc">${c}</div>
       <div class="dpq"><button data-k="${k}" data-d="-1" ${counts[k] ? '' : 'disabled'}>−</button><b>${counts[k]}</b><button data-k="${k}" data-d="1" ${canAdd ? '' : 'disabled'}>+</button></div></div>`;
   }).join('')).join('');
   $('dpBud').textContent = `${used} / ${budget}`; $('dpBar').style.width = Math.min(100, used / budget * 100) + '%';

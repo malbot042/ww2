@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { rankStars } from './campaign.js';
 import { envLabel } from './env.js';
 import { G } from './state.js';
 import { FRONTS } from './data.js';
@@ -86,13 +87,13 @@ function renderSquad(force) {
   const allies = G.ents.filter(e => e.side === 'A' && e.dom !== 'static' && !e.support);
   $('squad').innerHTML = allies.map(e => {
     const hp = Math.max(0, e.hp / e.s.hp), me = e === G.player, sel = G.selection.has(e);
-    return `<div class="sq ${me ? 'me' : ''} ${sel ? 'sel' : ''} ${e.alive ? '' : 'dead'}" data-id="${e.id}"><div class="sqn">${me ? '▶ ' : ''}${e.name}</div><div class="sqo">${e.alive ? (me ? 'Bajo tu mando' : orderLabel(e.order, e.queue)) + (e.retreating ? ' · retirada' : '') + (e.submerged ? ' · sumergido' : '') : 'Destruido'}</div><div class="bar"><i style="width:${hp * 100}%;background:${hp < 0.35 ? 'var(--red)' : 'var(--hp)'}"></i></div></div>`;
+    return `<div class="sq ${me ? 'me' : ''} ${sel ? 'sel' : ''} ${e.alive ? '' : 'dead'}" data-id="${e.id}"><div class="sqn">${me ? '▶ ' : ''}${e.name}${e.rank ? ` <i class="rk">${rankStars(e)}</i>` : ''}</div><div class="sqo">${e.alive ? (me ? 'Bajo tu mando' : orderLabel(e.order, e.queue)) + (e.retreating ? ' · retirada' : '') + (e.submerged ? ' · sumergido' : '') : 'Destruido'}</div><div class="bar"><i style="width:${hp * 100}%;background:${hp < 0.35 ? 'var(--red)' : 'var(--hp)'}"></i></div></div>`;
   }).join('');
 }
 export function updateHud(dt) {
   const e = G.player;
   if (e) {
-    $('uName').textContent = e.name; $('uType').textContent = `${e.m.type} · ${e.fac === 'us' ? 'EE. UU.' : e.fac === 'uk' ? 'Reino Unido' : ''}`;
+    $('uName').textContent = e.name + (e.rank ? ' ' + rankStars(e) : ''); $('uType').textContent = `${e.m.type} · ${e.fac === 'us' ? 'EE. UU.' : e.fac === 'uk' ? 'Reino Unido' : ''}`;
     const hp = Math.max(0, e.hp / e.s.hp); $('uHp').style.width = hp * 100 + '%'; $('uHp').style.background = hp < 0.35 ? 'var(--red)' : 'var(--hp)';
     const k = e.s.dispK || 1, kmh = e.dom === 'sea' ? `${Math.round(Math.abs(e.speed) * 0.95 * k)} nudos` : `${Math.round(Math.abs(e.speed) * (e.dom === 'air' ? 3.6 : 1.5) * k)} km/h`;
     $('uW').innerHTML = weaponLines(e) + `<div class="wp"><span>Velocidad</span><b>${kmh}</b></div>` + targetPanel(e);
