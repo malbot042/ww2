@@ -15,6 +15,7 @@ export const MAPCFG = {
   pacific_air: { theme: 'tropical', gen: 'tropical', ext: 4800, N: 320, bounds: 1650, zoneS: 720, zoneR: 0, spawn: 1380, sites: true },
   europe_sea: { theme: 'channel', gen: 'channelSea', ext: 4800, N: 320, bounds: 1500, zoneS: 760, zoneR: 260, spawn: 1050 },
   europe_air: { theme: 'channel', gen: 'channelAir', ext: 4800, N: 320, bounds: 1650, zoneS: 720, zoneR: 0, spawn: 1380, sites: true },
+  normandy: { theme: 'channel', gen: 'normandy', ext: 4800, N: 360, bounds: 1550, zoneS: 0, zoneR: 210, spawn: 1000, combined: true },
   europe_land: { theme: 'bocage', gen: 'bocage', ext: 3600, N: 360, bounds: 1150, zoneS: 520, zoneR: 175, spawn: 780 },
   africa_land: { theme: 'desert', gen: 'desert', ext: 3600, N: 300, bounds: 1150, zoneS: 540, zoneR: 175, spawn: 780 },
   africa_air: { theme: 'desert', gen: 'desertAir', ext: 4800, N: 320, bounds: 1650, zoneS: 720, zoneR: 0, spawn: 1380, sites: true },
@@ -95,7 +96,27 @@ function makeHeightFn(cfg, seed) {
       return h;
     };
   }
-  return { fn, N, R, zones, sitesA, sitesE };
+  let extra = {};
+  if (gen === 'normandy') {
+    const cz = x => 300 + N.fbm(x * 0.0011, 4.4, 3) * 110;
+    fn = (x, z) => {
+      const s = cz(x) - z;
+      if (s < 0) return Math.max(-34, -0.6 + s * 0.045) + N.fbm(x * 0.01, z * 0.01, 2) * 0.4;
+      if (s < 80) return 0.6 + s * 0.02;
+      const bl = 2.2 + smooth(80, 150, s) * 13 + N.fbm(x * 0.02, z * 0.02, 2) * 1.5;
+      return s < 150 ? bl : bl + N.fbm(x * 0.0008, z * 0.0008, 4) * 12 + N.fbm(x * 0.004, z * 0.004, 2) * 2.5;
+    };
+    zones.length = 0; zones.push([-420, cz(-420) - 190], [380, -420], [60, cz(60) + 560]);
+    extra = {
+      coast: cz,
+      spawns: {
+        A: { sea: [0, cz(0) + 1050], air: [0, 1450], land: x => [x, cz(x) - 40] },
+        E: { land: [100, -1000], sea: [1250, cz(1250) + 640], air: [0, -1500] },
+      },
+      statics: { battery: [-820, 40, 700].map(x => [x, cz(x) - 210]), aa: [[-500, -250], [600, -300]] },
+    };
+  }
+  return { fn, N, R, zones, sitesA, sitesE, extra };
 }
 
 // ---------- Construcción del mundo ----------
@@ -103,7 +124,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
   if (worldGroup) { G.scene.remove(worldGroup); dispose(worldGroup); }
   worldGroup = new THREE.Group(); G.scene.add(worldGroup); clouds = [];
   const cfg = MAPCFG[mapKey], th = THEMES[cfg.theme];
-  const { fn, N, R, zones, sitesA, sitesE } = makeHeightFn(cfg, seed);
+  const { fn, N, R, zones, sitesA, sitesE, extra } = makeHeightFn(cfg, seed);
   const ext = cfg.ext, n = cfg.N, cell = ext / n, half = ext / 2;
   const H = new Float32Array((n + 1) * (n + 1));
   for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
@@ -126,6 +147,10 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     for (const [zx] of zones) roads.push({ t: 'v', f: z => zx + 35 * Math.sin(z * 0.004 + zx) });
     if (cfg.gen === 'bocage') roads.push({ t: 'h', f: x => 420 + 80 * Math.sin(x * 0.002) }, { t: 'h', f: x => -430 + 70 * Math.sin(x * 0.0023 + 2) });
     zones.forEach(zn => { zn[1] = zz + amp * Math.sin(zn[0] * 0.0025 + 1); });
+  }
+  if (cfg.gen === 'normandy') {
+    const [ax] = zones[0], [, bz] = zones[1];
+    roads.push({ t: 'v', f: z => ax + 30 * Math.sin(z * 0.004) }, { t: 'h', f: x => bz + 50 * Math.sin(x * 0.002) }, { t: 'v', f: z => zones[1][0] + 25 * Math.sin(z * 0.005 + 1) });
   }
   const roadDist = (x, z) => { let d = 1e9; for (const r of roads) d = Math.min(d, r.t === 'h' ? Math.abs(z - r.f(x)) : Math.abs(x - r.f(z))); return d; };
 
@@ -281,7 +306,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     inst(new THREE.CylinderGeometry(0.3, 0.45, 5, 5).translate(0, 2.5, 0), 0x5a4a38, trees);
     // Setos (bocage) en los bordes de los campos
     const hedges = [], htrees = [];
-    if (isB || cfg.gen === 'channelAir') {
+    if (isB || cfg.gen === 'channelAir' || cfg.gen === 'normandy') {
       const B = cfg.bounds + 250;
       for (let cx = Math.floor(-B / 135); cx <= Math.ceil(B / 135); cx++) for (let cz = Math.floor(-B / 105); cz <= Math.ceil(B / 105); cz++) {
         for (const vert of [0, 1]) {
@@ -301,10 +326,15 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     inst(new THREE.IcosahedronGeometry(1.7, 0).scale(1.5, 1.2, 2.6).translate(0, 1.5, 0), 0x3a5428, hedges, { flat: true });
     // Pueblos normandos
     const houses = [], roofs = [];
-    const vill = isB ? zones.map(([x, z]) => [x + 70, z + 60]).concat([[-900, -500], [880, 520], [-300, 650]]) : [];
+    const vill = isB ? zones.map(([x, z]) => [x + 70, z + 60]).concat([[-900, -500], [880, 520], [-300, 650]]) : cfg.gen === 'normandy' ? [[zones[1][0] + 60, zones[1][1] + 50], [zones[1][0] - 70, zones[1][1] - 40], [-900, -700], [900, -800]] : [];
     if (!isB) for (let k = 0; k < 10; k++) { const x = (R() * 2 - 1) * 1300, z = (R() * 2 - 1) * 1300; if (h(x, z) > 4) vill.push([x, z]); }
     for (const [vx, vz] of vill) for (let q = 0; q < 12; q++) { const x = vx + (R() - 0.5) * 110, z = vz + (R() - 0.5) * 110; if (h(x, z) < 2 || roadDist(x, z) < 8 || inZone(x, z, 25)) continue; const p = { x, z, r: (R() < 0.5 ? 0 : Math.PI / 2) + (R() - 0.5) * 0.2, s: 0.85 + R() * 0.4 }; houses.push(p); roofs.push(p); }
     inst(new THREE.BoxGeometry(7, 5, 10).translate(0, 2.5, 0), 0xcfc4ad, houses);
+    if (cfg.gen === 'normandy') { // erizos checos en la playa
+      const hog = mergeGeometries([new THREE.BoxGeometry(0.35, 0.35, 3.4).rotateX(0.6), new THREE.BoxGeometry(0.35, 0.35, 3.4).rotateX(-0.6).rotateY(Math.PI / 2), new THREE.BoxGeometry(3.4, 0.35, 0.35).rotateZ(0.6)]).translate(0, 1, 0);
+      const hogs = scatter(9000, (x, z, y) => y > -1.2 && y < 1.3 && R() < 0.5 && !inZone(x, z, 12));
+      inst(hog, 0x3b3833, hogs, { rough: 0.6 });
+    }
     inst(new THREE.CylinderGeometry(4.6, 4.6, 10.4, 3, 1).rotateX(Math.PI / 2).rotateZ(Math.PI / 2).scale(1, 0.75, 1).translate(0, 6.4, 0).rotateY(Math.PI / 2), 0x6b4a3a, roofs, { flat: true });
   }
 
@@ -342,7 +372,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
   // Zonas: asegurar que caen en agua (naval) o tierra (terrestre)
   const zonePts = zones.map(([x, z]) => ({ x, z }));
   G.map = {
-    key: mapKey, cfg, theme: cfg.theme, ext, n, H, h, isLand, isSea, isDeep, bounds: cfg.bounds, zones: zonePts, sitesA, sitesE, roadDist,
+    extra, key: mapKey, cfg, theme: cfg.theme, ext, n, H, h, isLand, isSea, isDeep, bounds: cfg.bounds, zones: zonePts, sitesA, sitesE, roadDist,
     gy: (x, z) => Math.max(h(x, z), 0),
     waterMat: wmat, water,
   };

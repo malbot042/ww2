@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { G } from './state.js';
 import { MODELS, specOf, CLS } from './data.js';
-import { buildModel, buildSite, buildAA } from './models.js';
+import { buildModel, buildSite, buildAA, buildBattery } from './models.js';
 import * as FX from './fx.js';
 import { clamp, rnd, angDiff, V3 } from './util.js';
 
@@ -48,6 +48,12 @@ export function spawnAA(side, fac, x, z) {
   e.p.set(x, G.map.gy(x, z), z); G.ents.push(e); return e;
 }
 
+export function spawnBattery(side, fac, x, z, h) {
+  const mesh = buildBattery(fac); G.unitsGroup.add(mesh);
+  const e = mkEnt({ key: 'battery', m: { name: 'Batería costera', type: 'Casamata 105 mm' }, s: { ...CLS.battery }, cls: 'battery', dom: 'static', side, fac, mesh, h, name: 'Batería costera' });
+  e.p.set(x, G.map.gy(x, z), z); mesh.rotation.y = h; G.ents.push(e); return e;
+}
+
 // ---------- utilidades de combate ----------
 const fwdOf = e => tmp2.set(Math.sin(e.h), 0, Math.cos(e.h));
 export const angTo = (e, p) => Math.atan2(p.x - e.p.x, p.z - e.p.z);
@@ -71,15 +77,51 @@ const visibleShip = o => o.dom === 'sea' && !o.submerged;
 const isPlane = o => o.dom === 'air';
 const isGround = o => o.dom === 'static' || o.dom === 'land' || (o.dom === 'sea' && !o.submerged);
 export function targetFilter(e) {
+  const mixed = G.battle && G.battle.kind === 'combined';
   switch (e.cls) {
-    case 'destroyer': case 'cruiser': case 'pt': return visibleShip;
-    case 'sub': return visibleShip;
-    case 'tank': return o => o.dom === 'land';
+    case 'destroyer': case 'cruiser': return mixed ? o => visibleShip(o) || o.dom === 'land' || (o.dom === 'static' && o.cls !== 'site') : visibleShip;
+    case 'pt': case 'sub': return visibleShip;
+    case 'tank': return mixed ? o => o.dom === 'land' || o.dom === 'static' || visibleShip(o) : o => o.dom === 'land';
     case 'fighter': return isPlane;
     case 'bomber': return o => o.dom === 'static' || (o.dom === 'sea' && !o.submerged) || o.dom === 'land';
     case 'aa': return isPlane;
+    case 'battery': return o => visibleShip(o) || o.dom === 'land';
   }
   return () => false;
+}
+// número de torres que pueden apuntar a un punto (arcos de tiro)
+export function bearingCount(e, p) {
+  if (!e.tur.length) return 0;
+  const want = Math.atan2(p.x - e.p.x, p.z - e.p.z) - e.h;
+  if (e.dom !== 'sea' || e.cls === 'pt' || e.cls === 'sub') return e.tur.length;
+  return e.tur.filter(t => Math.abs(angDiff(want, t.userData.base || 0)) <= 2.55).length;
+}
+// blanco del jugador: fijado (T / clic) o automático con prioridades
+function playerScore(e, o, d, range) {
+  let sc = d / range;
+  if (e.dom === 'sea' && e.tur.length > 1) sc += (1 - bearingCount(e, o.p) / e.tur.length) * 0.9;
+  else sc += Math.abs(angDiff(angTo(e, o.p), e.h + (e.tYaw[0] || 0))) / Math.PI * 0.9;
+  sc += (o.hp / o.s.hp) * 0.25;
+  if (o.target === e) sc -= 0.2;
+  if (o.dom === e.dom || (e.dom === 'land' && o.cls === 'battery')) sc -= 0.15;
+  if (o === e.target) sc -= 0.25;
+  return sc;
+}
+function candidates(e, filt, range) {
+  return G.ents.filter(o => o.alive && o.side !== e.side && !o.falling && filt(o) && o.p.distanceTo(e.p) <= range && !(e.dom === 'land' && smokeBlocks(e.p, o.p)));
+}
+export function lockTarget(e, o) { e.lock = o; e.target = o; }
+function playerTarget(e, filt, range) {
+  if (e.lock && (!e.lock.alive || e.lock.falling || e.lock.submerged || e.lock.p.distanceTo(e.p) > range * 1.25)) e.lock = null;
+  if (G.keysOnce.has('KeyT')) {
+    const list = candidates(e, filt, range * 1.15).sort((a, b) => angDiff(angTo(e, a.p), e.h) - angDiff(angTo(e, b.p), e.h));
+    if (list.length) { const i = list.indexOf(e.target); e.lock = list[(i + 1) % list.length]; G.onMsg && G.onMsg('Blanco fijado', `${e.lock.name} · ${Math.round(e.lock.p.distanceTo(e.p))} m`); }
+  }
+  if (G.keysOnce.has('KeyY') && e.lock) { e.lock = null; G.onMsg && G.onMsg('Blanco automático', ''); }
+  if (e.lock) return e.lock;
+  let best = null, bs = 1e9;
+  for (const o of candidates(e, filt, range)) { const sc = playerScore(e, o, o.p.distanceTo(e.p), range); if (sc < bs) { bs = sc; best = o; } }
+  return best;
 }
 export function weaponRange(e) {
   const s = e.s;
@@ -192,7 +234,7 @@ export function updateProjs(dt) {
         }
       }
       if (!done && p.y <= surf) {
-        if (q.kind === 'naval') { if (ground < 0) { FX.splash(V3(p.x, 0, p.z), q.dmg > 40 ? 1.8 : 1.2); for (const e of G.ents) if (e.alive && e.side !== q.side && e.dom === 'sea' && !e.submerged && dist2(e.p, p) < e.hl * 0.6 + 8) damage(e, q.dmg * 0.12, q.owner, null, 'near'); } else FX.dirt(V3(p.x, surf, p.z), 1.2); }
+        if (q.kind === 'naval') { if (ground < 0) { FX.splash(V3(p.x, 0, p.z), q.dmg > 40 ? 1.8 : 1.2); for (const e of G.ents) if (e.alive && e.side !== q.side && e.dom === 'sea' && !e.submerged && dist2(e.p, p) < e.hl * 0.6 + 8) damage(e, q.dmg * 0.12, q.owner, null, 'near'); } else { FX.dirt(V3(p.x, surf, p.z), 1.2); for (const e of G.ents) if (e.alive && e.side !== q.side && (e.dom === 'land' || e.dom === 'static')) { const d = dist2(e.p, p) - e.hw; if (d < 10) damage(e, q.dmg * 0.6 * (1 - Math.max(0, d) / 12), q.owner, null, 'he'); } } }
         else if (q.kind === 'ap') FX.dirt(V3(p.x, surf, p.z), 0.6);
         else if (Math.random() < 0.25) { if (ground < 0) FX.splash(V3(p.x, 0, p.z), 0.25); }
         done = true;
@@ -213,6 +255,7 @@ function aimTurrets(e, tp, dt, rate = 0.9) {
     let want = tp ? Math.atan2(tp.x - e.p.x, tp.z - e.p.z) - e.h : base;
     let ok = !!tp;
     if (e.dom === 'sea' && e.cls !== 'pt' && e.cls !== 'sub') { if (Math.abs(angDiff(want, base)) > 2.55) { want = base; ok = false; } }
+    if (e.cls === 'battery') { const d = angDiff(want, 0); if (Math.abs(d) > 1.1) { want = Math.sign(d) * 1.1; ok = false; } }
     if (e.m.tur === 'casemate') { const lim = 0.2; const d = angDiff(want, 0); if (Math.abs(d) > lim) { want = Math.sign(d) * lim; ok = false; } }
     const diff = angDiff(want, e.tYaw[i]);
     e.tYaw[i] += clamp(diff, -rate * dt, rate * dt);
@@ -235,7 +278,7 @@ function fireNaval(e, t) {
       const d = dist2(from, aimP), err = d * (e === G.player ? 0.02 : 0.03) + 4;
       const tp = aimP.clone().add(V3(rnd(-1, 1) * err, 0, rnd(-1, 1) * err * 1.6));
       const dx = tp.x - from.x, dz = tp.z - from.z, dd = Math.hypot(dx, dz), T = dd / s.hs;
-      const vy = (1.5 - from.y + 0.5 * GRAV * T * T) / T;
+      const ty = t.dom === 'sea' ? 1.5 : t.p.y + 1.5, vy = (ty - from.y + 0.5 * GRAV * T * T) / T;
       proj('naval', e, from, V3(dx / dd * s.hs, vy, dz / dd * s.hs), { grav: GRAV, dmg: s.dmg, life: T + 1.5 });
     }
     FX.muzzle(from, fwdOf(e).clone().applyAxisAngle(V3(0, 1, 0), e.tYaw[i]), e.cls === 'cruiser' ? 1.6 : 1);
@@ -427,25 +470,23 @@ export function controlPlayer(e, dt) {
     driveShip(e, thr, steer, dt);
     if (once('KeyC')) { if (e.cls === 'sub') toggleDive(e); else if (e.s.dc) dropDC(e); }
     if (K('KeyC') && e.s.dc && e.cls !== 'sub') dropDC(e);
-    const filt = visibleShip, rng = e.cls === 'sub' ? 900 : weaponRange(e) * 1.05;
-    if (once('KeyT')) e.manualCycle = (e.manualCycle || 0) + 1;
-    e.target = pickTarget(e, filt, rng, true);
-    if (e.cls === 'destroyer' || e.cls === 'cruiser') { aimTurrets(e, e.target?.p, dt, e.cls === 'cruiser' ? 0.6 : 0.95); if (f1) fireNaval(e, e.target); fireAA(e); }
+    const filt = targetFilter(e), rng = e.cls === 'sub' ? 900 : weaponRange(e);
+    e.target = playerTarget(e, filt, rng);
+    e.bear = e.target ? bearingCount(e, e.target.p) : 0;
+    if (e.cls === 'destroyer' || e.cls === 'cruiser') { e.aimReady = aimTurrets(e, e.target?.p, dt, e.cls === 'cruiser' ? 1.1 : 1.6); if (f1) fireNaval(e, e.target); fireAA(e); }
     else if (e.cls === 'pt') { aimTurrets(e, e.target?.p, dt, 3); if (f1 && e.target) fireGuns(e, lead(e.p, e.target, 700).sub(e.p).setY(-0.5).normalize()); fireAA(e); }
     else if (e.cls === 'sub') {
       aimTurrets(e, !e.submerged ? e.target?.p : null, dt, 1.2);
       if (f2 && !e.submerged && e.target && e.cd.main <= 0) { const t = e.target, from = e.p.clone().setY(2.5); const dx = t.p.x - from.x, dz = t.p.z - from.z, dd = Math.hypot(dx, dz), T = dd / 240; proj('naval', e, from, V3(dx / dd * 240, (0.5 * GRAV * T * T - 1) / T, dz / dd * 240), { grav: GRAV, dmg: e.s.deck.dmg, life: T + 1 }); e.cd.main = e.s.deck.rof; FX.muzzle(from, fwdOf(e), 0.7); FX.sfx('cannon', e.p, 0.6); }
     }
-    if (f2 && e.cls !== 'sub' && e.s.torp) fireTorps(e, e.target && e.cls !== 'pt' ? torpLead(e, e.target) : e.h);
+    if (f2 && e.cls !== 'sub' && e.s.torp) fireTorps(e, e.target && e.target.dom === 'sea' && e.cls !== 'pt' ? torpLead(e, e.target) : e.h);
     if (f1 && e.cls === 'sub') fireTorps(e, e.h);
     return;
   }
   if (e.dom === 'land') {
     driveTank(e, thr, steer, dt);
-    if (once('KeyT')) { const all = G.ents.filter(o => o.alive && o.side !== e.side && o.dom === 'land' && o.p.distanceTo(e.p) < e.s.gun.range * 1.1 && !smokeBlocks(e.p, o.p)).sort((a, b) => a.p.distanceTo(e.p) - b.p.distanceTo(e.p)); if (all.length) { const i = all.indexOf(e.target); e.lock = all[(i + 1) % all.length]; } }
-    if (e.lock && (!e.lock.alive || e.lock.p.distanceTo(e.p) > e.s.gun.range * 1.15)) e.lock = null;
-    e.target = e.lock || pickTarget(e, o => o.dom === 'land', e.s.gun.range * 1.05, true);
-    const ready = aimTurrets(e, e.target?.p, dt, 0.9 * e.s.tsp);
+    e.target = playerTarget(e, targetFilter(e), e.s.gun.range * 1.05);
+    const ready = e.aimReady = aimTurrets(e, e.target?.p, dt, 1.6 * e.s.tsp);
     if (f1 && ready) fireTank(e, e.target);
     if (f2 && smokeScreen(e)) G.onMsg && G.onMsg('Cortina de humo', '');
   }
@@ -477,27 +518,43 @@ function formationPoint(e, leader, sp) {
   return leader.p.clone().addScaledVector(r, lx).addScaledVector(f, lz);
 }
 function nearestEnemy(e, filt) { let b = null, bd = 1e9; for (const o of G.ents) { if (!o.alive || o.side === e.side || o.falling || !filt(o)) continue; const d = dist2(o.p, e.p); if (d < bd) { bd = d; b = o; } } return b; }
+const anchorCache = new Map();
+export function clearAnchors() { anchorCache.clear(); }
+function domOK(e, x, z) { const h = G.map.h(x, z); return e.dom === 'land' ? h > 1 : h < -6; }
+// punto válido más cercano para el dominio de la unidad (barcos en el agua, tanques en tierra)
+export function anchorFor(e, x, z) {
+  if (e.dom === 'air' || e.dom === 'static' || domOK(e, x, z)) return V3(x, 0, z);
+  const key = e.dom + ((x / 60) | 0) + ',' + ((z / 60) | 0);
+  if (!anchorCache.has(key)) {
+    let best = null; const B = G.map.bounds - 20;
+    for (let r = 40; r < 1800 && !best; r += 40) for (let a = 0; a < 6.28; a += 0.18) { const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (Math.abs(px) < B && Math.abs(pz) < B && domOK(e, px, pz)) { best = V3(px, 0, pz); break; } }
+    anchorCache.set(key, best || V3(x, 0, z));
+  }
+  return anchorCache.get(key).clone();
+}
 export function orderPoint(e) {
-  const o = e.order, mp = G.map;
+  const o = e.order;
   const jit = (r) => V3(Math.sin(e.id * 2.39) * r, 0, Math.cos(e.id * 2.39) * r);
+  const at = (x, z, r) => { const j = jit(r), p = anchorFor(e, x + j.x, z + j.z); return p; };
   switch (o.type) {
     case 'follow': {
       const L = e.side === 'A' ? G.player : null;
-      if (L && L.alive && L.dom === e.dom && L !== e) return formationPoint(e, L, e.dom === 'sea' ? 95 : e.dom === 'air' ? 45 : 32);
-      return null;
+      if (!L || !L.alive || L === e) return null;
+      if (L.dom === e.dom) return formationPoint(e, L, e.dom === 'sea' ? 95 : e.dom === 'air' ? 45 : 32);
+      return at(L.p.x, L.p.z, e.dom === 'air' ? 140 : 80);
     }
     case 'zone': {
       if (G.battle.kind === 'air') { const s = (e.side === 'A' ? G.sitesE : G.sitesA)[o.k]; return s ? s.p.clone().add(jit(60)) : null; }
-      const z = G.objectives[o.k]; return z ? z.pos.clone().add(jit(G.map.cfg.zoneR * 0.5)) : null;
+      const z = G.objectives[o.k]; return z ? at(z.pos.x, z.pos.z, G.map.cfg.zoneR * 0.5) : null;
     }
     case 'defend': {
       if (G.battle.kind === 'air') { const own = (e.side === 'A' ? G.sitesA : G.sitesE).filter(s => s.alive); const s = own.sort((a, b) => dist2(a.p, e.p) - dist2(b.p, e.p))[0]; return s ? s.p.clone().add(jit(150)) : null; }
-      const z = G.objectives.filter(z => z.owner === e.side).sort((a, b) => dist2(a.pos, e.p) - dist2(b.pos, e.p))[0] || G.objectives[1];
-      return z.pos.clone().add(jit(G.map.cfg.zoneR * 0.5));
+      const z = G.objectives.filter(z => z.owner === e.side && (!z.dom || z.dom === e.dom || e.dom === 'air')).sort((a, b) => dist2(a.pos, e.p) - dist2(b.pos, e.p))[0] || G.objectives[1];
+      return at(z.pos.x, z.pos.z, G.map.cfg.zoneR * 0.5);
     }
     case 'escort': { const L = G.ents.find(x => x.id === o.lead && x.alive); return L ? formationPoint(e, L, 50) : null; }
-    case 'hold': case 'move': return V3(o.x, 0, o.z);
-    case 'attack': { const t = nearestEnemy(e, o2 => e.dom === 'air' ? (e.cls === 'bomber' ? o2.dom !== 'air' : o2.dom === 'air') : o2.dom === e.dom); return t ? t.p.clone() : null; }
+    case 'hold': case 'move': return anchorFor(e, o.x, o.z);
+    case 'attack': { const t = nearestEnemy(e, e.dom === 'air' ? (e.cls === 'bomber' ? o2 => o2.dom !== 'air' && !o2.submerged : isPlane) : targetFilter(e)); return t ? anchorFor(e, t.p.x, t.p.z) : null; }
   }
   return null;
 }
@@ -509,10 +566,10 @@ function think(e) {
   const r = weaponRange(e);
   const engageR = e.dom === 'air' ? (e.cls === 'bomber' ? 0 : 900) : r * (leash ? leash : 0.9);
   if (e.cls === 'bomber') {
-    const tgt = e.order.type === 'zone' ? (e.side === 'A' ? G.sitesE : G.sitesA)[e.order.k] : null;
+    const tgt = e.order.type === 'zone' && G.battle.kind === 'air' ? (e.side === 'A' ? G.sitesE : G.sitesA)[e.order.k] : null;
     e.target = tgt && tgt.alive ? tgt : pickTarget(e, o => o.dom === 'static' || o.dom === 'land' || (o.dom === 'sea' && !o.submerged), e.order.type === 'attack' ? 6000 : 900);
     // si el objetivo de la orden cayó, buscar el siguiente
-    if (!e.target && e.order.type === 'zone') { e.order = { type: 'attack' }; }
+    if (!e.target && e.order.type === 'zone' && G.battle.kind === 'air') { e.order = { type: 'attack' }; }
   } else e.target = engageR ? pickTarget(e, targetFilter(e), engageR) : null;
   // submarino: caza de submarinos con cargas de profundidad
   if (e.s.dc) {
@@ -548,7 +605,7 @@ function aiShip(e, t, goal, dt) {
     } else {
       if (d > r * 0.85) ang = at;
       else { const a1 = at + Math.PI / 2, a2 = at - Math.PI / 2; ang = Math.abs(angDiff(a1, e.h)) < Math.abs(angDiff(a2, e.h)) ? a1 : a2; if (d < r * 0.4) ang += (ang === a1 ? 0.5 : -0.5); }
-      if (e.s.torp && d < 650 && e.cd.torp <= 0 && Math.random() < 0.04) { const la = torpLead(e, t), rel = Math.abs(angDiff(la, e.h)); if (rel > 0.5 && rel < 2.6) fireTorps(e, la); }
+      if (e.s.torp && t.dom === 'sea' && d < 650 && e.cd.torp <= 0 && Math.random() < 0.04) { const la = torpLead(e, t), rel = Math.abs(angDiff(la, e.h)); if (rel > 0.5 && rel < 2.6) fireTorps(e, la); }
     }
     // correa: no alejarse demasiado del objetivo de la orden
     if (e.order.type !== 'attack' && dg > 750) ang = angTo(e, goal);
@@ -560,7 +617,7 @@ function aiShip(e, t, goal, dt) {
   driveShip(e, thr, steerTo(e, ang), dt);
   if (e.cls === 'sub') aimTurrets(e, null, dt);
   else if (e.cls === 'pt') { aimTurrets(e, t?.p, dt, 3); if (t && dist2(t.p, e.p) < e.s.mg.range) fireGuns(e, lead(e.p, t, 700).sub(e.p).setY(-0.5).normalize()); fireAA(e); }
-  else { aimTurrets(e, t?.p, dt, e.cls === 'cruiser' ? 0.6 : 0.95); if (t) fireNaval(e, t); fireAA(e); }
+  else { aimTurrets(e, t?.p, dt, e.cls === 'cruiser' ? 1.0 : 1.4); if (t) fireNaval(e, t); fireAA(e); }
 }
 function aiTank(e, t, goal, dt) {
   let ang = angTo(e, goal), thr = 1;
@@ -581,7 +638,7 @@ function aiTank(e, t, goal, dt) {
   if (e.blocked > 1.5) { e.ai.esc = 1.2; e.blocked = 0; e.ai.dir *= -1; }
   const st = e.ai.esc > 0 ? e.ai.dir : steerTo(e, ang, thr ? 2.2 : 3);
   driveTank(e, thr, st, dt);
-  const ready = aimTurrets(e, t?.p, dt, 0.9 * e.s.tsp);
+  const ready = aimTurrets(e, t?.p, dt, 1.3 * e.s.tsp);
   if (t && ready) fireTank(e, t);
 }
 function aiPlane(e, t, goal, dt) {
@@ -620,6 +677,11 @@ function aiStatic(e, dt) {
     if (e.ai.think2 <= 0) { e.target = pickTarget(e, isPlane, e.s.flak.range); e.ai.think2 = 0.4; }
     const tr = e.tur[0]; if (e.target) { const a = angTo(e, e.target.p) - e.h; tr.rotation.y += clamp(angDiff(a, tr.rotation.y), -2 * dt, 2 * dt); }
     if (e.target) fireFlak(e);
+  } else if (e.cls === 'battery') {
+    e.ai.think2 = (e.ai.think2 || 0) - dt;
+    if (e.ai.think2 <= 0) { e.target = pickTarget(e, targetFilter(e), e.s.main.range); e.ai.think2 = 0.6; }
+    aimTurrets(e, e.target?.p, dt, 0.5);
+    if (e.target) fireNaval(e, e.target);
   } else if (e.mesh.userData.spin) e.mesh.userData.spin.rotation.y += dt * 0.8;
 }
 

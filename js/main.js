@@ -3,6 +3,7 @@ import { G } from './state.js';
 import { FRONTS, BATTLES, KIND_NAME, MODELS } from './data.js';
 import { updateWorld } from './world.js';
 import { startBattle, updateBattle, issueOrder, setPlayer, orderLabel } from './battle.js';
+import { lockTarget, targetFilter } from './units.js';
 import { updateUnits, updateProjs } from './units.js';
 import { initFx, updateFx, initAudio, setEngine } from './fx.js';
 import { hudInit, hudHide, updateHud, flash, hitMark, hurt, addFeed, initAimMarkers, updateAimMarkers } from './hud.js';
@@ -150,11 +151,11 @@ function launch(key, keepCampaign = false) {
   setTimeout(() => {
     G.running = false; G.paused = false; G.strategic = false;
     startBattle(key, false);
-    const p = G.player; G.targetZoom = G.zoom = p.dom === 'land' ? 240 : p.dom === 'sea' ? 330 : 380;
+    const p = G.player; G.targetZoom = G.zoom = ZOOM_DEF[p.dom];
     G.cam.preset = 0; G.cam.pitch = 1.1; G.cam.yaw = 0; G.cam.ang = 0; G.cam.rel = false; $('camName').textContent = 'Cenital';
     hudInit(); show(null); $('menu').classList.add('hide');
     G.running = true;
-    flash(`${BATTLES[key].title}, ${BATTLES[key].year}`, G.battle.kind === 'air' ? 'Pulsa 1, 2 o 3 para enviar tu escuadrilla contra las instalaciones A, B o C' : 'Pulsa 1, 2 o 3 para enviar tu escuadra a los objetivos A, B o C', 5);
+    flash(`${BATTLES[key].title}, ${BATTLES[key].year}`, G.battle.kind === 'combined' ? 'A: salida de la playa · B: pueblo · C: fondeadero (naval). Tab cambia entre barco, avión y tanque' : G.battle.kind === 'air' ? 'Pulsa 1, 2 o 3 para enviar tu escuadrilla contra las instalaciones A, B o C' : 'Pulsa 1, 2 o 3 para enviar tu escuadra a los objetivos A, B o C', 5);
   }, 60);
 }
 function startDemo() {
@@ -198,6 +199,7 @@ addEventListener('keydown', ev => {
   else if (c === 'KeyQ') { const n = issueOrder('follow'); if (n) flash('Seguidme', `${n} unidades en formación`); }
   else if (c === 'KeyE') { const n = issueOrder('attack'); if (n) flash('Ataque libre', `${n} unidades buscan al enemigo`); }
   else if (c === 'KeyR') { const n = issueOrder('hold'); if (n) flash('Mantener posición', `${n} unidades`); }
+  else if (c === 'KeyG') cycleGroup();
   else if (c === 'KeyF') { const n = issueOrder('defend'); if (n) flash('Defender', G.battle.kind === 'air' ? 'Patrulla sobre nuestras instalaciones' : 'A nuestros objetivos'); }
   else if (c === 'Tab') cycleUnit(ev.shiftKey ? -1 : 1);
   else if (c === 'KeyZ' || c === 'Equal' || c === 'NumpadAdd') G.targetZoom = clamp(G.targetZoom / 1.25, 110, 2600);
@@ -212,10 +214,27 @@ addEventListener('keyup', ev => { G.keys[ev.code] = false; });
 addEventListener('blur', () => { G.keys = {}; });
 function allWingmen() { return G.ents.filter(e => e.alive && e.side === 'A' && e.dom !== 'static' && e !== G.player); }
 function selectAll() { G.selection = new Set(allWingmen()); G.showSel = false; }
+const ZOOM_DEF = { land: 240, sea: 330, air: 380 };
+function takeControl(next) {
+  const prevDom = G.player && G.player.dom;
+  setPlayer(next); flash(next.name, next.m.type, 1.4);
+  if (prevDom !== next.dom) G.targetZoom = ZOOM_DEF[next.dom];
+}
 function cycleUnit(dir) {
   const list = G.ents.filter(e => e.alive && e.side === 'A' && e.dom !== 'static'); if (list.length < 2) return;
-  const i = list.indexOf(G.player); const next = list[(i + dir + list.length) % list.length];
-  setPlayer(next); flash(next.name, next.m.type, 1.4);
+  const i = list.indexOf(G.player); takeControl(list[(i + dir + list.length) % list.length]);
+}
+// selección por tipo (G): todas → barcos → aviones → tanques
+const GROUPS = [['all', 'Toda la escuadra'], ['sea', 'Barcos'], ['air', 'Aviones'], ['land', 'Tanques']];
+let groupIdx = 0;
+function cycleGroup() {
+  const doms = new Set(allWingmen().map(e => e.dom));
+  for (let k = 0; k < GROUPS.length; k++) {
+    groupIdx = (groupIdx + 1) % GROUPS.length; const [g, n] = GROUPS[groupIdx];
+    if (g !== 'all' && !doms.has(g)) continue;
+    const sel = allWingmen().filter(e => g === 'all' || e.dom === g); G.selection = new Set(sel); G.showSel = g !== 'all';
+    flash(`Selección: ${n}`, `${sel.length} unidades · ahora da una orden (1 2 3 Q E R F)`, 1.6); return;
+  }
 }
 function togglePause() {
   if (!G.running && $('pause').classList.contains('hide')) return;
@@ -240,6 +259,9 @@ addEventListener('mouseup', ev => {
   const dx = Math.abs(ev.clientX - drag.x), dy = Math.abs(ev.clientY - drag.y);
   const mine = allWingmen();
   if (dx < 6 && dy < 6) {
+    // clic sobre un enemigo: fijar blanco
+    const P = G.player;
+    if (P && P.alive && P.dom !== 'air') { let en = null, ed = 30; const f = targetFilter(P); for (const e of G.ents) { if (!e.alive || e.side === 'A' || !f(e)) continue; const [sx, sy] = screenOf(e); const d = Math.hypot(sx - ev.clientX, sy - ev.clientY); if (d < ed) { ed = d; en = e; } } if (en) { lockTarget(P, en); flash('Blanco fijado', `${en.name} · ${Math.round(en.p.distanceTo(P.p))} m`, 1.4); drag = null; return; } }
     let best = null, bd = 28; for (const e of [...mine, G.player]) { if (!e) continue; const [sx, sy] = screenOf(e); const d = Math.hypot(sx - ev.clientX, sy - ev.clientY); if (d < bd) { bd = d; best = e; } }
     if (best && best !== G.player) { if (ev.shiftKey) { G.selection.has(best) ? G.selection.delete(best) : G.selection.add(best); } else G.selection = new Set([best]); G.showSel = true; flash(best.name, `Seleccionado · ${orderLabel(best.order)}`, 1.4); }
   } else {
@@ -249,7 +271,7 @@ addEventListener('mouseup', ev => {
   }
   drag = null;
 });
-canvas.addEventListener('dblclick', ev => { if (!G.running) return; for (const e of allWingmen()) { const [sx, sy] = screenOf(e); if (Math.hypot(sx - ev.clientX, sy - ev.clientY) < 28) { setPlayer(e); flash(e.name, 'Bajo tu mando', 1.4); return; } } });
+canvas.addEventListener('dblclick', ev => { if (!G.running) return; for (const e of allWingmen()) { const [sx, sy] = screenOf(e); if (Math.hypot(sx - ev.clientX, sy - ev.clientY) < 28) { takeControl(e); return; } } });
 canvas.addEventListener('mouseup', ev => {
   if (ev.button !== 2 || !G.running) return;
   const p = groundAt(ev.clientX, ev.clientY); if (!p) return;

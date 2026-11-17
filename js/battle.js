@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { G } from './state.js';
 import { BATTLES, MODELS, CLS } from './data.js';
 import { buildWorld } from './world.js';
-import { spawnUnit, spawnSite, spawnAA, clearProjs, orderPoint } from './units.js';
+import { spawnUnit, spawnSite, spawnAA, spawnBattery, clearProjs, clearAnchors } from './units.js';
 import { resetFx } from './fx.js';
 import { V3, clamp, canvasTex } from './util.js';
 
@@ -51,18 +51,20 @@ export function startBattle(key, demo = false) {
   clearBattle();
   const b = BATTLES[key]; G.battle = b; G.battleKey = key; G.demo = demo;
   const map = buildWorld(b.map);
-  const naval = b.kind === 'naval', air = b.kind === 'air';
+  const naval = b.kind === 'naval', air = b.kind === 'air', mixed = b.kind === 'combined';
+  clearAnchors();
   const wantSea = (x, z) => map.h(x, z) < -12 && map.h(x + 40, z) < -8 && map.h(x - 40, z) < -8 && map.h(x, z + 60) < -8 && map.h(x, z - 60) < -8;
   const wantLand = (x, z) => map.h(x, z) > 1.5;
   // objetivos
   if (!air) {
     map.zones.forEach((zn, k) => {
-      const [x, z] = findNear(zn.x, zn.z, naval ? wantSea : wantLand);
-      const pos = V3(x, naval ? 0 : map.gy(x, z), z), R = map.cfg.zoneR;
+      const zdom = mixed ? (map.h(zn.x, zn.z) > 0 ? 'land' : 'sea') : naval ? 'sea' : 'land';
+      const [x, z] = findNear(zn.x, zn.z, zdom === 'sea' ? wantSea : wantLand);
+      const pos = V3(x, zdom === 'sea' ? 0 : map.gy(x, z), z), R = map.cfg.zoneR;
       const ring = new THREE.Mesh(new THREE.RingGeometry(R - 4, R, 64), new THREE.MeshBasicMaterial({ color: 0xcccccc, transparent: true, opacity: 0.5, depthTest: false, depthWrite: false, side: THREE.DoubleSide }));
       ring.rotation.x = -Math.PI / 2; ring.position.set(x, pos.y + 1, z); ring.renderOrder = 9; markers.add(ring);
       const lab = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex('ABC'[k], '#bbbbbb'), sizeAttenuation: false, depthTest: false, transparent: true })); lab.scale.set(0.05, 0.05, 1); lab.position.set(x, pos.y + 30, z); lab.renderOrder = 10; markers.add(lab);
-      G.objectives.push({ k, pos, owner: null, prog: 0, ring, lab, name: 'ABC'[k] });
+      G.objectives.push({ k, pos, owner: null, prog: 0, ring, lab, name: 'ABC'[k], dom: zdom });
     });
   } else {
     const [fa, fe] = b.sites;
@@ -76,27 +78,42 @@ export function startBattle(key, demo = false) {
   }
   // unidades
   const sp = map.cfg.spawn;
+  const SP = map.extra && map.extra.spawns;
   const place = (list, side) => {
     const flat = []; list.forEach(([k, n]) => { for (let i = 0; i < n; i++) flat.push(k); });
-    const n = flat.length, dom = CLS[MODELS[flat[0]].cls].dom, gap = dom === 'sea' ? 115 : dom === 'air' ? 55 : 42;
+    const byDom = {}; flat.forEach(k => { const d = CLS[MODELS[k].cls].dom; (byDom[d] = byDom[d] || []).push(k); });
     const sgn = side === 'A' ? 1 : -1, out = [];
-    flat.forEach((k, i) => {
-      const row = dom === 'air' ? (i % 2) : 0, col = dom === 'air' ? Math.floor(i / 2) - 2 : i - (n - 1) / 2;
-      let x = col * gap * (dom === 'air' ? 1.6 : 1), z = sgn * (sp + row * 60 + (dom === 'land' ? (i % 2) * 30 : 0));
-      if (dom === 'sea') [x, z] = findNear(x, z, wantSea);
-      if (dom === 'land') [x, z] = findNear(x, z, wantLand);
-      const e = spawnUnit(k, side, x, z, side === 'A' ? Math.PI : 0);
-      out.push(e);
-    });
+    for (const dom in byDom) {
+      const ks = byDom[dom], n = ks.length, gap = dom === 'sea' ? 115 : dom === 'air' ? 55 : 42;
+      ks.forEach((k, i) => {
+        const row = dom === 'air' ? (i % 2) : 0, col = dom === 'air' ? Math.floor(i / 2) - (Math.ceil(n / 2) - 1) / 2 : i - (n - 1) / 2;
+        let x, z, h = side === 'A' ? Math.PI : 0;
+        const s = SP && SP[side][dom];
+        if (s) {
+          if (typeof s === 'function') [x, z] = s(col * gap * 1.6); else { x = s[0] + col * gap * (dom === 'air' ? 1.6 : 1); z = s[1] + row * 60 * sgn; }
+          h = Math.atan2(-x, (map.extra.coast ? map.extra.coast(0) : 0) - z);
+          if (dom === 'land' && side === 'A') h = Math.PI;
+        } else { x = col * gap * (dom === 'air' ? 1.6 : 1); z = sgn * (sp + row * 60 + (dom === 'land' ? (i % 2) * 30 : 0)); }
+        if (dom === 'sea') [x, z] = findNear(x, z, wantSea);
+        if (dom === 'land') [x, z] = findNear(x, z, wantLand);
+        out.push(spawnUnit(k, side, x, z, h));
+      });
+    }
     return out;
   };
   const allies = place(b.allies, 'A'), enemies = place(b.enemy, 'E');
+  // defensas fijas (baterías costeras y antiaéreos)
+  if (b.statics && map.extra && map.extra.statics) {
+    const st = map.extra.statics;
+    (st.battery || []).forEach(([x0, z0]) => { const [x, z] = findNear(x0, z0, wantLand); spawnBattery('E', 'de', x, z, 0); });
+    (st.aa || []).forEach(([x0, z0]) => { const [x, z] = findNear(x0, z0, wantLand); spawnAA('E', 'de', x, z); });
+  }
   // jugador
   const pref = naval ? 'destroyer' : air ? 'fighter' : 'tank';
   G.player = demo ? null : (allies.find(e => e.cls === pref) || allies[0]);
   let slot = 0; allies.forEach(e => { if (e !== G.player) { e.slot = slot++; e.order = { type: 'follow' }; G.selection.add(e); } });
   if (demo) { allies.forEach(e => e.order = { type: 'attack' }); G.selection.clear(); }
-  G.tickets = { A: air ? 450 : 600, E: air ? 450 : 600 }; G.ticketsMax = G.tickets.A;
+  G.tickets = { A: air ? 450 : mixed ? 800 : 600, E: air ? 450 : mixed ? 800 : 600 }; G.ticketsMax = G.tickets.A;
   G.time = 0; G.over = false; G.stats = { kills: 0, lost: 0 }; cmdT = { A: demo ? 0 : 1e9, E: 0 }; deadT = 0;
   // líneas de órdenes
   lines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x9fd0ff, transparent: true, opacity: 0.55, depthTest: false }));
@@ -137,14 +154,19 @@ function command(side) {
     fighters.forEach((f, i) => { const lead = bombers.filter(b => b.alive)[i % Math.max(1, bombers.length)]; f.order = lead && i % 2 === 0 ? { type: 'escort', lead: lead.id } : i % 3 === 1 ? { type: 'defend' } : { type: 'attack' }; });
     return;
   }
-  const zs = G.objectives, R = G.map.cfg.zoneR;
+  const zs = G.objectives, R = G.map.cfg.zoneR, mixed = G.battle.kind === 'combined';
+  if (mixed) {
+    units.filter(e => e.dom === 'air').forEach((e, i) => { e.order = e.cls === 'bomber' ? { type: 'attack' } : i % 2 ? { type: 'defend' } : { type: 'attack' }; });
+  }
   const enemyNear = zs.map(z => G.ents.filter(e => e.alive && e.side === enemySide && e.dom !== 'static' && e.p.distanceTo(z.pos) < R * 1.8).length);
   const w = zs.map((z, k) => 1 + (z.owner !== side ? 1.2 : 0) + enemyNear[k] * 0.25);
   const cnt = [0, 0, 0];
   const sorted = units.slice().sort((a, b) => a.id - b.id);
   for (const e of sorted) {
-    let best = 0, bs = -1e9;
-    zs.forEach((z, k) => { const sc = w[k] / (cnt[k] + 1) - e.p.distanceTo(z.pos) / 2500 + (e.order.type === 'zone' && e.order.k === k ? 0.25 : 0); if (sc > bs) { bs = sc; best = k; } });
+    if (mixed && e.dom === 'air') continue;
+    let best = -1, bs = -1e9;
+    zs.forEach((z, k) => { if (mixed && z.dom !== e.dom) return; const sc = w[k] / (cnt[k] + 1) - e.p.distanceTo(z.pos) / 2500 + (e.order.type === 'zone' && e.order.k === k ? 0.25 : 0); if (sc > bs) { bs = sc; best = k; } });
+    if (best < 0) { e.order = { type: 'attack' }; continue; }
     cnt[best]++; e.order = { type: 'zone', k: best };
     if (e.cls === 'sub' || (e.cls === 'pt' && Math.random() < 0.5)) e.order = { type: 'attack' };
   }
@@ -162,7 +184,7 @@ export function updateBattle(dt) {
     let a = 0, e = 0;
     for (const z of G.objectives) {
       let na = 0, ne = 0;
-      for (const u of G.ents) if (u.alive && u.dom !== 'static' && u.dom !== 'air' && Math.hypot(u.p.x - z.pos.x, u.p.z - z.pos.z) < R) u.side === 'A' ? na++ : ne++;
+      for (const u of G.ents) if (u.alive && u.dom !== 'static' && u.dom !== 'air' && (!z.dom || u.dom === z.dom || b.kind !== 'combined') && Math.hypot(u.p.x - z.pos.x, u.p.z - z.pos.z) < R) u.side === 'A' ? na++ : ne++;
       z.na = na; z.ne = ne;
       if (na && !ne) z.prog = Math.min(100, z.prog + 9 * dt * Math.min(na, 3));
       else if (ne && !na) z.prog = Math.max(-100, z.prog - 9 * dt * Math.min(ne, 3));
@@ -202,10 +224,11 @@ function updateMarkers() {
   for (const e of G.ents) {
     let sp = icons.get(e);
     if (!sp) { sp = new THREE.Sprite(new THREE.SpriteMaterial({ sizeAttenuation: false, depthTest: false, transparent: true })); sp.renderOrder = 12; markers.add(sp); icons.set(e, sp); }
-    const kind = e.cls === 'sub' ? 'sub' : e.dom === 'static' ? (e.cls === 'site' ? 'site' : 'aa') : e.dom;
+    const kind = e.cls === 'sub' ? 'sub' : e.dom === 'static' ? (e.cls === 'site' || e.cls === 'battery' ? 'site' : 'aa') : e.dom;
     const tex = icon(e.side, kind, e === G.player);
     if (sp.material.map !== tex) { sp.material.map = tex; sp.material.needsUpdate = true; }
     sp.visible = far && e.alive && (e.cls !== 'aa');
+    if (e.cls === 'battery') sp.visible = far && e.alive;
     const sz = e === G.player ? 0.034 : e.cls === 'site' ? 0.032 : 0.026; sp.scale.set(sz, sz, 1);
     sp.position.set(e.p.x, Math.max(e.p.y, 0) + 8, e.p.z);
     sp.material.opacity = e.submerged ? 0.55 : 1;

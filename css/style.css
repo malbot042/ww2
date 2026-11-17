@@ -27,9 +27,14 @@ button:focus-visible{outline:3px solid var(--paper);outline-offset:2px}
 .bar i{display:block;height:100%;background:var(--hp);transition:width .2s}
 .wp{display:flex;justify-content:space-between;gap:10px;font-size:14px;margin-top:3px}
 .wp b{color:var(--paper);font-weight:600;white-space:nowrap}.wp b.ok{color:#a9d36e}.wp b.bad{color:#ff7a6a}
-.wp.tgt{border-top:1px solid var(--line);padding-top:4px;margin-top:6px}.wp.tgt b{color:#ff9d84}
+.wp b.warn{color:#ffc14d}
+.tg{border-top:1px solid var(--line);margin-top:8px;padding-top:6px}
+.tg.lock .tgh span{color:#ffd040}
+.tgh{display:flex;justify-content:space-between;font-size:13px;opacity:.85}.tgh b{color:var(--paper)}
+.tgn{font-size:18px;font-weight:700;color:#ffb39f;line-height:1.1;margin-top:2px}.tgn i{font-style:normal;font-weight:500;font-size:13px;opacity:.7;margin-left:6px}
+.tgk{font-size:12px;opacity:.65;margin-top:4px}.tgk kbd{font-size:11px}
 #squad{top:236px;left:12px;width:250px;display:flex;flex-direction:column;gap:3px;max-height:calc(100vh - 300px);overflow:auto;pointer-events:auto}
-#squad .sq{padding:3px 8px 4px;font-size:13px;cursor:pointer;opacity:.85;display:grid;grid-template-columns:1fr auto;column-gap:6px}
+#squad .sq{padding:2px 8px 3px;font-size:13px;cursor:pointer;opacity:.85;display:grid;grid-template-columns:1fr auto;column-gap:6px}
 #squad .sq .bar{grid-column:1/-1;margin-top:2px;height:4px}
 #squad .sq.sel{border-color:#9fd0ff;opacity:1}
 #squad .sq.me{border-color:var(--paper);opacity:1}

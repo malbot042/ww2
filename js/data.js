@@ -13,11 +13,11 @@ export const FRONTS = {
   europe: {
     name: 'Europa', years: '1944', vs: 'Aliados contra Alemania',
     desc: 'El Canal de la Mancha y Normandía: acantilados, bocage, pueblos y cielos disputados.',
-    battles: ['naval', 'air', 'land'], enemyName: 'Alemania',
+    battles: ['naval', 'air', 'land', 'combined'], enemyName: 'Alemania',
   },
 };
 
-export const KIND_NAME = { naval: 'Batalla naval', air: 'Batalla aérea', land: 'Batalla de tanques' };
+export const KIND_NAME = { naval: 'Batalla naval', air: 'Batalla aérea', land: 'Batalla de tanques', combined: 'Batalla combinada' };
 
 export const BATTLES = {
   'pacific-naval': {
@@ -52,6 +52,13 @@ export const BATTLES = {
     brief: 'Superioridad aérea antes del desembarco: destruye el radar, el aeródromo y el depósito alemanes en la costa francesa (A, B, C). Los P-47 llevan la carga pesada.',
     allies: [['p51', 6], ['p47', 4]], enemy: [['bf109g', 6], ['fw190f', 4]], sites: ['us', 'de'],
   },
+  'europe-combined': {
+    front: 'europe', kind: 'combined', map: 'normandy', title: 'Día D: playa de Normandía', year: '1944',
+    brief: 'Mar, aire y tierra a la vez. Tus tanques desembarcan bajo el fuego de las baterías costeras; los barcos pueden bombardear la costa y los aviones cubren el cielo. Toma la salida de la playa (A) y el pueblo (B) con los tanques y controla el fondeadero (C) con la flota. Tab salta entre barco, avión y tanque; G selecciona por tipo.',
+    allies: [['town', 1], ['fletcher', 2], ['pt109', 1], ['p51', 3], ['p47', 2], ['sherman', 3], ['firefly', 1]],
+    enemy: [['z1936', 1], ['sboot', 2], ['u7c', 1], ['bf109g', 2], ['fw190f', 1], ['pz4h', 2], ['panther', 1], ['stug', 1]],
+    statics: [['battery', 3], ['aa', 2]],
+  },
   'europe-land': {
     front: 'europe', kind: 'land', map: 'europe_land', title: 'Bocage normando', year: '1944',
     brief: 'Toma los cruces de caminos (A, B, C). Panther y Tiger destrozan a cualquier Sherman de frente: usa a los Firefly y al M10 para el trabajo duro y flanquea entre los setos.',
@@ -76,6 +83,7 @@ export const CLS = {
   tank: { dom: 'land', hp: 260, max: 26, acc: 14, turn: 1.4, value: 25, gun: { range: 470, rof: 3.2, dmg: 55 }, armor: [0.9, 1.2, 1.6], tsp: 1.0 },
   site: { dom: 'static', hp: 1000, value: 150 },
   aa: { dom: 'static', hp: 90, value: 4, flak: { range: 420, rof: 1.2, dmg: 15 } },
+  battery: { dom: 'static', hp: 650, value: 40, main: { range: 950, rof: 5, dmg: 38, hs: 300, n: 1 } },
 };
 
 // Modelos concretos: cls, fac, nombre y parámetros visuales
@@ -129,8 +137,12 @@ export const MODELS = {
 
 export const FAC_NAME = { us: 'EE. UU.', uk: 'Reino Unido', jp: 'Japón', de: 'Alemania', it: 'Italia' };
 
+// Ritmo arcade: barcos y tanques más rápidos que en la realidad; el HUD muestra la velocidad "real" (dispK)
+const PACE = { sea: { max: 1.45, acc: 2.0, turn: 1.3 }, land: { max: 1.4, acc: 1.8, turn: 1.2 } };
 export function specOf(key) {
   const m = MODELS[key], c = CLS[m.cls], s = { ...c };
   if (m.stats) for (const k in m.stats) s[k] = typeof m.stats[k] === 'object' && !Array.isArray(m.stats[k]) ? { ...(c[k] || {}), ...m.stats[k] } : m.stats[k];
+  const p = PACE[s.dom];
+  if (p) { s.max *= p.max; s.acc *= p.acc; s.turn *= p.turn; s.dispK = 1 / p.max; } else s.dispK = 1;
   return s;
 }

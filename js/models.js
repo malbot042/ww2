@@ -237,6 +237,17 @@ export function buildAA(fac) {
   return g;
 }
 
+export function buildBattery(fac) {
+  const g = new THREE.Group(), con = mat(0x8f8c82, { r: 0.95, m: 0 }), dk = mat(DARK);
+  g.add(box(16, 6, 12, con, 0, 2.6, -1));
+  const roof = box(18, 1.4, 14, con, 0, 6.2, -0.5); g.add(roof);
+  g.add(box(9, 2, 0.6, mat(0x1a1a18), 0, 3.6, 5.1)); // tronera
+  const t = new THREE.Group(); t.position.set(0, 3.6, 3.5); t.userData.base = 0;
+  const b = tube(0.35, 9, dk); b.position.set(0, 0, 0.5); t.add(b); g.add(t);
+  for (const s of [-1, 1]) { const w = box(3, 4, 10, con, s * 9.5, 1.6, -1); w.rotation.y = s * 0.25; g.add(w); }
+  g.userData = { turrets: [t], hw: 9, hl: 7, top: 7 };
+  return g;
+}
 export function buildModel(key) {
   const m = MODELS[key], dom = CLS[m.cls].dom;
   const g = dom === 'sea' ? buildShip(m) : dom === 'air' ? buildPlane(m) : buildTank(m);

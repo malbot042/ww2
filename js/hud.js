@@ -26,12 +26,29 @@ function renderFeed() { $('feed').innerHTML = feed.map(f => `<div class="f ${f.s
 function weaponLines(e) {
   const s = e.s, cd = v => v <= 0 ? '<b class="ok">LISTO</b>' : `<b>${v.toFixed(1)} s</b>`;
   const L = [];
-  if (e.cls === 'destroyer' || e.cls === 'cruiser') { L.push(['Espacio · Artillería', cd(e.cd.main)]); if (s.torp) L.push(['Shift · Torpedos', cd(e.cd.torp)]); if (s.dc) L.push(['C · Cargas de profundidad', cd(e.cd.dc)]); }
+  const aim = v => v > 0 ? '<b>' + v.toFixed(1) + ' s</b>' : !e.target ? '<b>SIN BLANCO</b>' : e.aimReady ? '<b class="ok">LISTO</b>' : '<b class="warn">APUNTANDO</b>';
+  if (e.cls === 'destroyer' || e.cls === 'cruiser') { L.push(['Espacio · Artillería', aim(e.cd.main)]); if (s.torp) L.push(['Shift · Torpedos', cd(e.cd.torp)]); if (s.dc) L.push(['C · Cargas de profundidad', cd(e.cd.dc)]); }
   else if (e.cls === 'pt') { L.push(['Espacio · Ametralladoras', '<b class="ok">AUTO</b>']); L.push(['Shift · Torpedos', cd(e.cd.torp)]); }
   else if (e.cls === 'sub') { L.push(['Espacio · Torpedos (proa)', cd(e.cd.torp)]); L.push(['Shift · Cañón de cubierta', e.submerged ? '<b>—</b>' : cd(e.cd.main)]); L.push(['C · ' + (e.submerged ? 'Emerger' : 'Sumergirse'), `<b class="${e.battery < 0.25 ? 'bad' : ''}">Batería ${Math.round(e.battery * 100)}%</b>`]); }
   else if (e.dom === 'air') { L.push(['Espacio · Ametralladoras', '<b class="ok">AUTO</b>']); L.push(['Shift · Bomba', cd(e.cd.bomb)]); }
-  else if (e.dom === 'land') { L.push(['Espacio · Cañón', cd(e.cd.main)]); L.push(['Shift · Humo', cd(e.cd.smoke)]); L.push(['T · Cambiar blanco', '']); }
+  else if (e.dom === 'land') { L.push(['Espacio · Cañón', aim(e.cd.main)]); L.push(['Shift · Humo', cd(e.cd.smoke)]); }
   return L.map(([a, b]) => `<div class="wp"><span>${a}</span>${b}</div>`).join('');
+}
+function targetPanel(e) {
+  const t = e.target;
+  if (e.dom === 'air') return '';
+  if (!t || !t.alive) return `<div class="tg empty"><div class="tgh"><span>Sin blanco a tiro</span></div><div class="tgk"><kbd>T</kbd> buscar blanco · clic sobre un enemigo para fijarlo</div></div>`;
+  const d = Math.round(t.p.distanceTo(e.p)), hp = Math.max(0, t.hp / t.s.hp);
+  let extra = '';
+  if ((e.cls === 'destroyer' || e.cls === 'cruiser') && e.tur.length) { const b = e.bear || 0; extra = `<div class="wp"><span>Torres que apuntan</span><b class="${b === e.tur.length ? 'ok' : b ? '' : 'bad'}">${b}/${e.tur.length}</b></div>` + (b < e.tur.length ? '<div class="tgk">Ponte de costado para disparar con todas</div>' : ''); }
+  if (e.dom === 'land' && t.cls === 'tank') {
+    const fx = Math.sin(t.h), fz = Math.cos(t.h), dx = e.p.x - t.p.x, dz = e.p.z - t.p.z, l = Math.hypot(dx, dz) || 1, c = (dx * fx + dz * fz) / l;
+    const zi = c > 0.62 ? 0 : c < -0.62 ? 2 : 1, m = t.s.armor[zi];
+    extra = `<div class="wp"><span>Le das por ${['delante', 'el lateral', 'detrás'][zi]}</span><b class="${m < 0.8 ? 'bad' : m > 1.3 ? 'ok' : ''}">daño ×${m.toFixed(2)}</b></div>`;
+  }
+  return `<div class="tg ${e.lock ? 'lock' : ''}"><div class="tgh"><span>${e.lock ? 'Blanco fijado' : 'Blanco automático'}</span><b>${d} m</b></div>
+    <div class="tgn">${t.name}<i>${t.m.type || ''}</i></div><div class="bar"><i style="width:${hp * 100}%;background:${hp < 0.35 ? 'var(--red)' : '#d9a441'}"></i></div>${extra}
+    <div class="tgk"><kbd>T</kbd> siguiente · <kbd>Y</kbd> automático · clic para fijar</div></div>`;
 }
 function renderSquad(force) {
   const allies = G.ents.filter(e => e.side === 'A' && e.dom !== 'static');
@@ -45,9 +62,10 @@ export function updateHud(dt) {
   if (e) {
     $('uName').textContent = e.name; $('uType').textContent = `${e.m.type} · ${e.fac === 'us' ? 'EE. UU.' : e.fac === 'uk' ? 'Reino Unido' : ''}`;
     const hp = Math.max(0, e.hp / e.s.hp); $('uHp').style.width = hp * 100 + '%'; $('uHp').style.background = hp < 0.35 ? 'var(--red)' : 'var(--hp)';
-    const kmh = e.dom === 'sea' ? `${Math.round(Math.abs(e.speed) * 0.95)} nudos` : `${Math.round(Math.abs(e.speed) * (e.dom === 'air' ? 3.6 : 1.9))} km/h`;
-    $('uW').innerHTML = weaponLines(e) + `<div class="wp"><span>Velocidad</span><b>${kmh}</b></div>` + (e.target && e.target.alive ? `<div class="wp tgt"><span>Blanco</span><b>${e.target.name} · ${Math.round(e.target.p.distanceTo(e.p))} m</b></div>` : '');
+    const k = e.s.dispK || 1, kmh = e.dom === 'sea' ? `${Math.round(Math.abs(e.speed) * 0.95 * k)} nudos` : `${Math.round(Math.abs(e.speed) * (e.dom === 'air' ? 3.6 : 1.5) * k)} km/h`;
+    $('uW').innerHTML = weaponLines(e) + `<div class="wp"><span>Velocidad</span><b>${kmh}</b></div>` + targetPanel(e);
   }
+  { const u = $('unit'), sq = $('squad'), top = u.offsetTop + u.offsetHeight + 8; if (sq.dataset.top != top) { sq.style.top = top + 'px'; sq.style.maxHeight = `calc(100vh - ${top + 70}px)`; sq.dataset.top = top; } }
   // tickets
   const t = G.tickets, mx = G.ticketsMax;
   $('tkA').textContent = Math.ceil(t.A); $('tkE').textContent = Math.ceil(t.E);
@@ -117,6 +135,7 @@ export function updateAimMarkers() {
   if (bombRing.visible) { const ip = bombImpact(e); bombRing.position.set(ip.x, ip.y + 0.5, ip.z); bombRing.material.opacity = e.cd.bomb <= 0 ? 0.85 : 0.25; }
   const t = ok && e.target && e.target.alive ? e.target : null;
   tgtRing.visible = !!t && e.dom !== 'air';
+  if (t) { tgtRing.material.color.setHex(e.lock ? 0xffd040 : 0xff5a3a); tgtRing.material.opacity = e.aimReady && e.cd.main <= 0 ? 0.6 + 0.4 * Math.sin(performance.now() / 90) : 0.8; }
   if (t) { const s = Math.max(t.hl, t.hw) * 1.5 + 4; tgtRing.scale.set(s, s, s); tgtRing.rotation.z += 0.02; tgtRing.position.set(t.p.x, Math.max(t.p.y, 0) + 1, t.p.z); }
   torpLine.visible = ok && e.dom === 'sea' && !!e.s.torp && (e.cls === 'sub' || !e.target || e.cls === 'pt');
   if (torpLine.visible) { const a = torpLine.geometry.attributes.position.array; a[0] = e.p.x + Math.sin(e.h) * e.hl; a[1] = 0.5; a[2] = e.p.z + Math.cos(e.h) * e.hl; a[3] = e.p.x + Math.sin(e.h) * 800; a[4] = 0.5; a[5] = e.p.z + Math.cos(e.h) * 800; torpLine.geometry.attributes.position.needsUpdate = true; torpLine.computeLineDistances(); }
