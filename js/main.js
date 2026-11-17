@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { applyVolumes, updateMusic, musicHeat, RADIO, initSoundUI, radioStop } from './sound.js';
 import { updateDamageFx } from './damagefx.js';
 import { newCampaign, endCampaignBattle, restoreSnapshot, UNLOCKS } from './campaign.js';
 import { G } from './state.js';
@@ -12,7 +13,7 @@ import { openDeploy, initDeployUI, beginPlacement, endPlacement, placeUnit, appl
 import { useSupport, updateVision, SUPPORT } from './strategy.js';
 import { updateMarkers } from './battle.js';
 import { updateUnits, updateProjs, spawnUnit } from './units.js';
-import { initFx, updateFx, initAudio, setEngine } from './fx.js';
+import { initFx, updateFx, initAudio, setEngine, engineProfile } from './fx.js';
 import { hudInit, hudHide, updateHud, flash, hitMark, hurt, addFeed, initAimMarkers, updateAimMarkers } from './hud.js';
 import { clamp, V3, rnd, angDiff } from './util.js';
 
@@ -42,17 +43,19 @@ G.onCrit = (e, m, by) => {
   if (by && by === G.player) hitMark(`¡${MOD_NAME[m]}!`);
   if (e === G.player) flash(m === 'fire' ? '¡Incendio!' : `¡${MOD_NAME[m]}!`, m === 'tracks' ? 'Se reparan solas en unos segundos' : 'Pulsa K para control de daños', 2);
 };
-G.onHurt = () => hurt();
+G.onHurt = () => { hurt(); musicHeat(0.06); const p = G.player; if (p && p.hp < p.s.hp * 0.3) RADIO.hurt(); };
 G.onHit = (e, zone, mult, dmg) => { if (G.battle && G.battle.kind === 'test') sandboxHit(e, zone, mult, dmg); if (zone === null) return hitMark('Impacto'); hitMark(['Impacto frontal', 'Impacto lateral', 'Impacto trasero'][zone] + (mult < 0.8 ? ' · blindaje resiste' : mult > 1.3 ? ' · ¡crítico!' : ''), mult < 0.8); };
 G.onKill = (e, by) => {
   if (G.demo) return;
+  musicHeat(0.12);
+  if (e.side === 'E' && by === G.player) RADIO.kill(); else if (e.side === 'A' && !e.support && e !== G.player && e.dom !== 'static') RADIO.lost(e);
   const who = by ? (by === G.player ? 'Tú' : by.name) : '';
   if (e.cls === 'aa') return;
   addFeed(`${e.side === 'E' ? '✕' : '✕'} ${e.name}${who ? ` <i>(${who})</i>` : ''}`, e.side === 'E' ? 'good' : 'bad');
   if (e.cls === 'site') flash(`${e.name} ${e.label} destruido`, e.side === 'E' ? 'Instalación enemiga eliminada' : 'Hemos perdido una instalación');
 };
-G.onZone = (z, prev) => { if (G.demo) return; if (z.owner === 'A') flash(`Objetivo ${z.name} tomado`, 'El enemigo pierde puntos cada segundo'); else if (z.owner === 'E') flash(`Objetivo ${z.name} perdido`, 'Recupéralo cuanto antes'); };
-G.onEnd = res => setTimeout(() => showResults(res), 2200);
+G.onZone = (z, prev) => { if (G.demo) return; if (z.owner) RADIO.zone(z, z.owner === 'A'); if (z.owner === 'A') flash(`Objetivo ${z.name} tomado`, 'El enemigo pierde puntos cada segundo'); else if (z.owner === 'E') flash(`Objetivo ${z.name} perdido`, 'Recupéralo cuanto antes'); };
+G.onEnd = res => { RADIO.end(res === 'win'); setTimeout(() => showResults(res), 2200); };
 G.onDemoEnd = () => startDemo();
 
 // ---------- cámara ----------
@@ -125,8 +128,9 @@ function frame(now) {
     if (sim || G.demo) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); }
     else if (G.deploying) { updateVision(dt); updateMarkers(); }
     updateWorld(dt); if (sim || G.demo) updateEnv(dt); updateCamera(dt);
-    if (G.running) { updateHud(dt); updateAimMarkers(); const p = G.player; if (p && p.alive) setEngine(p.dom, Math.abs(p.speed) / p.s.max, !G.paused); }
-    else { updateAimMarkers(); setEngine('sea', 0, false); }
+    if (G.running) { updateHud(dt); updateAimMarkers(); const p = G.player; if (p && p.alive) setEngine(engineProfile(p), Math.abs(p.speed) / p.s.max, !G.paused); }
+    else { updateAimMarkers(); setEngine('ship', 0, false); }
+    updateMusic(dt);
   }
   G.keysOnce.clear();
   renderer.render(scene, camera);
@@ -147,7 +151,7 @@ function buildFrontMenu() {
       <span class="fd">Elige cualquiera de los ${Object.keys(MODELS).length} modelos, coloca blancos fijos o enemigos con IA y prueba armas, blindajes, cámaras y controles.</span>
       <span class="fb"><i>Naval</i><i>Aérea</i><i>Tanques</i></span>
     </button>`;
-  $('fronts').querySelectorAll('.front').forEach(b => b.onclick = () => { initAudio(); if (b.dataset.test) launch('test'); else buildBattleMenu(b.dataset.front); });
+  $('fronts').querySelectorAll('.front').forEach(b => b.onclick = () => { initAudio(); applyVolumes(); if (b.dataset.test) launch('test'); else buildBattleMenu(b.dataset.front); });
 }
 function buildBattleMenu(fk) {
   const f = FRONTS[fk];
@@ -183,6 +187,7 @@ function launch(key, keepCampaign = false, opts = {}) {
     $('top').classList.toggle('hide', test);
     if (test) { initSandbox({ flash, onPlayerChange: e => { G.targetZoom = ZOOM_DEF[e.dom]; } }); sandboxStart(); } else sandboxHide();
     G.running = true;
+    radioStop(); if (G.battle.kind !== 'test') setTimeout(() => RADIO.start(), opts.place ? 0 : 1200);
     if (opts.place && G.battle.kind !== 'test') { beginPlacement(); flash('Fase de despliegue', 'Coloca tus unidades y pulsa Enter para comenzar', 4); return; }
     flash(G.battle.kind === 'test' ? 'Campo de pruebas' : `${BATTLES[key].title}, ${BATTLES[key].year}`, G.battle.kind === 'test' ? 'Elige unidad y blancos en el panel de la derecha' : G.battle.kind === 'combined' ? G.battle.hint : G.battle.kind === 'air' ? 'Pulsa 1, 2 o 3 para enviar tu escuadrilla contra las instalaciones A, B o C' : 'Pulsa 1, 2 o 3 para enviar tu escuadra a los objetivos A, B o C', 5);
   }, 60);
@@ -244,7 +249,8 @@ function doSupport(kind) {
   if (useSupport('A', kind, pt)) flash(kind === 'barrage' ? (G.battle.kind === 'naval' ? s.nameSea : s.name) : s.name, kind === 'reinf' ? 'Una unidad nueva llega a la base' : kind === 'barrage' ? 'Impacto en 5 s: aléjate de la marca de humo' : 'Dos aviones en camino', 2);
   else flash(`${s.name} no disponible`, G.cp && G.cp.A < s.cost ? `Necesitas ${s.cost} puntos de mando` : 'En espera', 1.4);
 }
-G.onSupport = (side, kind, p) => { if (side === 'E' && !G.demo) { if (kind === 'barrage') flash('¡Artillería enemiga!', 'Busca la marca de humo y apártate', 2); else if (kind === 'air') flash('¡Ataque aéreo enemigo!', '', 1.6); } };
+G.onSupport = (side, kind, p) => { if (!G.demo) { if (side === 'E') RADIO.incoming(kind); else RADIO.support(kind); } if (side === 'E' && !G.demo) { if (kind === 'barrage') flash('¡Artillería enemiga!', 'Busca la marca de humo y apártate', 2); else if (kind === 'air') flash('¡Ataque aéreo enemigo!', '', 1.6); } };
+initSoundUI();
 const FORMS = ['cuña', 'línea', 'columna']; G.formation = 'cuña';
 
 // ---------- entrada ----------

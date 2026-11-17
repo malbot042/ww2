@@ -122,24 +122,47 @@ export function smokeScreen(p) { smoke.spawn(p.x + rnd(-10, 10), p.y + rnd(1, 5)
 export function contrail(p, k = 1) { trails.spawn(p.x, p.y, p.z, rnd(-0.3, 0.3), rnd(-0.2, 0.2), rnd(-0.3, 0.3), 3.2 * k, 2.6 * k, rnd(7, 10), COL.white, 0.26); }
 
 // ---------- Audio sintetizado ----------
-let AC = null, noiseBuf = null, master = null, engine = null;
+let AC = null, noiseBuf = null, master = null, engine = null, sfxBus = null, engBus = null, musicBus = null;
+export const audio = () => ({ AC, noiseBuf, master, musicBus });
+export function setVolumes(v) { if (!AC) return; const t = AC.currentTime; master.gain.setTargetAtTime(0.6 * v.master, t, 0.05); sfxBus.gain.setTargetAtTime(v.sfx, t, 0.05); engBus.gain.setTargetAtTime(v.sfx, t, 0.05); musicBus.gain.setTargetAtTime(v.music * 0.5, t, 0.1); }
 export function initAudio() {
   if (AC) { AC.resume?.(); return; }
   try {
     AC = new (window.AudioContext || window.webkitAudioContext)();
     master = AC.createGain(); master.gain.value = 0.55; master.connect(AC.destination);
+    sfxBus = AC.createGain(); engBus = AC.createGain(); musicBus = AC.createGain(); musicBus.gain.value = 0.25;
+    for (const b of [sfxBus, engBus, musicBus]) b.connect(master);
     noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
     const d = noiseBuf.getChannelData(0); let last = 0; for (let i = 0; i < d.length; i++) { const w = Math.random() * 2 - 1; last = (last + 0.02 * w) / 1.02; d[i] = w * 0.6 + last * 3; }
-    // motor de la unidad controlada
-    const o = AC.createOscillator(), f = AC.createBiquadFilter(), g = AC.createGain(); o.type = 'sawtooth'; o.frequency.value = 40; f.type = 'lowpass'; f.frequency.value = 220; g.gain.value = 0;
-    o.connect(f); f.connect(g); g.connect(master); o.start(); engine = { o, f, g };
+    // motor de la unidad controlada: dos osciladores desafinados + ruido filtrado + modulación (petardeo)
+    const o1 = AC.createOscillator(), o2 = AC.createOscillator(), f = AC.createBiquadFilter(), g = AC.createGain(), og = AC.createGain();
+    o1.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 220; g.gain.value = 0; og.gain.value = 0.6;
+    const ns = AC.createBufferSource(); ns.buffer = noiseBuf; ns.loop = true; const nf = AC.createBiquadFilter(), ng = AC.createGain(); nf.type = 'bandpass'; nf.frequency.value = 120; nf.Q.value = 0.7; ng.gain.value = 0;
+    const lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.value = 12; lg.gain.value = 0.25; lfo.connect(lg); lg.connect(og.gain);
+    o1.connect(og); o2.connect(og); og.connect(f); f.connect(g); ns.connect(nf); nf.connect(ng); ng.connect(g); g.connect(engBus);
+    o1.start(); o2.start(); ns.start(); lfo.start(); engine = { o1, o2, f, g, ng, nf, lfo, lg };
   } catch (e) { AC = null; }
 }
-export function setEngine(kind, speedK, on) {
+// perfiles de motor por tipo: [frec. base, desafinado, corte del filtro, ruido, frec. ruido, petardeo, volumen]
+const ENG = {
+  fighter: [78, 1.5, 420, 0.25, 300, 22, 0.05], radial: [58, 1.33, 360, 0.3, 240, 15, 0.055], heavy: [44, 1.26, 300, 0.4, 180, 9, 0.065],
+  tank: [36, 1.5, 260, 0.9, 110, 7, 0.06], inf: [0, 1, 100, 0.5, 400, 3, 0.0], ship: [24, 2.02, 160, 1.1, 70, 2, 0.06], sub: [30, 1.5, 200, 0.5, 90, 4, 0.04], pt: [52, 1.5, 380, 0.6, 200, 14, 0.06],
+};
+export function engineProfile(e) {
+  if (!e) return null;
+  if (e.dom === 'air') return e.s.heavy ? 'heavy' : e.m.radial ? 'radial' : 'fighter';
+  if (e.cls === 'inf' || e.cls === 'atgun') return 'inf';
+  if (e.dom === 'land') return 'tank';
+  return e.cls === 'sub' ? 'sub' : e.cls === 'pt' ? 'pt' : 'ship';
+}
+export function setEngine(prof, speedK, on) {
   if (!engine) return;
-  const base = kind === 'air' ? 70 : kind === 'sea' ? 32 : 45;
-  engine.o.frequency.setTargetAtTime(base + speedK * base * 0.8, AC.currentTime, 0.2);
-  engine.g.gain.setTargetAtTime(on ? (kind === 'air' ? 0.05 : 0.04) : 0, AC.currentTime, 0.3);
+  const P = ENG[prof] || ENG.ship, t = AC.currentTime, f = P[0] * (0.8 + speedK * 0.7);
+  engine.o1.frequency.setTargetAtTime(Math.max(1, f), t, 0.2); engine.o2.frequency.setTargetAtTime(Math.max(1, f * P[1]), t, 0.2);
+  engine.f.frequency.setTargetAtTime(P[2] * (0.8 + speedK * 0.6), t, 0.2);
+  engine.nf.frequency.setTargetAtTime(P[4] * (0.8 + speedK * 0.5), t, 0.2); engine.ng.gain.setTargetAtTime(P[3] * (0.4 + speedK * 0.6), t, 0.2);
+  engine.lfo.frequency.setTargetAtTime(P[5] * (0.8 + speedK * 0.6), t, 0.2);
+  engine.g.gain.setTargetAtTime(on ? P[6] : 0, t, 0.3);
 }
 let lastGun = 0;
 export function sfx(kind, p, s = 1) {
@@ -155,6 +178,6 @@ export function sfx(kind, p, s = 1) {
   f.type = 'lowpass'; f.frequency.value = cfg[0];
   const v = Math.min(1, cfg[1] * Math.min(s, 2)) * vol;
   g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + cfg[2] * Math.min(1.5, 0.6 + s * 0.4));
-  src.connect(f); f.connect(g); g.connect(master); src.start(t, Math.random(), cfg[2] * 1.6);
-  if (cfg[3]) { const o = AC.createOscillator(), og = AC.createGain(); o.frequency.setValueAtTime(cfg[3] * 1.6, t); o.frequency.exponentialRampToValueAtTime(cfg[3] * 0.5, t + 0.4); og.gain.setValueAtTime(v * 0.9, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.5); o.connect(og); og.connect(master); o.start(t); o.stop(t + 0.55); }
+  src.connect(f); f.connect(g); g.connect(sfxBus); src.start(t, Math.random(), cfg[2] * 1.6);
+  if (cfg[3]) { const o = AC.createOscillator(), og = AC.createGain(); o.frequency.setValueAtTime(cfg[3] * 1.6, t); o.frequency.exponentialRampToValueAtTime(cfg[3] * 0.5, t + 0.4); og.gain.setValueAtTime(v * 0.9, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.5); o.connect(og); og.connect(sfxBus); o.start(t); o.stop(t + 0.55); }
 }
