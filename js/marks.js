@@ -12,7 +12,7 @@ function makeTex() {
 export function initMarks() {
   if (!tex) tex = makeTex();
   if (marks) marks.parent && marks.parent.remove(marks);
-  const desert = G.map.theme === 'desert';
+  const desert = G.map.theme === 'desert' || G.map.theme === 'mixed';
   marks = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ map: tex, color: desert ? 0x8a6a44 : 0x4a3e2e, transparent: true, opacity: desert ? 0.5 : 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), N);
   marks.count = 0; marks.frustumCulled = false; marks.renderOrder = 1; mi = 0;
   G.scene.add(marks);

@@ -170,3 +170,4 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 | v1.0 | Fase 5, técnico: calidad gráfica y FPS, mando, controles táctiles, guardado, tutorial y pantalla partida |
 | v1.1 | Resolución siempre baja (360 líneas) y efecto de monitor CRT sin curvatura: líneas de barrido, rejilla RGB, resplandor y aberración cromática (desactivable) |
 | v1.2 | Modo sencillo por defecto (despliegue de un botón, órdenes básicas, munición y apoyo automáticos, barra de teclas contextual) y modo veterano con todo |
+| v1.3 | Campo de pruebas ampliado (7,2 km de mapa) que mezcla desierto, Europa y Pacífico, con botones para saltar entre terrenos |

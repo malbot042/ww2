@@ -77,8 +77,8 @@ export const BATTLES = {
     statics: [['battery', 3], ['aa', 2]],
   },
   'test': {
-    front: 'europe', kind: 'test', map: 'normandy', title: 'Campo de pruebas', year: '',
-    brief: 'Sin puntos ni derrota. Elige cualquier unidad del catálogo, añade blancos o enemigos y prueba armas, blindajes y cámaras.',
+    front: 'europe', kind: 'test', map: 'proving', title: 'Campo de pruebas', year: '',
+    brief: 'Mapa ampliado que mezcla el desierto, la campiña europea y el Pacífico con islas. Sin puntos ni derrota: elige cualquier unidad, añade blancos o enemigos y salta de un terreno a otro.',
     allies: [['sherman', 1]], enemy: [],
   },
   'europe-land': {

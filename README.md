@@ -34,6 +34,8 @@ Los objetivos A (salida de la playa) y B (pueblo) los capturan los tanques; el C
 La tarjeta **Tutorial** del menú enseña lo básico en 10 pasos guiados (unos 5 minutos): moverse, cámara, zoom, fijar un blanco, disparar, munición, control de daños, órdenes a la escuadra, cambiar de unidad y mapa táctico.
 
 ## Campo de pruebas
+Mapa ampliado (unos 5 × 5 km jugables) que mezcla los tres frentes: **desierto** al oeste, **campiña europea** con setos y pueblos al este, una franja de estepa entre ambos y, al sur, el **Pacífico** con islas tropicales y atolones. Los botones **Desierto / Europa / Pacífico** del panel llevan tu unidad al terreno elegido (a tierra, al agua o por encima, según lo que manejes).
+
 Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin puntos ni derrota. Desde el panel de la derecha puedes:
 - Ser **cualquier unidad** del catálogo, incluidas las del Eje.
 - Añadir enemigos o aliados de cualquier modelo, también baterías costeras y antiaéreos. Los enemigos pueden ser **pasivos**, quietos o en movimiento, o tener la IA activada.

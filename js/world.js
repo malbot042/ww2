@@ -8,6 +8,7 @@ const THEMES = {
   tropical: { sky: 0x9fc8de, fog: 0xa8cde0, sun: 0xfff1d8, sunI: 3.0, hemiS: 0xd2e8f6, hemiG: 0x3e4c3a, hemiI: 1.25, shallow: 0x35c2b8, deep: 0x0a3558, skyZ: 0x6fa8d6 },
   channel: { sky: 0xaebcc6, fog: 0xb2bfc8, sun: 0xf6f0e4, sunI: 2.5, hemiS: 0xd4dde4, hemiG: 0x4a4c3e, hemiI: 1.35, shallow: 0x5a8f88, deep: 0x163644, skyZ: 0x8ea4b6 },
   bocage: { sky: 0xb4c4ca, fog: 0xbac8cc, sun: 0xfbf2e0, sunI: 2.7, hemiS: 0xd8e2e6, hemiG: 0x4c4a38, hemiI: 1.3, shallow: 0x5a8f88, deep: 0x163644, skyZ: 0x8ea4b6 },
+  mixed: { sky: 0xbccad2, fog: 0xc2ccd0, sun: 0xfff0dc, sunI: 2.9, hemiS: 0xdde6ea, hemiG: 0x5c5440, hemiI: 1.25, shallow: 0x3dbab6, deep: 0x0c3a5c, skyZ: 0x7fa8cc },
   desert: { sky: 0xd9ccb0, fog: 0xdccfb4, sun: 0xffe8c2, sunI: 3.2, hemiS: 0xeee4d0, hemiG: 0x8a7050, hemiI: 1.1, shallow: 0x43b4ba, deep: 0x0d3d62, skyZ: 0x86acc8 },
 };
 export const MAPCFG = {
@@ -20,6 +21,8 @@ export const MAPCFG = {
   europe_land: { theme: 'bocage', gen: 'bocage', ext: 3600, N: 360, bounds: 1150, zoneS: 520, zoneR: 175, spawn: 780 },
   africa_land: { theme: 'desert', gen: 'desert', ext: 3600, N: 300, bounds: 1150, zoneS: 540, zoneR: 175, spawn: 780 },
   tobruk: { theme: 'desert', gen: 'tobruk', ext: 4800, N: 360, bounds: 1550, zoneS: 0, zoneR: 200, spawn: 1000, combined: true },
+  // campo de pruebas: desierto al oeste, campiña europea al este, Pacífico con islas al sur
+  proving: { theme: 'mixed', gen: 'mixed', ext: 7200, N: 480, bounds: 2600, zoneS: 0, zoneR: 0, spawn: 1000, combined: true },
   africa_air: { theme: 'desert', gen: 'desertAir', ext: 4800, N: 320, bounds: 1650, zoneS: 720, zoneR: 0, spawn: 1380, sites: true },
 };
 
@@ -105,6 +108,49 @@ function makeHeightFn(cfg, seed) {
     };
   }
   let extra = {};
+  if (gen === 'mixed') {
+    const coast = x => 620 + N.fbm(x * 0.0009, 9.1, 3) * 180;           // costa: tierra al norte, océano al sur
+    const border = z => N.fbm(z * 0.0011, 6.6, 3) * 280;                 // frontera desierto / Europa
+    const wD = (x, z) => smooth(420, -420, x - border(z));               // 1 = desierto, 0 = Europa
+    const desH = (x, z) => 8 + N.fbm(x * 0.0006, z * 0.0006, 4) * 14 + Math.pow(N.ridge(x * 0.0022 + z * 0.0012, z * 0.0016 - x * 0.0004, 3), 3) * 6 + N.fbm(x * 0.02, z * 0.02, 2) * 0.6;
+    const eurH = (x, z) => 10 + N.fbm(x * 0.0007, z * 0.0007, 4) * 20 + N.fbm(x * 0.003, z * 0.003, 3) * 3;
+    const isl = [];
+    for (let t = 0; isl.length < 10 && t < 800; t++) {
+      const r = 110 + R() * 230, x = (R() * 2 - 1) * 2500, z = coast(x) + 480 + R() * 1900;
+      if (z + r > 2900) continue;
+      if (isl.every(i => Math.hypot(x - i.x, z - i.z) > r + i.r + 160) && Math.hypot(x, z - 1700) > r + 260) isl.push({ x, z, r, h: 8 + R() * 30, at: R() < 0.2 && r > 160 });
+    }
+    fn = (x, z) => {
+      const s = coast(x) - z;
+      let h;
+      if (s > 0) {
+        const w = wD(x, z), land = Math.max(2.6, lerp(eurH(x, z), desH(x, z), w));
+        h = s < 50 ? 0.6 + s * 0.035 : lerp(2.4, land, smooth(50, 260, s));
+      } else h = Math.max(-36 + N.fbm(x * 0.0009, z * 0.0009, 3) * 6, -0.6 + s * 0.055);
+      for (const i of isl) {
+        const dx = x - i.x, dz = z - i.z; if (Math.abs(dx) > i.r * 1.9 || Math.abs(dz) > i.r * 1.9) continue;
+        const d = Math.hypot(dx, dz) * (1 + N.fbm(x * 0.004 + i.x, z * 0.004, 3) * 0.45);
+        const v = i.at ? 1 - Math.abs(d - i.r * 0.8) / (i.r * 0.22) : 1 - d / i.r;
+        if (v < -0.7) continue;
+        const f = v < 0 ? lerp(-36, -2.5, Math.pow((v + 0.7) / 0.7, 2)) : v < 0.12 ? lerp(-2.5, 1.6, v / 0.12) : 1.6 + (i.at ? 1.5 : i.h) * Math.pow(smooth(0.12, 1, v), 1.3) * (0.75 + 0.5 * N.fbm(x * 0.01, z * 0.01, 3));
+        if (f > h) h = f;
+      }
+      return h;
+    };
+    zones.length = 0; zones.push([-1500, -300], [0, -600], [1500, -300]);
+    const big = isl.slice().sort((a, b) => b.r - a.r)[0];
+    extra = {
+      coast, islands: isl,
+      region: (x, z) => z > coast(x) + 40 ? 'trop' : wD(x, z) > 0.5 ? 'des' : 'eur',
+      desertW: wD,
+      spawns: { A: { land: x => [x * 1.4, 260], sea: [0, coast(0) + 650], air: [0, 2000] }, E: { land: [0, -1800], sea: [1600, 2300], air: [0, -2300] } },
+      spots: {
+        des: { land: [-1600, -300], sea: [-1600, coast(-1600) + 450], air: [-1600, -300] },
+        eur: { land: [1600, -300], sea: [1600, coast(1600) + 450], air: [1600, -300] },
+        trop: { land: big ? [big.x, big.z] : [0, 1800], sea: big ? [big.x, big.z + big.r + 260] : [0, 1800], air: big ? [big.x, big.z] : [0, 1800] },
+      },
+    };
+  }
   if (gen === 'tobruk') {
     zones.length = 0; zones.push([150, -640], [-380, -260], [460, 280]);
     extra = {
@@ -180,6 +226,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     if (cfg.gen === 'bocage') roads.push({ t: 'h', f: x => 420 + 80 * Math.sin(x * 0.002) }, { t: 'h', f: x => -430 + 70 * Math.sin(x * 0.0023 + 2) });
     zones.forEach(zn => { zn[1] = zz + amp * Math.sin(zn[0] * 0.0025 + 1); });
   }
+  if (cfg.gen === 'mixed') roads.push({ t: 'h', f: x => -560 + 70 * Math.sin(x * 0.0018) }, { t: 'v', f: z => 1500 + 35 * Math.sin(z * 0.004) }, { t: 'v', f: z => -1500 + 35 * Math.sin(z * 0.004 + 2) });
   if (cfg.gen === 'normandy') {
     const [ax] = zones[0], [, bz] = zones[1];
     roads.push({ t: 'v', f: z => ax + 30 * Math.sin(z * 0.004) }, { t: 'h', f: x => bz + 50 * Math.sin(x * 0.002) }, { t: 'v', f: z => zones[1][0] + 25 * Math.sin(z * 0.005 + 1) });
@@ -203,22 +250,22 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
   };
   const fields = [0x6f8f3e, 0x86a04a, 0x5b7c34, 0xb9ac63, 0x9d8752, 0x6d5c41, 0x7a9a46].map(C);
   const hash = (a, b) => { const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return s - Math.floor(s); };
-  const colorAt = (x, z) => {
+  const paint = (theme, x, z) => {
     const y = h(x, z), e2 = 3;
     const slope = Math.hypot(h(x + e2, z) - h(x - e2, z), h(x, z + e2) - h(x, z - e2)) / (2 * e2);
     const nz = N.fbm(x * 0.02, z * 0.02, 3), nz2 = N.fbm(x * 0.004, z * 0.004, 3);
-    if (y < -0.5) { c.copy(cfg.theme === 'tropical' || cfg.theme === 'desert' ? P.reef : P.shingle).lerp(P.seabed, smooth(1, 30, -y)); }
-    else if (cfg.theme === 'tropical') {
+    if (y < -0.5) { c.copy(theme === 'tropical' || theme === 'desert' ? P.reef : P.shingle).lerp(P.seabed, smooth(1, 30, -y)); }
+    else if (theme === 'tropical') {
       if (y < 2.2) c.copy(P.sandW).lerp(P.sandWet, smooth(1.2, -0.5, y) * 0.8);
       else { c.copy(P.jungle).lerp(P.jungle2, (nz + 1) / 2); c.lerp(P.rock, smooth(0.35, 0.8, slope)); if (y < 3) c.lerp(P.sandW, smooth(3, 2.2, y)); }
-    } else if (cfg.theme === 'desert') {
+    } else if (theme === 'desert') {
       c.copy(P.dsand).lerp(P.dsand2, clamp((nz2 + 0.5), 0, 1) * 0.7); c.lerp(P.dgravel, clamp(nz * 1.5, 0, 1) * 0.5);
       c.lerp(P.drock, smooth(0.12, 0.35, slope));
       if (y < 1.5) c.lerp(P.sandW, 0.5);
       const rd = roadDist(x, z); if (rd < 7) c.lerp(P.droad, smooth(7, 3, rd) * 0.7);
       const tk = Math.abs(N.n2(x * 0.004 + 50, z * 0.004)); if (tk < 0.012) c.lerp(P.track, 0.35);
     } else {
-      if (y < 2.5 && cfg.theme === 'channel') { c.copy(slope > 0.5 ? P.chalk : P.sandWet).lerp(P.shingle, 0.3); }
+      if (y < 2.5 && theme === 'channel') { c.copy(slope > 0.5 ? P.chalk : P.sandWet).lerp(P.shingle, 0.3); }
       else {
         const wx = x + N.fbm(x * 0.01, z * 0.01, 2) * 18, wz = z + N.fbm(z * 0.01, x * 0.01, 2) * 18;
         const cx = Math.floor(wx / 135), cz = Math.floor(wz / 105), fh = hash(cx, cz);
@@ -226,15 +273,26 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
         if (fh > 0.42 && fh < 0.72) { const fur = Math.sin((fh > 0.57 ? wx : wz) * 1.6); c.offsetHSL(0, 0, fur * 0.012); }
         const ex = Math.min(wx - cx * 135, (cx + 1) * 135 - wx), ez = Math.min(wz - cz * 105, (cz + 1) * 105 - wz);
         if (Math.min(ex, ez) < 3.2 && cfg.gen !== 'channelSea') c.lerp(P.hedge, 0.75);
-        if (cfg.theme === 'channel') c.lerp(P.chalk, smooth(0.6, 1.0, slope));
-        if (y < 3 && cfg.theme === 'channel') c.lerp(P.sandWet, smooth(3, 2, y));
+        if (theme === 'channel') c.lerp(P.chalk, smooth(0.6, 1.0, slope));
+        if (y < 3 && theme === 'channel') c.lerp(P.sandWet, smooth(3, 2, y));
         const rd = roadDist(x, z); if (rd < 5) c.lerp(P.road, smooth(5, 2.5, rd));
       }
     }
     c.offsetHSL(0, 0, nz * 0.02 + (Math.random() - 0.5) * 0.025);
     return c;
   };
-  const T = ext > 4000 ? 1536 : 2048, cv = document.createElement('canvas'); cv.width = cv.height = T;
+  const c2 = new THREE.Color();
+  const colorAt = (x, z) => {
+    if (cfg.theme !== 'mixed') return paint(cfg.theme, x, z);
+    const y = h(x, z), ex = extra;
+    if (y < -0.5 || ex.region(x, z) === 'trop') return paint('tropical', x, z);
+    if (y < 2.4) return paint('tropical', x, z); // playas de arena
+    const w = ex.desertW(x, z);
+    if (w > 0.98) return paint('desert', x, z);
+    if (w < 0.02) return paint('bocage', x, z);
+    c2.copy(paint('bocage', x, z)); paint('desert', x, z); return c.lerp(c2, 1 - w); // estepa de transición
+  };
+  const T = ext > 6000 ? 1792 : ext > 4000 ? 1536 : 2048, cv = document.createElement('canvas'); cv.width = cv.height = T;
   const cx2 = cv.getContext('2d'), img = cx2.createImageData(T, T);
   for (let j = 0; j < T; j++) for (let i = 0; i < T; i++) {
     const x = -half + (i + 0.5) / T * ext, z = -half + (j + 0.5) / T * ext;
@@ -303,43 +361,45 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     list.forEach((p, i) => { d.position.set(p.x, h(p.x, p.z) + (opts.yo || 0) * p.s - (opts.sink || 0), p.z); d.rotation.set(p.rx || 0, p.r, 0); d.scale.set(p.s * (p.sx || 1), p.s * (p.sy || 1), p.s * (p.sz || 1)); d.updateMatrix(); im.setMatrixAt(i, d.matrix); });
     im.castShadow = opts.shadow !== false; im.receiveShadow = true; worldGroup.add(im);
   }
-  const scatter = (count, test, extra = () => ({}), full = false) => { const out = []; if (!full) count = Math.round(count * (G.qual ? G.qual.veg : 1)); for (let i = 0; i < count; i++) { const x = (R() * 2 - 1) * (cfg.bounds + 450), z = (R() * 2 - 1) * (cfg.bounds + 450); const y = h(x, z); if (test(x, z, y)) out.push({ x, z, r: R() * 6.28, s: 0.75 + R() * 0.6, ...extra(x, z) }); } return out; };
+  const isMix = cfg.theme === 'mixed', inR = (k, x, z) => !isMix || extra.region(x, z) === k;
+  const scatter = (count, test, extra = () => ({}), full = false) => { const out = []; if (!full) count = Math.round(count * (G.qual ? G.qual.veg : 1)); if (isMix) count = Math.round(count * 5.5); /* cada terreno ocupa solo una parte del mapa */ for (let i = 0; i < count; i++) { const x = (R() * 2 - 1) * (cfg.bounds + 450), z = (R() * 2 - 1) * (cfg.bounds + 450); const y = h(x, z); if (test(x, z, y)) out.push({ x, z, r: R() * 6.28, s: 0.75 + R() * 0.6, ...extra(x, z) }); } return out; };
   const inZone = (x, z, r = 40) => roadDist(x, z) < 10 || zones.some(([a, b]) => Math.hypot(x - a, z - b) < r);
 
-  if (cfg.theme === 'tropical') {
-    const palm = scatter(9000, (x, z, y) => y > 1.4 && y < 5 && R() < 0.35);
-    const jungle = scatter(14000, (x, z, y) => y > 3.5 && N.fbm(x * 0.01, z * 0.01, 2) > -0.15);
+  if (cfg.theme === 'tropical' || isMix) {
+    const palm = scatter(9000, (x, z, y) => y > 1.4 && y < 5 && R() < 0.35 && inR('trop', x, z));
+    const jungle = scatter(14000, (x, z, y) => y > 3.5 && N.fbm(x * 0.01, z * 0.01, 2) > -0.15 && inR('trop', x, z));
     const trunk = new THREE.CylinderGeometry(0.22, 0.38, 9, 6); trunk.translate(0, 4.5, 0); trunk.rotateZ(0.12);
     const fr = []; for (let k = 0; k < 8; k++) { const f = new THREE.BoxGeometry(0.5, 0.12, 4.2); f.translate(0, 0, 2.1); f.rotateX(0.45); f.rotateY(k / 8 * Math.PI * 2); fr.push(f); }
     const crown = mergeGeometries(fr); crown.translate(1.1, 9, 0);
     inst(trunk, 0x7d6a50, palm); inst(crown, 0x4f7f34, palm, { flat: true });
     const jt = mergeGeometries([new THREE.IcosahedronGeometry(3.4, 0).translate(0, 7, 0), new THREE.IcosahedronGeometry(2.6, 0).translate(2.2, 6, 1), new THREE.IcosahedronGeometry(2.4, 0).translate(-1.8, 6.5, -1.2), new THREE.IcosahedronGeometry(2.2, 0).translate(0.4, 8.8, 0.3)]);
     inst(jt, 0x2e5427, jungle, { flat: true });
-    const huts = scatter(1200, (x, z, y) => y > 1.8 && y < 4 && R() < 0.06);
+    const huts = scatter(1200, (x, z, y) => y > 1.8 && y < 4 && R() < 0.06 && inR('trop', x, z));
     inst(new THREE.BoxGeometry(5, 3, 6).translate(0, 1.5, 0), 0x8a7558, huts);
     inst(new THREE.ConeGeometry(4.6, 3, 4).rotateY(Math.PI / 4).translate(0, 4.4, 0), 0x9b8a5e, huts, { flat: true });
-  } else if (cfg.theme === 'desert') {
-    const scrub = scatter(5000, (x, z, y) => y > 1.5 && R() < 0.4 && !inZone(x, z, 20), () => ({ sy: 0.5 }));
+  } if (cfg.theme === 'desert' || isMix) {
+    const scrub = scatter(5000, (x, z, y) => y > 1.5 && R() < 0.4 && !inZone(x, z, 20) && inR('des', x, z), () => ({ sy: 0.5 }));
     inst(new THREE.IcosahedronGeometry(1.4, 0).translate(0, 0.6, 0), 0x6f6a3e, scrub, { flat: true });
-    const rocks = scatter(2500, (x, z, y) => y > 1 && N.fbm(x * 0.004, z * 0.004, 2) > 0.15 && R() < 0.5, () => ({ sy: 0.55, sx: 1 + Math.random() }));
+    const rocks = scatter(2500, (x, z, y) => y > 1 && N.fbm(x * 0.004, z * 0.004, 2) > 0.15 && R() < 0.5 && inR('des', x, z), () => ({ sy: 0.55, sx: 1 + Math.random() }));
     inst(new THREE.DodecahedronGeometry(2.2, 0), 0x8c7454, rocks, { flat: true, sink: 0.6 });
     // Oasis con palmeras
-    const oasis = []; for (let k = 0; k < 3; k++) { const ox = (R() * 2 - 1) * 900, oz = (R() * 2 - 1) * 900; for (let q = 0; q < 26; q++) oasis.push({ x: ox + (R() - 0.5) * 90, z: oz + (R() - 0.5) * 90, r: R() * 6, s: 0.8 + R() * 0.4 }); }
+    const oasis = []; for (let k = 0; k < 3; k++) { const ox = isMix ? -1300 - R() * 1000 : (R() * 2 - 1) * 900, oz = isMix ? -1800 + R() * 1800 : (R() * 2 - 1) * 900; for (let q = 0; q < 26; q++) oasis.push({ x: ox + (R() - 0.5) * 90, z: oz + (R() - 0.5) * 90, r: R() * 6, s: 0.8 + R() * 0.4 }); }
     const trunk = new THREE.CylinderGeometry(0.22, 0.38, 9, 6).translate(0, 4.5, 0).rotateZ(0.1);
     const fr = []; for (let k = 0; k < 8; k++) { const f = new THREE.BoxGeometry(0.5, 0.12, 4); f.translate(0, 0, 2); f.rotateX(0.45); f.rotateY(k / 8 * Math.PI * 2); fr.push(f); }
     inst(trunk, 0x7d6a50, oasis); inst(mergeGeometries(fr).translate(0.9, 9, 0), 0x5b7f39, oasis, { flat: true });
     // Casas blancas y postes de telégrafo
-    const houses = []; for (let k = 0; k < 6; k++) { const vx = (R() * 2 - 1) * 1000, vz = (R() * 2 - 1) * 1000; if (inZone(vx, vz, 120)) continue; for (let q = 0; q < 8; q++) houses.push({ x: vx + (R() - 0.5) * 70, z: vz + (R() - 0.5) * 70, r: R() * 0.3, s: 0.8 + R() * 0.5 }); }
-    inst(new THREE.BoxGeometry(8, 4, 8).translate(0, 2, 0), 0xe4d8bf, houses);
-  } else { // channel / bocage
-    const isB = cfg.theme === 'bocage';
-    const trees = scatter(isB ? 9000 : 6000, (x, z, y) => y > 3 && N.fbm(x * 0.0035, z * 0.0035, 3) > 0.12 && !inZone(x, z, 60));
+    const houses = []; for (let k = 0; k < 6; k++) { const vx = isMix ? -1100 - R() * 1300 : (R() * 2 - 1) * 1000, vz = isMix ? -2000 + R() * 2100 : (R() * 2 - 1) * 1000; if (inZone(vx, vz, 120)) continue; for (let q = 0; q < 8; q++) houses.push({ x: vx + (R() - 0.5) * 70, z: vz + (R() - 0.5) * 70, r: R() * 0.3, s: 0.8 + R() * 0.5 }); }
+    inst(new THREE.BoxGeometry(8, 4, 8).translate(0, 2, 0), 0xe4d8bf, houses.filter(p => inR('des', p.x, p.z)));
+  } if (cfg.theme === 'channel' || cfg.theme === 'bocage' || isMix) { // channel / bocage
+    const isB = cfg.theme === 'bocage' || isMix;
+    const trees = scatter(isB ? 9000 : 6000, (x, z, y) => y > 3 && N.fbm(x * 0.0035, z * 0.0035, 3) > 0.12 && !inZone(x, z, 60) && inR('eur', x, z));
     const tg = mergeGeometries([new THREE.IcosahedronGeometry(3.6, 0).translate(0, 7.5, 0), new THREE.IcosahedronGeometry(2.8, 0).translate(2, 6.6, 1.4), new THREE.IcosahedronGeometry(2.6, 0).translate(-2, 7, -1), new THREE.IcosahedronGeometry(2.4, 0).translate(0.5, 9.4, 0.6)]);
     inst(tg, 0x3b5a2c, trees, { flat: true });
     inst(new THREE.CylinderGeometry(0.3, 0.45, 5, 5).translate(0, 2.5, 0), 0x5a4a38, trees);
     // Setos (bocage) en los bordes de los campos
     const hedges = [], htrees = [];
     if (isB || cfg.gen === 'channelAir' || cfg.gen === 'normandy') {
+      // (en el mapa mixto solo en la parte europea)
       const B = cfg.bounds + 250;
       for (let cx = Math.floor(-B / 135); cx <= Math.ceil(B / 135); cx++) for (let cz = Math.floor(-B / 105); cz <= Math.ceil(B / 105); cz++) {
         for (const vert of [0, 1]) {
@@ -348,7 +408,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
           for (let t = 0; t < len; t += 6.5) {
             const wx = vert ? cx * 135 : cx * 135 + t, wz = vert ? cz * 105 + t : cz * 105;
             const x = wx - N.fbm(wx * 0.01, wz * 0.01, 2) * 18, z = wz - N.fbm(wz * 0.01, wx * 0.01, 2) * 18;
-            if (Math.abs(x) > B || Math.abs(z) > B || h(x, z) < 2.5 || inZone(x, z, 16)) continue;
+            if (Math.abs(x) > B || Math.abs(z) > B || h(x, z) < 2.5 || inZone(x, z, 16) || !inR('eur', x, z)) continue;
             if (R() < 0.07) htrees.push({ x, z, r: R() * 6.28, s: 0.8 + R() * 0.5 });
             else hedges.push({ x, z, r: (vert ? 0 : Math.PI / 2) + (R() - 0.5) * 0.3, s: 0.9 + R() * 0.35, sy: 0.8 + R() * 0.5 });
           }
@@ -359,7 +419,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     inst(new THREE.IcosahedronGeometry(1.7, 0).scale(1.5, 1.2, 2.6).translate(0, 1.5, 0), 0x3a5428, hedges, { flat: true });
     // Pueblos normandos
     const houses = [], roofs = [];
-    const vill = isB ? zones.map(([x, z]) => [x + 70, z + 60]).concat([[-900, -500], [880, 520], [-300, 650]]) : cfg.gen === 'normandy' ? [[zones[1][0] + 60, zones[1][1] + 50], [zones[1][0] - 70, zones[1][1] - 40], [-900, -700], [900, -800]] : [];
+    const vill = isMix ? [[1500, -420], [900, -1300], [2000, -1600], [1200, 200], [2100, 300]] : isB ? zones.map(([x, z]) => [x + 70, z + 60]).concat([[-900, -500], [880, 520], [-300, 650]]) : cfg.gen === 'normandy' ? [[zones[1][0] + 60, zones[1][1] + 50], [zones[1][0] - 70, zones[1][1] - 40], [-900, -700], [900, -800]] : [];
     if (!isB) for (let k = 0; k < 10; k++) { const x = (R() * 2 - 1) * 1300, z = (R() * 2 - 1) * 1300; if (h(x, z) > 4) vill.push([x, z]); }
     for (const [vx, vz] of vill) for (let q = 0; q < 12; q++) { const x = vx + (R() - 0.5) * 110, z = vz + (R() - 0.5) * 110; if (h(x, z) < 2 || roadDist(x, z) < 8 || inZone(x, z, 25)) continue; const p = { x, z, r: (R() < 0.5 ? 0 : Math.PI / 2) + (R() - 0.5) * 0.2, s: 0.85 + R() * 0.4 }; houses.push(p); roofs.push(p); }
     inst(new THREE.BoxGeometry(7, 5, 10).translate(0, 2.5, 0), 0xcfc4ad, houses);
@@ -375,9 +435,9 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
   const ctex = canvasTex(128, (g, s) => {
     for (let k = 0; k < 18; k++) { const x = s * (0.25 + Math.random() * 0.5), y = s * (0.3 + Math.random() * 0.4), r = s * (0.12 + Math.random() * 0.15); const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, s, s); }
   });
-  for (let k = 0; k < 34; k++) {
+  for (let k = 0; k < (cfg.theme === 'mixed' ? 60 : 34); k++) {
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: ctex, transparent: true, opacity: cfg.theme === 'desert' ? 0.35 : 0.7, depthWrite: false, fog: false }));
-    sp.scale.set(420 + R() * 380, 240 + R() * 160, 1); sp.position.set((R() * 2 - 1) * 2400, 520 + R() * 80, (R() * 2 - 1) * 2400);
+    sp.scale.set(420 + R() * 380, 240 + R() * 160, 1); sp.position.set((R() * 2 - 1) * (isMix ? 3200 : 2400), 520 + R() * 80, (R() * 2 - 1) * (isMix ? 3200 : 2400));
     worldGroup.add(sp); clouds.push(sp);
   }
 
@@ -407,6 +467,8 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
   G.map = {
     extra, key: mapKey, cfg, theme: cfg.theme, ext, n, H, h, isLand, isSea, isDeep, bounds: cfg.bounds, zones: zonePts, sitesA, sitesE, roadDist,
     gy: (x, z) => Math.max(h(x, z), 0),
+    region: extra.region || null,
+    isDesert: (x, z) => cfg.theme === 'desert' || (cfg.theme === 'mixed' && extra.region(x, z) === 'des'),
     waterMat: wmat, water,
   };
   return G.map;

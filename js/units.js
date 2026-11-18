@@ -582,7 +582,7 @@ function driveTank(e, thr, steer, dt) {
   e.mesh.rotation.x = -Math.atan2(yf - yb, e.hl * 1.6) + (e.thr ? -e.thr * 0.01 : 0);
   e.mesh.rotation.z = Math.atan2(yl - yr, e.hl * 0.8);
   if (Math.abs(e.speed) > 1) trackMark(e);
-  if (Math.abs(e.speed) > 4 && Math.random() < (G.map.theme === 'desert' ? 0.7 : 0.25)) FX.dust(e.p.clone().addScaledVector(f, -e.hl), G.map.theme === 'desert' ? null : new THREE.Color(0x8d8166));
+  if (Math.abs(e.speed) > 4 && Math.random() < (G.map.isDesert(e.p.x, e.p.z) ? 0.7 : 0.25)) FX.dust(e.p.clone().addScaledVector(f, -e.hl), G.map.isDesert(e.p.x, e.p.z) ? null : new THREE.Color(0x8d8166));
 }
 function flyPlane(e, thr, steer, dt) {
   const s = e.s, eng = e.mods.engine ? 0.72 : 1, ctl = e.mods.controls ? 0.6 : 1;

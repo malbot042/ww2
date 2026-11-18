@@ -202,3 +202,4 @@ body.split #orders{left:25%;max-width:47vw;font-size:12px;gap:3px 8px}body.split
 #scrDeploy.simple #dpGo{font-size:18px;padding:12px 26px}.qsel{display:flex;gap:18px;justify-content:center}
 body:not(.simple) .simple-only{display:none}
 .chk input[type=checkbox]{flex:none;width:16px;height:16px}
+#sandbox .r3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px}#sandbox .r3 button{padding:6px 4px;font-size:12px}

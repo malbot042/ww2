@@ -58,6 +58,13 @@ export function initSandbox(opts) {
   $('sbClear').onclick = ev => { for (const e of G.ents.filter(x => x !== G.player && (x.side === 'E' || x.side === 'A'))) removeEntity(e); G.smokes.length = 0; flash('Campo despejado', '', 1); ev.target.blur(); };
   $('sbRepair').onclick = ev => { const p = G.player; if (p) { p.hp = p.s.hp; p.battery = 1; for (const k in p.cd) p.cd[k] = 0; p.ammo = { ...p.ammoMax }; p.mods = {}; p.repairing = 0; p.tur.forEach(t => { t.userData.dead = false; t.rotation.x = t.rotation.z = 0; }); } flash('Unidad reparada y rearmada', 'Vida, munición, averías y batería', 1.2); ev.target.blur(); };
   $('sbGod').addEventListener('change', () => { G.godMode = $('sbGod').checked; });
+  // saltar a otro terreno del mapa mixto (al punto adecuado para la unidad: tierra, mar o aire)
+  document.querySelectorAll('#sandbox [data-go]').forEach(b => b.onclick = ev => {
+    const sp = G.map.extra.spots && G.map.extra.spots[b.dataset.go], p = G.player; if (!sp || !p) return;
+    const [x, z] = sp[p.dom] || sp.land, at = anchorFor(p, x, z);
+    p.p.x = at.x; p.p.z = at.z; if (p.dom === 'land') p.p.y = G.map.gy(at.x, at.z); p.speed = 0;
+    G.focus.copy(p.p); flash(b.textContent, p.dom === 'sea' ? 'En el agua más cercana' : p.dom === 'air' ? 'Sobrevolando la zona' : 'En tierra firme', 1.2); ev.target.blur();
+  });
 }
 export function sandboxStart() {
   $('sandbox').classList.remove('hide');

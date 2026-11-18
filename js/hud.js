@@ -123,9 +123,10 @@ function buildMinimap() {
   for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) {
     const x = -B + i / S * 2 * B, z = -B + j / S * 2 * B, h = m.h(x, z), k = (j * S + i) * 4;
     let r, gg, b;
+    const th = theme === 'mixed' ? ({ des: 'desert', eur: 'bocage', trop: 'tropical' })[m.region(x, z)] : theme;
     if (h < 0) { const d = Math.min(1, -h / 30); r = 60 - 35 * d; gg = 125 - 55 * d; b = 140 - 40 * d; }
-    else if (theme === 'desert') { r = 200 - h * 1.5; gg = 168 - h * 1.5; b = 112 - h; }
-    else if (theme === 'tropical') { r = h < 2 ? 220 : 60; gg = h < 2 ? 205 : 105 + h; b = h < 2 ? 160 : 50; }
+    else if (th === 'desert') { r = 200 - h * 1.5; gg = 168 - h * 1.5; b = 112 - h; }
+    else if (th === 'tropical' || h < 2.4) { r = h < 2 ? 220 : 60; gg = h < 2 ? 205 : 105 + h; b = h < 2 ? 160 : 50; }
     else { r = 105 + h; gg = 128 + h; b = 72; }
     img.data[k] = r; img.data[k + 1] = gg; img.data[k + 2] = b; img.data[k + 3] = 255;
   }
