@@ -6,7 +6,7 @@ import { FRONTS } from './data.js';
 import { orderLabel } from './battle.js';
 import { bombImpact } from './units.js';
 import { canvasTex } from './util.js';
-import { sightOf, SUPPORT, canUse } from './strategy.js';
+import { sightOf, SUPPORT, canUse , autoSupportKind } from './strategy.js';
 
 const $ = id => document.getElementById(id);
 let msgT = 0, hitT = 0, hurtT = 0, mmBg = null, squadT = 0, feed = [];
@@ -35,7 +35,7 @@ function weaponLines(e) {
   const L = [];
   const main = A.ap !== undefined ? n(A.ap !== undefined ? e.ammoSel : 'ap') : 1;
   const aim = v => A.ap !== undefined && n('ap') + n('he') < 1 ? '<b class="bad">SIN MUNICIÓN</b>' : v > 0 ? '<b>' + v.toFixed(1) + ' s</b>' : !e.target ? '<b>SIN BLANCO</b>' : e.aimReady ? '<b class="ok">LISTO</b>' : '<b class="warn">APUNTANDO</b>';
-  const ammoLine = () => A.ap !== undefined ? [`N · Munición`, `<b class="sel ${e.ammoSel === 'ap' ? 'on' : ''}">AP ${n('ap')}</b> <b class="sel ${e.ammoSel === 'he' ? 'on' : ''}">HE ${n('he')}</b>`] : null;
+  const ammoLine = () => A.ap !== undefined ? [G.opts?.mode !== 'veteran' && !e.ammoManual ? 'Munición (auto)' : `N · Munición`, `<b class="sel ${e.ammoSel === 'ap' ? 'on' : ''}">AP ${n('ap')}</b> <b class="sel ${e.ammoSel === 'he' ? 'on' : ''}">HE ${n('he')}</b>`] : null;
   if (e.cls === 'destroyer' || e.cls === 'cruiser' || e.cls === 'battleship') { L.push(['Espacio · Artillería', aim(e.cd.main)], ammoLine()); if (s.torp) L.push(['Shift · Torpedos' + cnt('torp'), cd(e.cd.torp, 'torp')]); if (s.dc) L.push(['C · Cargas de profundidad' + cnt('dc'), cd(e.cd.dc, 'dc')]); }
   else if (e.cls === 'carrier') { L.push(['Shift · Lanzar avión', `<b class="${e.hangar ? 'ok' : 'bad'}">${e.hangar} en hangar${e.cd.launch > 0 ? ' · ' + e.cd.launch.toFixed(0) + ' s' : ''}</b>`], ['Antiaéreos', '<b class="ok">AUTO</b>']); }
   else if (e.cls === 'pt') { L.push(['Espacio · Ametralladoras', '<b class="ok">AUTO</b>']); L.push(['Shift · Torpedos' + cnt('torp'), cd(e.cd.torp, 'torp')]); }
@@ -134,11 +134,30 @@ function buildMinimap() {
 let fogCv = null;
 function fogCanvas(S) { if (!fogCv || fogCv.width !== S) { fogCv = document.createElement('canvas'); fogCv.width = fogCv.height = S; } return fogCv; }
 // panel de apoyo (puntos de mando)
+// barra de teclas del modo sencillo: solo lo útil en este momento
+function renderSimpleBar() {
+  if (G.opts?.mode === 'veteran') return;
+  const e = G.player; if (!e) return;
+  const kb = (ks, t) => `<span>${ks.map(k => `<kbd>${k}</kbd>`).join('')} ${t}</span>`;
+  const sec = e.dom === 'air' ? (e.s.bomb ? 'Bombas' : e.s.rocket ? 'Cohetes' : '') : e.s.torp ? 'Torpedos' : e.cls === 'carrier' ? 'Lanzar avión' : e.dom === 'land' && e.cls !== 'inf' && e.cls !== 'atgun' ? 'Humo' : '';
+  const L = [kb(['↑', '↓', '←', '→'], 'Mover'), kb(['Espacio'], 'Fuego')];
+  if (sec) L.push(kb(['Shift'], sec));
+  if (e.mods && Object.keys(e.mods).length || e.hp < e.s.hp * 0.5) L.push(kb(['K'], 'Reparar'));
+  if (G.objectives && G.objectives.length) L.push(kb(['1', '2', '3'], G.battle.kind === 'air' ? 'Atacar A·B·C' : 'Objetivo A·B·C'));
+  L.push(kb(['Q'], 'Seguidme'), kb(['E'], 'Ataque libre'));
+  if (G.cp && canUse('A', autoSupportKind())) L.push(kb(['7'], 'Apoyo'));
+  L.push(kb(['Tab'], 'Unidad'), kb(['M'], 'Mapa'), kb(['P'], 'Pausa y ayuda'));
+  const h = L.join(''); if ($('ordSim').dataset.h !== h) { $('ordSim').innerHTML = h; $('ordSim').dataset.h = h; }
+}
 function renderSupport() {
+  renderSimpleBar();
   if (!G.cp) return;
   const sea = G.battle.kind === 'naval';
   const btn = (k, i) => { const s = SUPPORT[k], ok = canUse('A', k), cd = G.supCd.A[k] > 0 ? ` ${Math.ceil(G.supCd.A[k])} s` : ''; return `<button class="sup ${ok ? '' : 'off'}" data-sup="${k}"><kbd>${7 + i}</kbd>${k === 'barrage' && sea ? s.nameSea : s.name}<i>${s.cost}${cd}</i></button>`; };
-  $('support').innerHTML = `<div class="cp"><span>Puntos de mando</span><b>${Math.floor(G.cp.A)}</b></div>${['barrage', 'air', 'reinf'].map(btn).join('')}`;
+  if (G.opts?.mode !== 'veteran') {
+    const k = autoSupportKind(), s = SUPPORT[k], ok = canUse('A', k), cd = G.supCd.A[k] > 0 ? ` ${Math.ceil(G.supCd.A[k])} s` : '';
+    $('support').innerHTML = `<div class="cp"><span>Puntos de mando</span><b>${Math.floor(G.cp.A)}</b></div><button class="sup ${ok ? '' : 'off'}" data-sup="${k}"><kbd>7</kbd>Apoyo: ${k === 'barrage' && sea ? s.nameSea : s.name}<i>${s.cost}${cd}</i></button>`;
+  } else $('support').innerHTML = `<div class="cp"><span>Puntos de mando</span><b>${Math.floor(G.cp.A)}</b></div>${['barrage', 'air', 'reinf'].map(btn).join('')}`;
 }
 export function worldToMM(x, z) { const B = G.map.bounds + 100, S = $('mm').width; return [(x + B) / (2 * B) * S, (z + B) / (2 * B) * S]; }
 function drawMinimap() {

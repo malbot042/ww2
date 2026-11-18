@@ -48,6 +48,16 @@ Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin punt
 - **Naval y tanques:** cada bando tiene 600 puntos. Si controlas más objetivos (A, B, C) que el enemigo, él pierde puntos cada segundo. Cada unidad destruida también resta puntos a su bando.
 - **Aérea:** cada bando tiene 3 instalaciones (aeródromo, depósito y radar) protegidas por antiaéreos. Gana quien destruye las del rival o agota sus puntos.
 
+## Modo sencillo y modo veterano
+Por defecto el juego arranca en **modo sencillo**, pensado para jugar sin aprender veinte teclas:
+- Antes de la batalla ves la fuerza recomendada y un solo botón, **¡Al combate!** (sin niebla de guerra ni colocación). «Personalizar…» abre las opciones completas.
+- Órdenes básicas: objetivos **1 2 3**, **Q** seguidme y **E** ataque libre. La escuadra decide su formación.
+- La **munición se elige sola** (HE contra infantería y cañones, AP contra blindados); **N** la cambia a mano.
+- **7** pide el apoyo más útil en ese momento (artillería, aviones o refuerzos).
+- La barra de abajo solo muestra las teclas que sirven a tu unidad en ese instante.
+
+El **modo veterano** (se elige en el menú principal o en la pausa) activa todo: presupuesto y colocación, niebla de guerra, mantener y defender, formaciones, grupos, órdenes encadenadas y los tres apoyos por separado. La tabla siguiente es la de este modo.
+
 ## Controles
 
 | Tecla | Acción |

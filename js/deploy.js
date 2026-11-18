@@ -24,7 +24,7 @@ export function openDeploy(key, onGo) {
   const pool = poolFor(key);
   pool.forEach(k => counts[k] = 0); b.allies.forEach(([k, n]) => counts[k] = n);
   const budget = b.allies.reduce((s, [k, n]) => s + costOf(k) * n, 0) + (G.campaign ? G.campaign.bonus : 0), maxN = b.allies.reduce((s, [, n]) => s + n, 0) + 3;
-  state = { key, counts, budget, maxN, pool, onGo };
+  state = { key, counts, budget, maxN, pool, onGo, quick: G.opts?.mode !== 'veteran' };
   $('dpTitle').textContent = `${b.title}, ${b.year}`;
   $('dpSub').textContent = `${KIND_NAME[b.kind]} · Elige tu fuerza dentro del presupuesto (máximo ${maxN} unidades)`;
   render();
@@ -43,11 +43,22 @@ function render() {
   $('dpBud').textContent = `${used} / ${budget}`; $('dpBar').style.width = Math.min(100, used / budget * 100) + '%';
   $('dpSum').innerHTML = `<div><span>Unidades</span><b>${n} / ${maxN}</b></div><div><span>Puntos libres</span><b>${budget - used}</b></div>`;
   $('dpGo').disabled = n < 1;
+  // modo sencillo: fuerza recomendada y un solo botón; lo demás se despliega con «Personalizar»
+  $('scrDeploy').classList.toggle('simple', state.quick);
+  $('dpGo').textContent = state.quick ? '¡Al combate!' : 'Continuar';
+  const b = BATTLES[state.key];
+  $('dpSub').textContent = state.quick ? `${KIND_NAME[b.kind]} · Fuerza recomendada` : `${KIND_NAME[b.kind]} · Elige tu fuerza dentro del presupuesto (máximo ${maxN} unidades)`;
+  $('dpSimple').innerHTML = `<h4>Tu fuerza</h4><ul>${Object.entries(counts).filter(([, c]) => c > 0).map(([k, c]) => `<li><b>${c}×</b>${MODELS[k].name}${vetCount(k) ? ' <em class="vet">★</em>' : ''}</li>`).join('')}</ul>
+    <p>${b.hint || 'Lleva tu escuadra a los objetivos A, B y C y mantenlos para que el enemigo pierda puntos.'}</p>
+    <button class="lnk" id="dpCustom">Personalizar fuerza, hora, clima y colocación…</button>`;
+  $('dpCustom').onclick = () => { state.quick = false; render(); };
   $('dpList').querySelectorAll('button[data-k]').forEach(bt => bt.onclick = () => { state.counts[bt.dataset.k] = Math.max(0, state.counts[bt.dataset.k] + +bt.dataset.d); render(); });
 }
 export function initDeployUI() {
   $('dpReset').onclick = () => { const b = BATTLES[state.key]; for (const k in state.counts) state.counts[k] = 0; b.allies.forEach(([k, n]) => state.counts[k] = n); render(); };
-  $('dpGo').onclick = () => { const roster = Object.entries(state.counts).filter(([, n]) => n > 0); state.onGo(roster, $('optFog').checked, $('optPlace').checked, { time: $('optTime').value, weather: $('optWeather').value }, $('optSplit').checked); };
+  $('dpGo').onclick = () => { const roster = Object.entries(state.counts).filter(([, n]) => n > 0);
+    if (state.quick) return state.onGo(roster, false, false, { time: 'day', weather: 'clear' }, false);
+    state.onGo(roster, $('optFog').checked, $('optPlace').checked, { time: $('optTime').value, weather: $('optWeather').value }, $('optSplit').checked); };
 }
 
 // ---------- colocación en el mapa ----------

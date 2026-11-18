@@ -104,6 +104,16 @@ export function updateStrategy(dt) {
   for (const e of G.ents) if (e.support && e.alive && e.leaving && (Math.abs(e.p.x) > G.map.bounds + 120 || Math.abs(e.p.z) > G.map.bounds + 120)) { e.alive = false; e.gone = true; e.mesh.visible = false; }
   if (!G.demo && b.kind !== 'test') enemySupportAI(dt);
 }
+// modo sencillo: una sola tecla de apoyo, se elige el más útil según la situación
+export function autoSupportKind(side = 'A') {
+  const P = G.player, t = P && P.target && P.target.alive ? P.target : null;
+  const own = G.ents.filter(e => e.alive && e.side === side && e.dom !== 'static' && !e.support).length;
+  const order = [];
+  if (own < 5) order.push('reinf');
+  if (t && (t.dom === 'sea' || t.dom === 'air')) order.push('air', 'barrage'); else order.push('barrage', 'air');
+  if (!order.includes('reinf')) order.push('reinf');
+  return order.find(k => canUse(side, k)) || order[0];
+}
 export function canUse(side, kind) { const s = SUPPORT[kind]; return G.cp && G.cp[side] >= s.cost && !(G.supCd[side][kind] > 0); }
 export function useSupport(side, kind, point) {
   if (!canUse(side, kind)) return false;

@@ -317,8 +317,10 @@ function splashHE(q, p, except) {
 // munición: elegir tipo (jugador: el seleccionado; IA: según el blanco)
 function pickAmmo(e, t) {
   const a = e.ammo; if (a.ap === undefined) return 'x';
-  let want = e === G.player && !G.demo ? e.ammoSel : (t && (isSoft(t) || (t.dom === 'land' && !isArmored(t)) || (e.dom === 'sea' && t.dom !== 'sea')) ? 'he' : 'ap');
+  const manual = e === G.player && !G.demo && (G.opts?.mode === 'veteran' || e.ammoManual);
+  let want = manual ? e.ammoSel : (t && (isSoft(t) || (t.dom === 'land' && !isArmored(t)) || (e.dom === 'sea' && t.dom !== 'sea')) ? 'he' : 'ap');
   if (a[want] < 1) want = want === 'ap' ? 'he' : 'ap';
+  if (e === G.player && !manual && a[want] >= 1) e.ammoSel = want; // el panel muestra la elegida
   return a[want] >= 1 ? want : null;
 }
 export function ammoFrac(e) {
@@ -628,7 +630,7 @@ export function controlPlayer(e, dt) {
     else G.onMsg && G.onMsg('Sin bengalas', '');
   }
   if (once('KeyK')) { if (startRepair(e)) G.onMsg && G.onMsg('Control de daños', 'Fuego extinguido; reparando averías…'); else if (G.onMsg) G.onMsg(e.cd.rep > 0 ? `Control de daños en ${Math.ceil(e.cd.rep)} s` : 'Sin averías que reparar', ''); }
-  if (once('KeyN') && e.ammo.ap !== undefined) { e.ammoSel = e.ammoSel === 'ap' ? 'he' : 'ap'; G.onMsg && G.onMsg(e.ammoSel === 'ap' ? 'Munición perforante (AP)' : 'Munición explosiva (HE)', e.ammoSel === 'ap' ? 'Contra blindados y barcos' : 'Contra infantería, cañones, defensas y costa'); }
+  if (once('KeyN') && e.ammo.ap !== undefined) { e.ammoManual = true; e.ammoSel = e.ammoSel === 'ap' ? 'he' : 'ap'; G.onMsg && G.onMsg(e.ammoSel === 'ap' ? 'Munición perforante (AP)' : 'Munición explosiva (HE)', e.ammoSel === 'ap' ? 'Contra blindados y barcos' : 'Contra infantería, cañones, defensas y costa'); }
   if (e.dom === 'air') {
     // ↑ picar (bajar y ganar velocidad) · ↓ subir
     if (thr > 0) e.alt -= 70 * dt; else if (thr < 0) e.alt += 45 * dt;

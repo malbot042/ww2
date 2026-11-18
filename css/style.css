@@ -194,3 +194,11 @@ body.touchui #orders{display:none}body.touchui #squad{max-height:38vh!important}
 #p2hud{position:fixed;right:16px;bottom:16px;z-index:16;width:280px;background:rgba(40,12,10,.78);color:#fff;border:1px solid rgba(255,110,90,.5);border-radius:10px;padding:10px 12px;font-size:13px;pointer-events:none}
 #p2hud .p2t{font-weight:700;letter-spacing:.04em;color:#ff9a86;margin-bottom:6px}#p2hud .p2b{height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden;margin-bottom:6px}#p2hud .p2b i{display:block;height:100%;background:#e85a44}#p2hud b{color:#9be29b}
 body.split #orders{left:25%;max-width:47vw;font-size:12px;gap:3px 8px}body.split #msg{right:50%}
+/* modo sencillo */
+#orders .ov-vet,#orders .ov-sim{display:contents}body.simple #orders .ov-vet{display:none}body:not(.simple) #orders .ov-sim{display:none}
+#scrDeploy.simple .adv{display:none!important}#scrDeploy:not(.simple) .simbox{display:none}#scrDeploy.simple #dpList{display:none}#scrDeploy.simple .dp{grid-template-columns:minmax(0,560px);justify-content:center}
+.simbox h4{margin:0 0 8px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.75}.simbox ul{margin:0 0 10px;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;font-size:15px}.simbox li b{color:#f2c94c;margin-right:6px}
+.simbox p{font-size:13px;opacity:.8;margin:0 0 6px;line-height:1.5}.simbox .lnk{background:none;border:0;color:#f2c94c;text-decoration:underline;cursor:pointer;font:inherit;font-size:13px;padding:0}
+#scrDeploy.simple #dpGo{font-size:18px;padding:12px 26px}.qsel{display:flex;gap:18px;justify-content:center}
+body:not(.simple) .simple-only{display:none}
+.chk input[type=checkbox]{flex:none;width:16px;height:16px}

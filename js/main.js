@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { autoSupportKind } from './strategy.js';
 import { initPost, resizePost, renderPost } from './post.js';
 import { setupSplit, stopSplit, updateSplit, renderSplit } from './split.js';
 import { startTutorial, updateTutorial, stopTutorial } from './tutorial.js';
@@ -297,6 +298,9 @@ function qualUI() { for (const id of ['optQual', 'optQual2']) { const el = $(id)
 qualUI();
 initTouch(canvas);
 $('padHelp').textContent = PAD_HELP;
+function applyMode() { G.opts.mode = G.opts.mode === 'veteran' ? 'veteran' : 'simple'; document.body.classList.toggle('simple', G.opts.mode === 'simple'); for (const id of ['optMode', 'optMode2']) $(id).value = G.opts.mode; }
+for (const id of ['optMode', 'optMode2']) $(id).onchange = ev => { G.opts.mode = ev.target.value; applyMode(); G.onOptions && G.onOptions(); flash(G.opts.mode === 'simple' ? 'Modo sencillo' : 'Modo veterano', G.opts.mode === 'simple' ? 'Órdenes básicas, munición y apoyo automáticos' : 'Todas las órdenes, formaciones y apoyos', 1.6); };
+applyMode();
 $('optCrt').checked = G.opts.crt !== false; $('optCrt').onchange = ev => { G.opts.crt = ev.target.checked; G.onOptions && G.onOptions(); };
 $('optFps').onchange = ev => { G.opts.fps = ev.target.checked; G.onOptions && G.onOptions(); };
 $('optCine').checked = G.opts.cine; $('optCine').onchange = ev => { G.opts.cine = ev.target.checked; G.onOptions && G.onOptions(); };
@@ -317,9 +321,10 @@ addEventListener('keydown', ev => {
     if (ev.code === 'KeyZ') G.targetZoom = clamp(G.targetZoom / 1.25, 110, 2600); if (ev.code === 'KeyX') G.targetZoom = clamp(G.targetZoom * 1.25, 110, 2600);
     return;
   }
-  const c = ev.code;
-  if (c in ZONE_KEYS) { const q = ev.shiftKey, n = issueOrder('zone', { k: ZONE_KEYS[c] }, q); if (n) flash((q ? 'Encadenado: ' : '') + (G.battle.kind === 'air' ? `Atacar instalación ${'ABC'[ZONE_KEYS[c]]}` : `Objetivo ${'ABC'[ZONE_KEYS[c]]}`), q ? 'Irán cuando completen la orden actual' : `${n} unidades en camino`); }
-  else if (c === 'Digit7') doSupport('barrage');
+  const c = ev.code, simple = G.opts.mode !== 'veteran';
+  if (simple && ['KeyO', 'KeyR', 'KeyF', 'KeyG', 'Digit8', 'Digit9'].includes(c)) return; // solo en modo veterano
+  if (c in ZONE_KEYS) { const q = ev.shiftKey && !simple, n = issueOrder('zone', { k: ZONE_KEYS[c] }, q); if (n) flash((q ? 'Encadenado: ' : '') + (G.battle.kind === 'air' ? `Atacar instalación ${'ABC'[ZONE_KEYS[c]]}` : `Objetivo ${'ABC'[ZONE_KEYS[c]]}`), q ? 'Irán cuando completen la orden actual' : `${n} unidades en camino`); }
+  else if (c === 'Digit7') doSupport(simple ? autoSupportKind() : 'barrage');
   else if (c === 'Digit8') doSupport('air');
   else if (c === 'Digit9') doSupport('reinf');
   else if (c === 'KeyO') { G.formation = FORMS[(FORMS.indexOf(G.formation) + 1) % FORMS.length]; flash(`Formación: ${G.formation}`, 'Al seguirte y al mover la escuadra', 1.4); }

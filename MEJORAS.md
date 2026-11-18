@@ -169,3 +169,4 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 | v0.9 | Fase 4, aspecto: daño visible, estelas y rodadas, estado de la mar, sonido y radio, cámara lenta y repetición |
 | v1.0 | Fase 5, técnico: calidad gráfica y FPS, mando, controles táctiles, guardado, tutorial y pantalla partida |
 | v1.1 | Resolución siempre baja (360 líneas) y efecto de monitor CRT sin curvatura: líneas de barrido, rejilla RGB, resplandor y aberración cromática (desactivable) |
+| v1.2 | Modo sencillo por defecto (despliegue de un botón, órdenes básicas, munición y apoyo automáticos, barra de teclas contextual) y modo veterano con todo |
