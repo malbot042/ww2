@@ -41,7 +41,7 @@ export function initTouch(canvas) {
     else if (ev.touches.length === 1) drag = { x: ev.touches[0].clientX, y: ev.touches[0].clientY, yaw: G.cam.yaw, pitch: G.cam.pitch, moved: false };
   }, { passive: false });
   canvas.addEventListener('touchmove', ev => {
-    if (pinch && ev.touches.length === 2) { const [a, b] = ev.touches; const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); G.targetZoom = clamp(pinch.z * pinch.d / Math.max(20, d), 110, 2600); ev.preventDefault(); }
+    if (pinch && ev.touches.length === 2) { const [a, b] = ev.touches; const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); G.targetZoom = clamp(pinch.z * pinch.d / Math.max(20, d), 110, 3600); ev.preventDefault(); }
     else if (drag && ev.touches.length === 1 && G.running && !G.deploying) {
       const t = ev.touches[0], dx = t.clientX - drag.x, dy = t.clientY - drag.y;
       if (Math.hypot(dx, dy) > 12) drag.moved = true;

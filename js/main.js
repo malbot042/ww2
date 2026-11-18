@@ -318,7 +318,7 @@ addEventListener('keydown', ev => {
     const pre = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4 }[ev.code];
     if (pre !== undefined) { applyPreset(pre); flash(PRESETS[pre], '', 0.8); }
     if (ev.code === 'Enter' || ev.code === 'NumpadEnter') startFromDeploy();
-    if (ev.code === 'KeyZ') G.targetZoom = clamp(G.targetZoom / 1.25, 110, 2600); if (ev.code === 'KeyX') G.targetZoom = clamp(G.targetZoom * 1.25, 110, 2600);
+    if (ev.code === 'KeyZ') G.targetZoom = clamp(G.targetZoom / 1.25, 110, 3600); if (ev.code === 'KeyX') G.targetZoom = clamp(G.targetZoom * 1.25, 110, 3600);
     return;
   }
   const c = ev.code, simple = G.opts.mode !== 'veteran';
@@ -334,8 +334,8 @@ addEventListener('keydown', ev => {
   else if (c === 'KeyG') cycleGroup();
   else if (c === 'KeyF') { const n = issueOrder('defend'); if (n) flash('Defender', G.battle.kind === 'air' ? 'Patrulla sobre nuestras instalaciones' : 'A nuestros objetivos'); }
   else if (c === 'Tab') cycleUnit(ev.shiftKey ? -1 : 1);
-  else if (c === 'KeyZ' || c === 'Equal' || c === 'NumpadAdd') G.targetZoom = clamp(G.targetZoom / 1.25, 110, 2600);
-  else if (c === 'KeyX' || c === 'Minus' || c === 'NumpadSubtract') G.targetZoom = clamp(G.targetZoom * 1.25, 110, 2600);
+  else if (c === 'KeyZ' || c === 'Equal' || c === 'NumpadAdd') G.targetZoom = clamp(G.targetZoom / 1.25, 110, 3600);
+  else if (c === 'KeyX' || c === 'Minus' || c === 'NumpadSubtract') G.targetZoom = clamp(G.targetZoom * 1.25, 110, 3600);
   else if (c === 'KeyV') setCamPreset((G.cam.preset + 1) % CAM_PRESETS.length);
   else if (c === 'KeyB') setCamPreset(0);
   else if (c === 'KeyM') { G.strategic = !G.strategic; }
@@ -382,7 +382,7 @@ function groundAt(x, y) { ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2
 function screenOf(e) { const v = e.p.clone(); v.y = Math.max(v.y, 0); v.project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; }
 let drag = null;
 canvas.addEventListener('contextmenu', ev => ev.preventDefault());
-canvas.addEventListener('wheel', ev => { if (!G.running) return; G.targetZoom = clamp(G.targetZoom * (ev.deltaY > 0 ? 1.15 : 1 / 1.15), 110, 2600); ev.preventDefault(); }, { passive: false });
+canvas.addEventListener('wheel', ev => { if (!G.running) return; G.targetZoom = clamp(G.targetZoom * (ev.deltaY > 0 ? 1.15 : 1 / 1.15), 110, 3600); ev.preventDefault(); }, { passive: false });
 let dragUnit = null;
 canvas.addEventListener('mousedown', ev => {
   if (!G.running) return;

@@ -12,18 +12,18 @@ const THEMES = {
   desert: { sky: 0xd9ccb0, fog: 0xdccfb4, sun: 0xffe8c2, sunI: 3.2, hemiS: 0xeee4d0, hemiG: 0x8a7050, hemiI: 1.1, shallow: 0x43b4ba, deep: 0x0d3d62, skyZ: 0x86acc8 },
 };
 export const MAPCFG = {
-  pacific_sea: { theme: 'tropical', gen: 'tropical', ext: 4800, N: 320, bounds: 1550, zoneS: 760, zoneR: 260, spawn: 1080 },
-  pacific_air: { theme: 'tropical', gen: 'tropical', ext: 4800, N: 320, bounds: 1650, zoneS: 720, zoneR: 0, spawn: 1380, sites: true },
-  europe_sea: { theme: 'channel', gen: 'channelSea', ext: 4800, N: 320, bounds: 1500, zoneS: 760, zoneR: 260, spawn: 1050 },
-  europe_air: { theme: 'channel', gen: 'channelAir', ext: 4800, N: 320, bounds: 1650, zoneS: 720, zoneR: 0, spawn: 1380, sites: true },
-  atoll: { theme: 'tropical', gen: 'atoll', ext: 4800, N: 360, bounds: 1550, zoneS: 0, zoneR: 200, spawn: 1000, combined: true },
-  normandy: { theme: 'channel', gen: 'normandy', ext: 4800, N: 360, bounds: 1550, zoneS: 0, zoneR: 210, spawn: 1000, combined: true },
-  europe_land: { theme: 'bocage', gen: 'bocage', ext: 3600, N: 360, bounds: 1150, zoneS: 520, zoneR: 175, spawn: 780 },
-  africa_land: { theme: 'desert', gen: 'desert', ext: 3600, N: 300, bounds: 1150, zoneS: 540, zoneR: 175, spawn: 780 },
-  tobruk: { theme: 'desert', gen: 'tobruk', ext: 4800, N: 360, bounds: 1550, zoneS: 0, zoneR: 200, spawn: 1000, combined: true },
+  pacific_sea: { scale: 1.4, theme: 'tropical', gen: 'tropical', ext: 4800, N: 320, bounds: 1550, zoneS: 760, zoneR: 260, spawn: 1080 },
+  pacific_air: { scale: 1.4, theme: 'tropical', gen: 'tropical', ext: 4800, N: 320, bounds: 1650, zoneS: 720, zoneR: 0, spawn: 1380, sites: true },
+  europe_sea: { scale: 1.4, theme: 'channel', gen: 'channelSea', ext: 4800, N: 320, bounds: 1500, zoneS: 760, zoneR: 260, spawn: 1050 },
+  europe_air: { scale: 1.4, theme: 'channel', gen: 'channelAir', ext: 4800, N: 320, bounds: 1650, zoneS: 720, zoneR: 0, spawn: 1380, sites: true },
+  atoll: { scale: 1.4, theme: 'tropical', gen: 'atoll', ext: 4800, N: 360, bounds: 1550, zoneS: 0, zoneR: 200, spawn: 1000, combined: true },
+  normandy: { scale: 1.4, theme: 'channel', gen: 'normandy', ext: 4800, N: 360, bounds: 1550, zoneS: 0, zoneR: 210, spawn: 1000, combined: true },
+  europe_land: { scale: 1.4, theme: 'bocage', gen: 'bocage', ext: 3600, N: 360, bounds: 1150, zoneS: 520, zoneR: 175, spawn: 780 },
+  africa_land: { scale: 1.4, theme: 'desert', gen: 'desert', ext: 3600, N: 300, bounds: 1150, zoneS: 540, zoneR: 175, spawn: 780 },
+  tobruk: { scale: 1.4, theme: 'desert', gen: 'tobruk', ext: 4800, N: 360, bounds: 1550, zoneS: 0, zoneR: 200, spawn: 1000, combined: true },
   // campo de pruebas: desierto al oeste, campiña europea al este, Pacífico con islas al sur
   proving: { theme: 'mixed', gen: 'mixed', ext: 7200, N: 480, bounds: 2600, zoneS: 0, zoneR: 0, spawn: 1000, combined: true },
-  africa_air: { theme: 'desert', gen: 'desertAir', ext: 4800, N: 320, bounds: 1650, zoneS: 720, zoneR: 0, spawn: 1380, sites: true },
+  africa_air: { scale: 1.4, theme: 'desert', gen: 'desertAir', ext: 4800, N: 320, bounds: 1650, zoneS: 720, zoneR: 0, spawn: 1380, sites: true },
 };
 
 let worldGroup = null, water = null, clouds = [], sky = null;
@@ -194,6 +194,21 @@ function makeHeightFn(cfg, seed) {
       statics: { battery: [-820, 40, 700].map(x => [x, cz(x) - 210]), aa: [[-500, -250], [600, -300]] },
     };
   }
+  // campo de batalla ampliado: todo el mapa (relieve, objetivos, salidas, costas) se escala por S
+  const S = cfg.scale || 1;
+  if (S !== 1) {
+    const f0 = fn; fn = (x, z) => f0(x / S, z / S);
+    for (const a of [zones, sitesA, sitesE]) a.forEach(p => { p[0] *= S; p[1] *= S; });
+    const scl = (v, k) => {
+      if (k === 'h') return v;
+      if (typeof v === 'number') return v * S;
+      if (typeof v === 'function') return k === 'coast' ? (x => S * v(x / S)) : (x => v(x / S).map(q => q * S));
+      if (Array.isArray(v)) return v.map(q => scl(q));
+      if (v && typeof v === 'object') { const o = {}; for (const kk in v) o[kk] = scl(v[kk], kk); return o; }
+      return v;
+    };
+    extra = scl(extra);
+  }
   return { fn, N, R, zones, sitesA, sitesE, extra };
 }
 
@@ -201,8 +216,10 @@ function makeHeightFn(cfg, seed) {
 export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
   if (worldGroup) { G.scene.remove(worldGroup); dispose(worldGroup); }
   worldGroup = new THREE.Group(); G.scene.add(worldGroup); clouds = [];
-  const cfg = MAPCFG[mapKey], th = THEMES[cfg.theme];
-  const { fn, N, R, zones, sitesA, sitesE, extra } = makeHeightFn(cfg, seed);
+  const base = MAPCFG[mapKey], S = base.scale || 1, th = THEMES[base.theme];
+  const { fn, N, R, zones, sitesA, sitesE, extra } = makeHeightFn(base, seed);
+  // medidas del mapa ampliado (la generación usa las de base)
+  const cfg = S === 1 ? base : { ...base, ext: Math.round(base.ext * S), N: Math.round(base.N * Math.min(S, 1.3)), bounds: Math.round(base.bounds * S), spawn: Math.round(base.spawn * S), zoneS: Math.round(base.zoneS * S) };
   const ext = cfg.ext, n = cfg.N, cell = ext / n, half = ext / 2;
   const H = new Float32Array((n + 1) * (n + 1));
   for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
@@ -362,7 +379,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     im.castShadow = opts.shadow !== false; im.receiveShadow = true; worldGroup.add(im);
   }
   const isMix = cfg.theme === 'mixed', inR = (k, x, z) => !isMix || extra.region(x, z) === k;
-  const scatter = (count, test, extra = () => ({}), full = false) => { const out = []; if (!full) count = Math.round(count * (G.qual ? G.qual.veg : 1)); if (isMix) count = Math.round(count * 5.5); /* cada terreno ocupa solo una parte del mapa */ for (let i = 0; i < count; i++) { const x = (R() * 2 - 1) * (cfg.bounds + 450), z = (R() * 2 - 1) * (cfg.bounds + 450); const y = h(x, z); if (test(x, z, y)) out.push({ x, z, r: R() * 6.28, s: 0.75 + R() * 0.6, ...extra(x, z) }); } return out; };
+  const scatter = (count, test, extra = () => ({}), full = false) => { const out = []; if (!full) count = Math.round(count * (G.qual ? G.qual.veg : 1)); if (isMix) count = Math.round(count * 5.5); /* cada terreno ocupa solo una parte del mapa */ else if (S !== 1) count = Math.round(count * S * S); for (let i = 0; i < count; i++) { const x = (R() * 2 - 1) * (cfg.bounds + 450), z = (R() * 2 - 1) * (cfg.bounds + 450); const y = h(x, z); if (test(x, z, y)) out.push({ x, z, r: R() * 6.28, s: 0.75 + R() * 0.6, ...extra(x, z) }); } return out; };
   const inZone = (x, z, r = 40) => roadDist(x, z) < 10 || zones.some(([a, b]) => Math.hypot(x - a, z - b) < r);
 
   if (cfg.theme === 'tropical' || isMix) {
@@ -383,12 +400,12 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     const rocks = scatter(2500, (x, z, y) => y > 1 && N.fbm(x * 0.004, z * 0.004, 2) > 0.15 && R() < 0.5 && inR('des', x, z), () => ({ sy: 0.55, sx: 1 + Math.random() }));
     inst(new THREE.DodecahedronGeometry(2.2, 0), 0x8c7454, rocks, { flat: true, sink: 0.6 });
     // Oasis con palmeras
-    const oasis = []; for (let k = 0; k < 3; k++) { const ox = isMix ? -1300 - R() * 1000 : (R() * 2 - 1) * 900, oz = isMix ? -1800 + R() * 1800 : (R() * 2 - 1) * 900; for (let q = 0; q < 26; q++) oasis.push({ x: ox + (R() - 0.5) * 90, z: oz + (R() - 0.5) * 90, r: R() * 6, s: 0.8 + R() * 0.4 }); }
+    const oasis = []; for (let k = 0; k < 3; k++) { const ox = isMix ? -1300 - R() * 1000 : (R() * 2 - 1) * 900 * S, oz = isMix ? -1800 + R() * 1800 : (R() * 2 - 1) * 900 * S; for (let q = 0; q < 26; q++) oasis.push({ x: ox + (R() - 0.5) * 90, z: oz + (R() - 0.5) * 90, r: R() * 6, s: 0.8 + R() * 0.4 }); }
     const trunk = new THREE.CylinderGeometry(0.22, 0.38, 9, 6).translate(0, 4.5, 0).rotateZ(0.1);
     const fr = []; for (let k = 0; k < 8; k++) { const f = new THREE.BoxGeometry(0.5, 0.12, 4); f.translate(0, 0, 2); f.rotateX(0.45); f.rotateY(k / 8 * Math.PI * 2); fr.push(f); }
     inst(trunk, 0x7d6a50, oasis); inst(mergeGeometries(fr).translate(0.9, 9, 0), 0x5b7f39, oasis, { flat: true });
     // Casas blancas y postes de telégrafo
-    const houses = []; for (let k = 0; k < 6; k++) { const vx = isMix ? -1100 - R() * 1300 : (R() * 2 - 1) * 1000, vz = isMix ? -2000 + R() * 2100 : (R() * 2 - 1) * 1000; if (inZone(vx, vz, 120)) continue; for (let q = 0; q < 8; q++) houses.push({ x: vx + (R() - 0.5) * 70, z: vz + (R() - 0.5) * 70, r: R() * 0.3, s: 0.8 + R() * 0.5 }); }
+    const houses = []; for (let k = 0; k < 6; k++) { const vx = isMix ? -1100 - R() * 1300 : (R() * 2 - 1) * 1000 * S, vz = isMix ? -2000 + R() * 2100 : (R() * 2 - 1) * 1000 * S; if (inZone(vx, vz, 120)) continue; for (let q = 0; q < 8; q++) houses.push({ x: vx + (R() - 0.5) * 70, z: vz + (R() - 0.5) * 70, r: R() * 0.3, s: 0.8 + R() * 0.5 }); }
     inst(new THREE.BoxGeometry(8, 4, 8).translate(0, 2, 0), 0xe4d8bf, houses.filter(p => inR('des', p.x, p.z)));
   } if (cfg.theme === 'channel' || cfg.theme === 'bocage' || isMix) { // channel / bocage
     const isB = cfg.theme === 'bocage' || isMix;
@@ -419,8 +436,8 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     inst(new THREE.IcosahedronGeometry(1.7, 0).scale(1.5, 1.2, 2.6).translate(0, 1.5, 0), 0x3a5428, hedges, { flat: true });
     // Pueblos normandos
     const houses = [], roofs = [];
-    const vill = isMix ? [[1500, -420], [900, -1300], [2000, -1600], [1200, 200], [2100, 300]] : isB ? zones.map(([x, z]) => [x + 70, z + 60]).concat([[-900, -500], [880, 520], [-300, 650]]) : cfg.gen === 'normandy' ? [[zones[1][0] + 60, zones[1][1] + 50], [zones[1][0] - 70, zones[1][1] - 40], [-900, -700], [900, -800]] : [];
-    if (!isB) for (let k = 0; k < 10; k++) { const x = (R() * 2 - 1) * 1300, z = (R() * 2 - 1) * 1300; if (h(x, z) > 4) vill.push([x, z]); }
+    const vill = isMix ? [[1500, -420], [900, -1300], [2000, -1600], [1200, 200], [2100, 300]] : isB ? zones.map(([x, z]) => [x + 70, z + 60]).concat([[-900, -500], [880, 520], [-300, 650], [1300, -900], [-1350, 800]].map(([x, z]) => [x * S, z * S])) : cfg.gen === 'normandy' ? [[zones[1][0] + 60, zones[1][1] + 50], [zones[1][0] - 70, zones[1][1] - 40], [-900 * S, -700 * S], [900 * S, -800 * S]] : [];
+    if (!isB) for (let k = 0; k < 10; k++) { const x = (R() * 2 - 1) * 1300 * S, z = (R() * 2 - 1) * 1300 * S; if (h(x, z) > 4) vill.push([x, z]); }
     for (const [vx, vz] of vill) for (let q = 0; q < 12; q++) { const x = vx + (R() - 0.5) * 110, z = vz + (R() - 0.5) * 110; if (h(x, z) < 2 || roadDist(x, z) < 8 || inZone(x, z, 25)) continue; const p = { x, z, r: (R() < 0.5 ? 0 : Math.PI / 2) + (R() - 0.5) * 0.2, s: 0.85 + R() * 0.4 }; houses.push(p); roofs.push(p); }
     inst(new THREE.BoxGeometry(7, 5, 10).translate(0, 2.5, 0), 0xcfc4ad, houses);
     if (cfg.gen === 'normandy') { // erizos checos en la playa
@@ -435,9 +452,9 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
   const ctex = canvasTex(128, (g, s) => {
     for (let k = 0; k < 18; k++) { const x = s * (0.25 + Math.random() * 0.5), y = s * (0.3 + Math.random() * 0.4), r = s * (0.12 + Math.random() * 0.15); const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, s, s); }
   });
-  for (let k = 0; k < (cfg.theme === 'mixed' ? 60 : 34); k++) {
+  for (let k = 0; k < Math.round(34 * ((cfg.bounds + 600) / 2400) ** 2); k++) {
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: ctex, transparent: true, opacity: cfg.theme === 'desert' ? 0.35 : 0.7, depthWrite: false, fog: false }));
-    sp.scale.set(420 + R() * 380, 240 + R() * 160, 1); sp.position.set((R() * 2 - 1) * (isMix ? 3200 : 2400), 520 + R() * 80, (R() * 2 - 1) * (isMix ? 3200 : 2400));
+    sp.scale.set(420 + R() * 380, 240 + R() * 160, 1); sp.position.set((R() * 2 - 1) * (cfg.bounds + 600), 520 + R() * 80, (R() * 2 - 1) * (cfg.bounds + 600));
     worldGroup.add(sp); clouds.push(sp);
   }
 
@@ -480,6 +497,6 @@ export function updateWorld(dt) {
   const u = water.material.uniforms;
   u.t.value += dt;
   u.fogN.value = G.scene.fog.near; u.fogF.value = G.scene.fog.far;
-  for (const c of clouds) { c.position.x += 6 * dt; if (c.position.x > 2600) c.position.x = -2600; }
+  for (const c of clouds) { c.position.x += 6 * dt; if (c.position.x > 3300) c.position.x = -3300; }
   if (sky && G.camera) sky.position.copy(G.camera.position);
 }
