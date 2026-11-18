@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { initHangar, openHangar, closeHangar, updateHangar, renderHangar } from './hangar.js';
 import { autoSupportKind } from './strategy.js';
 import { initPost, resizePost, renderPost } from './post.js';
 import { setupSplit, stopSplit, updateSplit, renderSplit } from './split.js';
@@ -17,7 +18,7 @@ import { updateWorld } from './world.js';
 import { updateEnv, launchFlare, envLabel } from './env.js';
 import { startBattle, updateBattle, issueOrder, setPlayer, orderLabel } from './battle.js';
 import { lockTarget, targetFilter, MOD_NAME } from './units.js';
-import { initSandbox, sandboxStart, sandboxHide, sandboxHit } from './sandbox.js';
+import { initSandbox, sandboxStart, sandboxHide, sandboxHit, quickTest } from './sandbox.js';
 import { openDeploy, initDeployUI, beginPlacement, endPlacement, placeUnit, applyPreset, PRESETS } from './deploy.js';
 import { useSupport, updateVision, SUPPORT } from './strategy.js';
 import { updateMarkers } from './battle.js';
@@ -136,6 +137,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   const rdt = Math.min((now - last) / 1000, 0.05); last = now;
   updateGamepads();
+  if (G.hangar) { updateHangar(rdt); updateMusic(rdt); updateFps(rdt); renderPost(renderer, () => renderHangar(renderer)); G.keysOnce.clear(); return; }
   if (G.map && replaying()) {
     updateReplay(rdt); updateWorld(rdt); updateCamera(rdt); updateMusic(rdt); updateAimMarkers();
     $('rpBar').style.width = (replayProgress() * 100).toFixed(1) + '%';
@@ -173,15 +175,20 @@ function buildFrontMenu() {
       <span class="fd">Aprende a moverte, manejar la cámara, fijar blancos, disparar, cambiar de munición, reparar y dar órdenes a tu escuadra.</span>
       <span class="fb"><i>Guiado</i></span>
     </button>
+    <button class="front f-hangar" data-hangar="1">
+      <span class="fy">${Object.keys(MODELS).length} modelos en 3D</span><span class="fn">Hangar</span><span class="fv">Todas las unidades</span>
+      <span class="fd">Gira cada barco, avión y carro en 3D, compara sus características, aprende su papel en combate y salta a una prueba rápida o a la batalla donde aparece.</span>
+      <span class="fb"><i>Naval</i><i>Aérea</i><i>Terrestre</i><i>Defensas</i></span>
+    </button>
     <button class="front f-test" data-test="1">
-      <span class="fy">Sin puntos ni derrota</span><span class="fn">Campo de pruebas</span><span class="fv">Mar, playa y tierra</span>
+      <span class="fy">Sin puntos ni derrota</span><span class="fn">Campo de pruebas</span><span class="fv">Desierto, Europa y Pacífico</span>
       <span class="fd">Elige cualquiera de los ${Object.keys(MODELS).length} modelos, coloca blancos fijos o enemigos con IA y prueba armas, blindajes, cámaras y controles.</span>
       <span class="fb"><i>Naval</i><i>Aérea</i><i>Tanques</i></span>
     </button>`;
   const sc = savedCampaign();
   $('contCamp').innerHTML = sc ? `<button class="btn" id="btnCont">Continuar campaña</button><span>${FRONTS[sc.front].name} · batalla ${sc.i + 1} de ${sc.list.length} · ${sc.score} pts${sc.unlocked.length ? ' · ' + sc.unlocked.length + (sc.unlocked.length === 1 ? ' unidad desbloqueada' : ' unidades desbloqueadas') : ''}</span><button class="ghost" id="btnDrop">Descartar</button>` : '';
   if (sc) { $('btnCont').onclick = () => { initAudio(); applyVolumes(); G.campaign = JSON.parse(JSON.stringify(sc)); toDeploy(G.campaign.list[G.campaign.i], true); }; $('btnDrop').onclick = () => { saveCampaign(null); buildFrontMenu(); }; }
-  $('fronts').querySelectorAll('.front').forEach(b => b.onclick = () => { initAudio(); applyVolumes(); if (b.dataset.tut) launch('test', false, { tutorial: true }); else if (b.dataset.test) launch('test'); else buildBattleMenu(b.dataset.front); });
+  $('fronts').querySelectorAll('.front').forEach(b => b.onclick = () => { initAudio(); applyVolumes(); if (b.dataset.hangar) { $('menu').classList.add('hide'); openHangar(); } else if (b.dataset.tut) launch('test', false, { tutorial: true }); else if (b.dataset.test) launch('test'); else buildBattleMenu(b.dataset.front); });
 }
 function buildBattleMenu(fk) {
   const f = FRONTS[fk];
@@ -219,7 +226,7 @@ function launch(key, keepCampaign = false, opts = {}) {
     $('top').classList.toggle('hide', test);
     stopTutorial(false);
     if (test && opts.tutorial) { sandboxHide(); startTutorial(() => toMenu()); }
-    else if (test) { initSandbox({ flash, onPlayerChange: e => { G.targetZoom = ZOOM_DEF[e.dom]; } }); sandboxStart(); } else sandboxHide();
+    else if (test) { initSandbox({ flash, onPlayerChange: e => { G.targetZoom = ZOOM_DEF[e.dom]; } }); sandboxStart(); if (opts.testUnit) { quickTest(opts.testUnit); G.targetZoom = ZOOM_DEF[G.player.dom]; } } else sandboxHide();
     G.running = true;
     radioStop(); if (G.battle.kind !== 'test') setTimeout(() => RADIO.start(), opts.place ? 0 : 1200);
     if (opts.place && G.battle.kind !== 'test') { beginPlacement(); flash('Fase de despliegue', 'Coloca tus unidades y pulsa Enter para comenzar', 4); return; }
@@ -297,6 +304,11 @@ applyQuality(G.opts.quality);
 function qualUI() { for (const id of ['optQual', 'optQual2']) { const el = $(id); el.innerHTML = Object.entries(QUALITY).map(([k, q]) => `<option value="${k}" ${k === G.opts.quality ? 'selected' : ''}>${q.n}</option>`).join(''); el.onchange = () => { G.opts.quality = el.value; applyQuality(el.value); qualUI(); G.onOptions && G.onOptions(); }; } $('optFps').checked = G.opts.fps; }
 qualUI();
 initTouch(canvas);
+initHangar({
+  onBack: () => { closeHangar(); show('scrFront'); },
+  onTest: key => { closeHangar(); launch('test', false, { testUnit: key }); },
+  onBattle: key => { closeHangar(); toDeploy(key); },
+});
 $('padHelp').textContent = PAD_HELP;
 function applyMode() { G.opts.mode = G.opts.mode === 'veteran' ? 'veteran' : 'simple'; document.body.classList.toggle('simple', G.opts.mode === 'simple'); for (const id of ['optMode', 'optMode2']) $(id).value = G.opts.mode; }
 for (const id of ['optMode', 'optMode2']) $(id).onchange = ev => { G.opts.mode = ev.target.value; applyMode(); G.onOptions && G.onOptions(); flash(G.opts.mode === 'simple' ? 'Modo sencillo' : 'Modo veterano', G.opts.mode === 'simple' ? 'Órdenes básicas, munición y apoyo automáticos' : 'Todas las órdenes, formaciones y apoyos', 1.6); };

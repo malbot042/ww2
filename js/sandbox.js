@@ -71,6 +71,19 @@ export function sandboxStart() {
   $('sbMe').value = G.player.key; G.godMode = $('sbGod').checked;
   $('sbInfo').innerHTML = 'Dispara a un blanco para ver el daño.';
 }
+// prueba rápida desde el hangar: cambia a la unidad, la lleva a su terreno y pone blancos delante
+export function quickTest(key) {
+  changePlayer(key);
+  const e = G.player, m = MODELS[key], sp = G.map.extra.spots;
+  if (sp) {
+    const reg = e.dom === 'sea' ? 'trop' : m.fac === 'jp' ? 'trop' : m.fac === 'it' || (m.fac === 'uk' && /Crusader|Matilda|Grant|Valentine|6 libras|australiana/i.test(m.name)) ? 'des' : 'eur';
+    const [x, z] = sp[reg][e.dom] || sp[reg].land, at = anchorFor(e, x, z);
+    e.p.x = at.x; e.p.z = at.z; if (e.dom === 'land') e.p.y = G.map.gy(at.x, at.z);
+    G.focus.copy(e.p);
+  }
+  $('sbMe').value = key;
+  targetSet();
+}
 export function sandboxHide() { $('sandbox').classList.add('hide'); G.godMode = false; }
 export function sandboxHit(e, zone, mult, dmg) {
   const side = zone === null || zone === undefined ? '' : ` · ${['frontal', 'lateral', 'trasero'][zone]} ×${mult.toFixed(2)}`;

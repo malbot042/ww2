@@ -30,11 +30,14 @@ Los objetivos A (salida de la playa) y B (pueblo) los capturan los tanques; el C
 - **Aérea:** Wildcat, Zero, Dauntless, Val, Kittyhawk, Hurricane, Bf 109 F/G, Macchi C.202, Stuka, P-51D, P-47 y Fw 190 F; bombarderos pesados B-17, Lancaster y He 111.
 - **Tanques:** Sherman, Firefly, Cromwell, M10, Grant, Crusader, Panzer III, Panzer IV F2/H, M13/40, Panther, StuG III, Tiger I, Matilda II y Chi-Ha; infantería y cañones antitanque de cada bando.
 
+## Hangar
+La tarjeta **Hangar** del menú muestra las 73 unidades del juego (barcos, aviones, carros, infantería, cañones y defensas) en 3D sobre una plataforma giratoria: arrastra para girarlas y usa la rueda para acercarte. Para cada una verás su papel en combate, barras comparativas (resistencia, velocidad, potencia de fuego, alcance, blindaje), el armamento en detalle, sus controles y el coste de despliegue. Desde ahí puedes saltar a una **prueba rápida** en el campo de pruebas (con la unidad ya colocada en su terreno y blancos delante) o a cualquier **batalla** en la que aparece.
+
 ## Tutorial
 La tarjeta **Tutorial** del menú enseña lo básico en 10 pasos guiados (unos 5 minutos): moverse, cámara, zoom, fijar un blanco, disparar, munición, control de daños, órdenes a la escuadra, cambiar de unidad y mapa táctico.
 
 ## Campo de pruebas
-Mapa ampliado (unos 5 × 5 km jugables) que mezcla los tres frentes: **desierto** al oeste, **campiña europea** con setos y pueblos al este, una franja de estepa entre ambos y, al sur, el **Pacífico** con islas tropicales y atolones. Los botones **Desierto / Europa / Pacífico** del panel llevan tu unidad al terreno elegido (a tierra, al agua o por encima, según lo que manejes).
+Mapa propio (unos 5 × 5 km jugables) que mezcla los tres frentes: **desierto** al oeste, **campiña europea** con setos y pueblos al este, una franja de estepa entre ambos y, al sur, el **Pacífico** con islas tropicales y atolones. Los botones **Desierto / Europa / Pacífico** del panel llevan tu unidad al terreno elegido (a tierra, al agua o por encima, según lo que manejes).
 
 Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin puntos ni derrota. Desde el panel de la derecha puedes:
 - Ser **cualquier unidad** del catálogo, incluidas las del Eje.
@@ -110,6 +113,8 @@ El **modo veterano** (se elige en el menú principal o en la pausa) activa todo:
 - **Puntos de mando:** se ganan controlando objetivos y destruyendo enemigos, y se gastan en artillería (7), ataque aéreo (8) o refuerzos (9). El enemigo también los usa.
 - **Formaciones, rutas y órdenes encadenadas,** y un mando enemigo que concentra fuerzas, flanquea y se retira a reparar.
 
+Todos los campos de batalla son 1,4 veces más grandes que en las primeras versiones (el doble de superficie).
+
 ## Contenido, aspecto y comodidad (v0.8–v1.0)
 - **Portaaviones** que lanzan y recuperan aviones, **acorazados** de torres lentas y gran calibre y **bombarderos pesados** en formación en caja con varios artilleros.
 - **Noche y clima:** menos detección y más dispersión; bengalas, reflectores, lluvia, rayos y mar gruesa que mueve los barcos.
@@ -158,6 +163,7 @@ js/touch.js       controles táctiles
 js/save.js        guardado en localStorage
 js/tutorial.js    tutorial guiado
 js/split.js       multijugador local a pantalla partida
+js/hangar.js      hangar 3D con fichas de todas las unidades
 v1.html           primer prototipo (v0.1)
 ```
 Con `#debug` en la URL queda disponible `window.__ww2` para pruebas automáticas.
