@@ -172,3 +172,4 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 | v1.2 | Modo sencillo por defecto (despliegue de un botón, órdenes básicas, munición y apoyo automáticos, barra de teclas contextual) y modo veterano con todo |
 | v1.3 | Campo de pruebas ampliado (7,2 km de mapa) que mezcla desierto, Europa y Pacífico, con botones para saltar entre terrenos |
 | v1.4 | Campos de batalla ×1,4 en todos los mapas y Hangar 3D con fichas de las 73 unidades, prueba rápida y acceso a sus batallas |
+| v1.5 | Mando aliado por IA activado por defecto: la escuadra se coordina sola, pide apoyo con reserva y respeta las órdenes del jugador durante 45 s |

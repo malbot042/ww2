@@ -89,6 +89,7 @@ export const RADIO = {
   hurt: () => radio(pick(['¡Nos han dado fuerte!', '¡Daños graves a bordo!', '¡Estamos muy tocados!']), 'hurt', 25),
   incoming: kind => radio(kind === 'barrage' ? '¡Artillería entrante!' : '¡Aviones enemigos a la vista!', 'inc' + kind, 12),
   support: kind => radio(kind === 'barrage' ? 'Fuego de apoyo en camino.' : kind === 'air' ? 'Apoyo aéreo en camino.' : 'Refuerzos en camino.', 'sup' + kind, 6),
+  plan: zn => radio(`A todas las unidades: esfuerzo principal en ${zn}.`, 'plan', 20),
   end: win => radio(win ? 'Victoria. Buen trabajo, comandante.' : 'Retirada. Todas las unidades, repliéguense.', 'end', 1),
 };
 

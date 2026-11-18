@@ -304,6 +304,17 @@ applyQuality(G.opts.quality);
 function qualUI() { for (const id of ['optQual', 'optQual2']) { const el = $(id); el.innerHTML = Object.entries(QUALITY).map(([k, q]) => `<option value="${k}" ${k === G.opts.quality ? 'selected' : ''}>${q.n}</option>`).join(''); el.onchange = () => { G.opts.quality = el.value; applyQuality(el.value); qualUI(); G.onOptions && G.onOptions(); }; } $('optFps').checked = G.opts.fps; }
 qualUI();
 initTouch(canvas);
+// mando aliado por IA (por defecto) o todas las órdenes para el jugador
+G.onPlan = (main, n) => {
+  if (G.demo || !G.running) return;
+  if (main >= 0) { const zn = ['Alfa', 'Bravo', 'Charlie'][main]; flash(`Mando aliado: esfuerzo en ${'ABC'[main]}`, `${n} unidades coordinadas por la IA · tus órdenes tienen prioridad`, 2); RADIO_plan(zn); }
+  else flash('Mando aliado: nuevo plan', `${n} unidades cambian de orden`, 1.6);
+};
+G.onAllySupport = kind => { if (!G.demo) flash('Mando aliado pide apoyo', kind === 'barrage' ? 'Artillería sobre una concentración enemiga' : kind === 'air' ? 'Ataque aéreo contra blindados o barcos' : 'Refuerzos en camino', 1.8); };
+function RADIO_plan(zn) { RADIO.plan && RADIO.plan(zn); }
+function applyCmd() { G.opts.aiCmd = G.opts.aiCmd !== false; for (const id of ['optCmd', 'optCmd2']) $(id).value = G.opts.aiCmd ? 'ai' : 'me'; }
+for (const id of ['optCmd', 'optCmd2']) $(id).onchange = ev => { G.opts.aiCmd = ev.target.value === 'ai'; applyCmd(); G.onOptions && G.onOptions(); flash(G.opts.aiCmd ? 'Mando aliado: IA' : 'Mando aliado: tú', G.opts.aiCmd ? 'La IA coordina la escuadra; tus órdenes mandan durante 45 s' : 'La escuadra solo obedece tus órdenes', 1.8); };
+applyCmd();
 initHangar({
   onBack: () => { closeHangar(); show('scrFront'); },
   onTest: key => { closeHangar(); launch('test', false, { testUnit: key }); },

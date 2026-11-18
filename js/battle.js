@@ -12,7 +12,10 @@ import { updateVision, updateStrategy, resetStrategy } from './strategy.js';
 import { formationOffset } from './units.js';
 import { V3, clamp, canvasTex } from './util.js';
 
-let markers = null, icons = new Map(), iconTex = {}, lines = null, selRings = new Map(), cmdT = { A: 0, E: 0 }, deadT = 0;
+let markers = null, icons = new Map(), iconTex = {}, lines = null, selRings = new Map(), cmdT = { A: 0, E: 0 }, deadT = 0, lastMain = -1;
+// mando aliado por IA: activo salvo que el jugador elija dar todas las órdenes; una orden manual manda sobre la IA durante este tiempo
+export const MANUAL_S = 45;
+const aiAllies = () => G.opts?.aiCmd !== false;
 
 function findNear(x, z, test, r0 = 0) {
   if (test(x, z)) return [x, z];
@@ -155,7 +158,7 @@ export function startBattle(key, demo = false, opts = {}) {
   let slot = 0; allies.forEach(e => { if (e !== G.player) { e.slot = slot++; e.order = { type: 'follow' }; G.selection.add(e); } });
   if (demo) { allies.forEach(e => e.order = { type: 'attack' }); G.selection.clear(); }
   G.tickets = { A: air ? 450 : mixed ? 800 : 600, E: air ? 450 : mixed ? 800 : 600 }; G.ticketsMax = G.tickets.A;
-  G.time = 0; G.over = false; G.stats = { kills: 0, lost: 0 }; cmdT = { A: demo ? 0 : 1e9, E: 0 }; deadT = 0;
+  G.time = 0; G.over = false; G.stats = { kills: 0, lost: 0 }; cmdT = { A: demo ? 0 : 3, E: 0 }; deadT = 0; lastMain = -1;
   // líneas de órdenes
   lines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x9fd0ff, transparent: true, opacity: 0.55, depthTest: false }));
   lines.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(240), 3)); lines.renderOrder = 11; lines.frustumCulled = false; markers.add(lines);
@@ -175,7 +178,7 @@ export function removeEntity(e) {
 
 // ---------- órdenes ----------
 const ORDER_TXT = { follow: 'Seguirme', zone: 'Objetivo', attack: 'Ataque libre', hold: 'Mantener', defend: 'Defender', move: 'Mover', escort: 'Escolta', route: 'Ruta', strike: 'Ataque a tierra' };
-export function orderLabel(o, q) { const t = o.type === 'zone' ? `Objetivo ${'ABC'[o.k]}` : o.type === 'route' ? `Ruta ${Math.min(o.i + 1, o.pts.length)}/${o.pts.length}` : ORDER_TXT[o.type] || o.type; return q && q.length ? t + ' → ' + q.map(x => x.type === 'zone' ? 'ABC'[x.k] : ORDER_TXT[x.type]).join(' → ') : t; }
+export function orderLabel(o, q) { const t = (o.byAI && G.running && !G.demo ? 'IA · ' : '') + (o.type === 'zone' ? `Objetivo ${'ABC'[o.k]}` : o.type === 'route' ? `Ruta ${Math.min(o.i + 1, o.pts.length)}/${o.pts.length}` : ORDER_TXT[o.type] || o.type); return q && q.length ? t + ' → ' + q.map(x => x.type === 'zone' ? 'ABC'[x.k] : ORDER_TXT[x.type]).join(' → ') : t; }
 export function issueOrder(type, arg = {}, queued = false) {
   const sel = [...G.selection].filter(e => e.alive && e !== G.player && !e.support);
   if (!sel.length) return 0;
@@ -195,6 +198,7 @@ export function issueOrder(type, arg = {}, queued = false) {
       o = { type: 'route', pts: [arg.pt], i: 0 };
     } else o = { type, ...arg };
     if (offs) { o.ox = offs[i][0]; o.oz = offs[i][1]; }
+    e.manualT = G.time + MANUAL_S; // la IA aliada respeta esta orden un tiempo
     if (queued && type !== 'route') { e.queue = e.queue || []; e.queue.push(o); if (e.order.type === 'follow' || e.order.type === 'hold') e.order = e.queue.shift(); }
     else { e.order = o; e.queue = []; }
     e.ai.think = 0;
@@ -212,10 +216,12 @@ export function setPlayer(e) {
 // ---------- mando IA ----------
 function command(side) {
   const enemySide = side === 'A' ? 'E' : 'A';
-  const units = G.ents.filter(e => e.alive && e.side === side && e.dom !== 'static' && (side === 'E' || e !== G.player));
+  const units = G.ents.filter(e => e.alive && e.side === side && e.dom !== 'static' && (side === 'E' || (e !== G.player && !e.support && !(e.manualT > G.time))));
+  const before = side === 'A' ? new Map(units.map(e => [e, orderLabel(e.order)])) : null;
   if (G.battle.kind === 'air') {
     const targets = (side === 'E' ? G.sitesA : G.sitesE);
     const bombers = units.filter(e => e.cls === 'bomber'), fighters = units.filter(e => e.cls === 'fighter');
+    if (before) setTimeout(() => announce(units, before, -1), 0);
     bombers.forEach((b, i) => { const alive = targets.map((s, k) => [s, k]).filter(([s]) => s.alive); if (!alive.length) { b.order = { type: 'attack' }; return; } const [s, k] = alive.sort((a, c) => a[0].p.distanceTo(b.p) - c[0].p.distanceTo(b.p))[i % Math.min(2, alive.length)]; b.order = { type: 'zone', k }; });
     fighters.forEach((f, i) => { const lead = bombers.filter(b => b.alive)[i % Math.max(1, bombers.length)]; f.order = lead && i % 2 === 0 ? { type: 'escort', lead: lead.id } : i % 3 === 1 ? { type: 'defend' } : { type: 'attack' }; });
     return;
@@ -244,6 +250,14 @@ function command(side) {
     cnt[best]++; e.order = { type: 'zone', k: best };
     if (e.cls === 'sub' || (e.cls === 'pt' && Math.random() < 0.5)) e.order = { type: 'attack' };
   }
+  if (before) announce(units, before, main);
+}
+// marca las órdenes de la IA aliada y avisa cuando cambia el plan
+function announce(units, before, main) {
+  let changed = 0;
+  for (const e of units) { e.order.byAI = true; if (orderLabel(e.order) !== before.get(e)) { changed++; e.ai.think = 0; } }
+  if (main >= 0 && main !== lastMain) { lastMain = main; G.onPlan && G.onPlan(main, units.length); }
+  else if (changed >= 3) G.onPlan && G.onPlan(-1, changed);
 }
 
 // ---------- actualización ----------
@@ -251,7 +265,7 @@ export function updateBattle(dt) {
   G.time += dt;
   const b = G.battle;
   // mando IA
-  if (b.kind !== 'test') for (const s of ['A', 'E']) { cmdT[s] -= dt; if (cmdT[s] <= 0) { command(s); cmdT[s] = 7; } }
+  if (b.kind !== 'test') for (const s of ['A', 'E']) { if (s === 'A' && !G.demo && !aiAllies()) continue; cmdT[s] -= dt; if (cmdT[s] <= 0) { command(s); cmdT[s] = 7; } }
   updateVision(dt); updateStrategy(dt);
   // zonas
   if (b.kind !== 'air') {

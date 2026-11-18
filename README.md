@@ -53,6 +53,11 @@ Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin punt
 - **Naval y tanques:** cada bando tiene 600 puntos. Si controlas más objetivos (A, B, C) que el enemigo, él pierde puntos cada segundo. Cada unidad destruida también resta puntos a su bando.
 - **Aérea:** cada bando tiene 3 instalaciones (aeródromo, depósito y radar) protegidas por antiaéreos. Gana quien destruye las del rival o agota sus puntos.
 
+## Mando aliado coordinado por IA
+Por defecto la escuadra aliada actúa coordinada bajo un **mando aliado de IA**: cada pocos segundos reparte las unidades entre los objetivos (concentra el esfuerzo donde el enemigo es más débil o donde hay que defender), mantiene los portaaviones atrás y los cañones antitanque en posición, organiza escoltas en las batallas aéreas y pide apoyo de artillería, aviación o refuerzos cuando sobran puntos de mando (siempre deja una reserva para ti). Te avisa por radio del esfuerzo principal, y en la lista de escuadra las órdenes de la IA aparecen como «IA · …».
+
+Tú sigues mandando: cualquier orden que des (objetivos, sígueme, ataque libre, rutas…) tiene prioridad durante 45 s; después la IA vuelve a integrar esas unidades en el plan. En el menú principal o en la pausa puedes cambiar **Mando aliado** a «Solo mis órdenes» para dirigirlo todo tú.
+
 ## Modo sencillo y modo veterano
 Por defecto el juego arranca en **modo sencillo**, pensado para jugar sin aprender veinte teclas:
 - Antes de la batalla ves la fuerza recomendada y un solo botón, **¡Al combate!** (sin niebla de guerra ni colocación). «Personalizar…» abre las opciones completas.

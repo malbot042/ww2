@@ -83,7 +83,7 @@ export const SUPPORT = {
 const STRIKER = { pacific: { A: 'sbd', E: 'val' }, africa: { A: 'hurricane', E: 'ju87' }, europe: { A: 'p47', E: 'fw190f' } };
 let events = [], aiT = 0;
 export function resetStrategy() {
-  G.cp = { A: 40, E: 40 }; G.supCd = { A: {}, E: {} }; G.supCount = { A: 0, E: 0 }; events = []; aiT = 8; visT = 0;
+  G.cp = { A: 40, E: 40 }; G.supCd = { A: {}, E: {} }; G.supCount = { A: 0, E: 0 }; events = []; aiT = 8; allyT = 15; visT = 0;
 }
 export function updateStrategy(dt) {
   if (!G.cp) return;
@@ -102,7 +102,7 @@ export function updateStrategy(dt) {
   for (let i = events.length - 1; i >= 0; i--) { const ev = events[i]; ev.t -= dt; if (ev.t <= 0) { ev.fn(); events.splice(i, 1); } }
   // apoyos aéreos que ya han soltado la carga se marchan
   for (const e of G.ents) if (e.support && e.alive && e.leaving && (Math.abs(e.p.x) > G.map.bounds + 120 || Math.abs(e.p.z) > G.map.bounds + 120)) { e.alive = false; e.gone = true; e.mesh.visible = false; }
-  if (!G.demo && b.kind !== 'test') enemySupportAI(dt);
+  if (!G.demo && b.kind !== 'test') { enemySupportAI(dt); if (G.opts?.aiCmd !== false) allySupportAI(dt); }
 }
 // modo sencillo: una sola tecla de apoyo, se elige el más útil según la situación
 export function autoSupportKind(side = 'A') {
@@ -168,6 +168,20 @@ function reinforce(side) {
   return true;
 }
 // la IA enemiga también gasta sus puntos
+// el mando aliado pide apoyo por su cuenta, pero guarda una reserva para el jugador
+let allyT = 15;
+function allySupportAI(dt) {
+  allyT -= dt; if (allyT > 0) return; allyT = 12;
+  const RES = 160; if (!G.cp || G.cp.A < RES) return;
+  const foes = G.ents.filter(e => e.alive && e.side === 'E' && e.dom !== 'air' && e.dom !== 'static' && e.visA !== false && !e.submerged);
+  let best = null, bn = 1;
+  for (const f of foes) { const n = foes.filter(o => o.p.distanceTo(f.p) < 70).length; if (n > bn) { bn = n; best = f; } }
+  if (best && G.cp.A - SUPPORT.barrage.cost >= RES - 60 && useSupport('A', 'barrage', best.p.clone())) { G.onAllySupport && G.onAllySupport('barrage'); return; }
+  const armor = foes.find(e => e.cls === 'tank' || e.dom === 'sea' || e.cls === 'battery');
+  if (armor && G.battle.kind !== 'naval' && G.cp.A - SUPPORT.air.cost >= RES - 60 && useSupport('A', 'air', armor.p.clone())) { G.onAllySupport && G.onAllySupport('air'); return; }
+  const mine = G.ents.filter(e => e.alive && e.side === 'A' && e.dom !== 'static').length;
+  if (mine < G.startCount.A * 0.6 && G.supCount.A < 4 && useSupport('A', 'reinf')) G.onAllySupport && G.onAllySupport('reinf');
+}
 function enemySupportAI(dt) {
   aiT -= dt; if (aiT > 0) return; aiT = 9;
   const foes = G.ents.filter(e => e.alive && e.side === 'A' && e.dom !== 'air' && e.dom !== 'static' && e.visE !== false && !e.submerged);

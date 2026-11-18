@@ -223,3 +223,4 @@ body:not(.simple) .simple-only{display:none}
 .hgtip{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);font-size:12px;opacity:.55;white-space:nowrap}
 .front.f-hangar{background:linear-gradient(135deg,#3b4048,#23272d)}
 @media(max-width:900px){.hgl{width:200px}.hgr2{width:260px}.hgs,.hgtip{display:none}}
+.qrow{flex-wrap:wrap;row-gap:8px}.qsel{flex-wrap:wrap}

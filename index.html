@@ -78,7 +78,7 @@
     <div id="contCamp"></div>
     <h2 class="pick">Elige el frente</h2>
     <div id="fronts"></div>
-    <div class="qsel"><label>Modo <select id="optMode2"><option value="simple">Sencillo</option><option value="veteran">Veterano</option></select></label><label>Calidad gráfica <select id="optQual2"></select></label></div>
+    <div class="qsel"><label>Mando aliado <select id="optCmd2"><option value="ai">IA coordinada</option><option value="me">Solo mis órdenes</option></select></label><label>Modo <select id="optMode2"><option value="simple">Sencillo</option><option value="veteran">Veterano</option></select></label><label>Calidad gráfica <select id="optQual2"></select></label></div>
     <p class="foot">Teclado: <kbd>← ↑ → ↓</kbd> mover tu unidad · <kbd>W A S D</kbd> cámara · <kbd>V</kbd> cambiar vista · <kbd>Espacio</kbd> disparar · <kbd>Shift</kbd> arma secundaria · <kbd>1 2 3</kbd> objetivos · <kbd>M</kbd> mapa táctico. El ratón es opcional: arrastra para seleccionar, clic derecho para ordenar, doble clic para tomar el mando.</p>
   </section>
   <section id="scrBattle" class="scr hide">
@@ -108,6 +108,7 @@
   <div class="card">
     <h2>Pausa táctica</h2>
     <p class="note">El tiempo está detenido, pero puedes seguir dando órdenes, seleccionar con el ratón y cambiar de unidad.</p>
+    <p class="note">Con <b>Mando aliado: IA coordinada</b> (por defecto) la IA reparte la escuadra entre los objetivos cada pocos segundos, pide apoyo cuando sobran puntos de mando y te avisa por radio del esfuerzo principal. Las órdenes que des tú mandan sobre la IA durante 45 s.</p>
     <p class="note simple-only"><b>Modo sencillo:</b> la munición se elige sola (<kbd>N</kbd> para cambiarla a mano), <kbd>7</kbd> pide el apoyo más útil y la escuadra decide su formación. Mantener, defender, formaciones, grupos, órdenes encadenadas y los apoyos por separado (<kbd>8</kbd> <kbd>9</kbd>) están en el modo veterano.</p>
     <div class="help">
       <div><h4>Tu unidad</h4>
@@ -123,7 +124,7 @@
         <p><kbd>Z</kbd><kbd>X</kbd> / rueda: zoom</p><p><kbd>M</kbd> Mapa táctico completo</p>
         <h4>Consejos</h4><p>Los barcos disparan con todas sus torres de costado. Los tanques son más débiles por los lados y por detrás. Mantener más objetivos que el enemigo le resta puntos cada segundo. La munición es limitada: vuelve a tu base (círculo verde con R) para rearmarte y reparar. AP contra blindados y barcos, HE contra infantería, cañones y defensas.</p></div>
     </div>
-    <h4 class="vh">Sonido y cámara</h4><div id="vols" class="vols"></div><label class="chk cine"><input type="checkbox" id="optCine" checked> Cámara lenta en los grandes derribos</label><div class="qrow"><label>Modo <select id="optMode"><option value="simple">Sencillo</option><option value="veteran">Veterano</option></select></label><label>Calidad gráfica <select id="optQual"></select></label><label class="chk"><input type="checkbox" id="optCrt" checked> Efecto CRT</label><label class="chk"><input type="checkbox" id="optFps"> Mostrar FPS</label></div><p class="note small">La resolución es siempre baja (360 líneas). La densidad de vegetación se aplica al cargar la próxima batalla.</p>
+    <h4 class="vh">Sonido y cámara</h4><div id="vols" class="vols"></div><label class="chk cine"><input type="checkbox" id="optCine" checked> Cámara lenta en los grandes derribos</label><div class="qrow"><label>Mando aliado <select id="optCmd"><option value="ai">IA coordinada</option><option value="me">Solo mis órdenes</option></select></label><label>Modo <select id="optMode"><option value="simple">Sencillo</option><option value="veteran">Veterano</option></select></label><label>Calidad gráfica <select id="optQual"></select></label><label class="chk"><input type="checkbox" id="optCrt" checked> Efecto CRT</label><label class="chk"><input type="checkbox" id="optFps"> Mostrar FPS</label></div><p class="note small">La resolución es siempre baja (360 líneas). La densidad de vegetación se aplica al cargar la próxima batalla.</p>
     <div class="row"><button class="btn" id="resume">Continuar</button><button class="ghost dark" id="quit">Abandonar al menú</button></div>
   </div>
 </div>
