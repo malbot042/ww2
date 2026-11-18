@@ -78,7 +78,7 @@ export const BATTLES = {
   },
   'test': {
     front: 'europe', kind: 'test', map: 'proving', title: 'Campo de pruebas', year: '',
-    brief: 'Mapa ampliado que mezcla el desierto, la campiña europea y el Pacífico con islas. Sin puntos ni derrota: elige cualquier unidad, añade blancos o enemigos y salta de un terreno a otro.',
+    brief: 'Mapa ampliado con el Pacífico y sus islas al suroeste, el desierto africano al sur y la campiña europea al este. Sin puntos ni derrota: elige cualquier unidad, añade blancos o enemigos y salta de un terreno a otro.',
     allies: [['sherman', 1]], enemy: [],
   },
   'europe-land': {

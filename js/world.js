@@ -109,19 +109,25 @@ function makeHeightFn(cfg, seed) {
   }
   let extra = {};
   if (gen === 'mixed') {
-    const coast = x => 620 + N.fbm(x * 0.0009, 9.1, 3) * 180;           // costa: tierra al norte, océano al sur
-    const border = z => N.fbm(z * 0.0011, 6.6, 3) * 280;                 // frontera desierto / Europa
-    const wD = (x, z) => smooth(420, -420, x - border(z));               // 1 = desierto, 0 = Europa
+    // rumbos desde el centro (0° = norte, 90° = este): Pacífico al suroeste y oeste, África al sur, Europa al este y norte
+    const deg = (x, z) => (Math.atan2(x, -z) * 180 / Math.PI + 360) % 360;
+    const polar = (th, r) => [Math.sin(th * Math.PI / 180) * r, -Math.cos(th * Math.PI / 180) * r];
+    const adiff = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+    const PAC = 245, PHALF = 56;                                        // sector del océano: de ~189° (sur-suroeste) a ~301° (oeste-noroeste)
+    // distancia firmada a la costa (m): > 0 tierra, < 0 mar; cerca del centro siempre hay tierra
+    const coastD = (x, z) => { const r = Math.hypot(x, z), th = deg(x, z) + N.fbm(r * 0.0012, 4.4, 3) * 16; return (adiff(th, PAC) - PHALF) * Math.PI / 180 * Math.max(r, 1) + Math.max(0, 520 - r) * 1.4; };
+    // peso del desierto: 1 en el sur (≈110°–200°), 0 en Europa (este y norte)
+    const wD = (x, z) => { const th = deg(x, z) + N.fbm(Math.hypot(x, z) * 0.0011, 6.6, 3) * 18; return smooth(-20, 20, 50 - adiff(th, 160)); };
     const desH = (x, z) => 8 + N.fbm(x * 0.0006, z * 0.0006, 4) * 14 + Math.pow(N.ridge(x * 0.0022 + z * 0.0012, z * 0.0016 - x * 0.0004, 3), 3) * 6 + N.fbm(x * 0.02, z * 0.02, 2) * 0.6;
     const eurH = (x, z) => 10 + N.fbm(x * 0.0007, z * 0.0007, 4) * 20 + N.fbm(x * 0.003, z * 0.003, 3) * 3;
     const isl = [];
-    for (let t = 0; isl.length < 10 && t < 800; t++) {
-      const r = 110 + R() * 230, x = (R() * 2 - 1) * 2500, z = coast(x) + 480 + R() * 1900;
-      if (z + r > 2900) continue;
-      if (isl.every(i => Math.hypot(x - i.x, z - i.z) > r + i.r + 160) && Math.hypot(x, z - 1700) > r + 260) isl.push({ x, z, r, h: 8 + R() * 30, at: R() < 0.2 && r > 160 });
+    for (let t = 0; isl.length < 10 && t < 1500; t++) {
+      const r0 = 110 + R() * 230, [x, z] = polar(PAC + (R() * 2 - 1) * 48, 1000 + R() * 1800);
+      if (Math.abs(x) + r0 > 2900 || Math.abs(z) + r0 > 2900 || coastD(x, z) > -r0 - 300) continue;
+      if (isl.every(i => Math.hypot(x - i.x, z - i.z) > r0 + i.r + 160)) isl.push({ x, z, r: r0, h: 8 + R() * 30, at: R() < 0.2 && r0 > 160 });
     }
     fn = (x, z) => {
-      const s = coast(x) - z;
+      const s = coastD(x, z);
       let h;
       if (s > 0) {
         const w = wD(x, z), land = Math.max(2.6, lerp(eurH(x, z), desH(x, z), w));
@@ -137,17 +143,19 @@ function makeHeightFn(cfg, seed) {
       }
       return h;
     };
-    zones.length = 0; zones.push([-1500, -300], [0, -600], [1500, -300]);
+    zones.length = 0; zones.push(polar(150, 1300), [0, 0], polar(55, 1300));
     const big = isl.slice().sort((a, b) => b.r - a.r)[0];
+    // primer punto de agua en un rumbo, saliendo desde el centro
+    const seaAt = th => { for (let r = 400; r < 2800; r += 50) { const [x, z] = polar(th, r); if (coastD(x, z) < -250) return [x, z]; } return polar(th, 2400); };
     extra = {
-      coast, islands: isl,
-      region: (x, z) => z > coast(x) + 40 ? 'trop' : wD(x, z) > 0.5 ? 'des' : 'eur',
+      islands: isl, polar,
+      region: (x, z) => coastD(x, z) < 40 ? 'trop' : wD(x, z) > 0.5 ? 'des' : 'eur',
       desertW: wD,
-      spawns: { A: { land: x => [x * 1.4, 260], sea: [0, coast(0) + 650], air: [0, 2000] }, E: { land: [0, -1800], sea: [1600, 2300], air: [0, -2300] } },
+      spawns: { A: { land: x => [x * 1.4, 150], sea: seaAt(PAC), air: [0, 300] }, E: { land: polar(60, 2200), sea: seaAt(PAC + 40), air: polar(20, 2300) } },
       spots: {
-        des: { land: [-1600, -300], sea: [-1600, coast(-1600) + 450], air: [-1600, -300] },
-        eur: { land: [1600, -300], sea: [1600, coast(1600) + 450], air: [1600, -300] },
-        trop: { land: big ? [big.x, big.z] : [0, 1800], sea: big ? [big.x, big.z + big.r + 260] : [0, 1800], air: big ? [big.x, big.z] : [0, 1800] },
+        des: { land: polar(160, 1500), sea: seaAt(190), air: polar(160, 1500) },
+        eur: { land: polar(55, 1500), sea: seaAt(298), air: polar(55, 1500) },
+        trop: { land: big ? [big.x, big.z] : polar(PAC, 1800), sea: big ? [big.x + big.r + 260, big.z] : polar(PAC, 1800), air: big ? [big.x, big.z] : polar(PAC, 1800) },
       },
     };
   }
@@ -243,7 +251,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     if (cfg.gen === 'bocage') roads.push({ t: 'h', f: x => 420 + 80 * Math.sin(x * 0.002) }, { t: 'h', f: x => -430 + 70 * Math.sin(x * 0.0023 + 2) });
     zones.forEach(zn => { zn[1] = zz + amp * Math.sin(zn[0] * 0.0025 + 1); });
   }
-  if (cfg.gen === 'mixed') roads.push({ t: 'h', f: x => -560 + 70 * Math.sin(x * 0.0018) }, { t: 'v', f: z => 1500 + 35 * Math.sin(z * 0.004) }, { t: 'v', f: z => -1500 + 35 * Math.sin(z * 0.004 + 2) });
+  if (cfg.gen === 'mixed') roads.push({ t: 'h', f: x => 1450 + 70 * Math.sin(x * 0.0018) }, { t: 'v', f: z => 1250 + 35 * Math.sin(z * 0.004) }, { t: 'h', f: x => -1100 + 50 * Math.sin(x * 0.002 + 1) });
   if (cfg.gen === 'normandy') {
     const [ax] = zones[0], [, bz] = zones[1];
     roads.push({ t: 'v', f: z => ax + 30 * Math.sin(z * 0.004) }, { t: 'h', f: x => bz + 50 * Math.sin(x * 0.002) }, { t: 'v', f: z => zones[1][0] + 25 * Math.sin(z * 0.005 + 1) });
@@ -400,12 +408,12 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     const rocks = scatter(2500, (x, z, y) => y > 1 && N.fbm(x * 0.004, z * 0.004, 2) > 0.15 && R() < 0.5 && inR('des', x, z), () => ({ sy: 0.55, sx: 1 + Math.random() }));
     inst(new THREE.DodecahedronGeometry(2.2, 0), 0x8c7454, rocks, { flat: true, sink: 0.6 });
     // Oasis con palmeras
-    const oasis = []; for (let k = 0; k < 3; k++) { const ox = isMix ? -1300 - R() * 1000 : (R() * 2 - 1) * 900 * S, oz = isMix ? -1800 + R() * 1800 : (R() * 2 - 1) * 900 * S; for (let q = 0; q < 26; q++) oasis.push({ x: ox + (R() - 0.5) * 90, z: oz + (R() - 0.5) * 90, r: R() * 6, s: 0.8 + R() * 0.4 }); }
+    const oasis = []; for (let k = 0; k < 3; k++) { const [mox, moz] = isMix ? extra.polar(125 + R() * 60, 900 + R() * 1500) : [0, 0], ox = isMix ? mox : (R() * 2 - 1) * 900 * S, oz = isMix ? moz : (R() * 2 - 1) * 900 * S; for (let q = 0; q < 26; q++) oasis.push({ x: ox + (R() - 0.5) * 90, z: oz + (R() - 0.5) * 90, r: R() * 6, s: 0.8 + R() * 0.4 }); }
     const trunk = new THREE.CylinderGeometry(0.22, 0.38, 9, 6).translate(0, 4.5, 0).rotateZ(0.1);
     const fr = []; for (let k = 0; k < 8; k++) { const f = new THREE.BoxGeometry(0.5, 0.12, 4); f.translate(0, 0, 2); f.rotateX(0.45); f.rotateY(k / 8 * Math.PI * 2); fr.push(f); }
     inst(trunk, 0x7d6a50, oasis); inst(mergeGeometries(fr).translate(0.9, 9, 0), 0x5b7f39, oasis, { flat: true });
     // Casas blancas y postes de telégrafo
-    const houses = []; for (let k = 0; k < 6; k++) { const vx = isMix ? -1100 - R() * 1300 : (R() * 2 - 1) * 1000 * S, vz = isMix ? -2000 + R() * 2100 : (R() * 2 - 1) * 1000 * S; if (inZone(vx, vz, 120)) continue; for (let q = 0; q < 8; q++) houses.push({ x: vx + (R() - 0.5) * 70, z: vz + (R() - 0.5) * 70, r: R() * 0.3, s: 0.8 + R() * 0.5 }); }
+    const houses = []; for (let k = 0; k < 6; k++) { const [mvx, mvz] = isMix ? extra.polar(120 + R() * 60, 800 + R() * 1500) : [0, 0], vx = isMix ? mvx : (R() * 2 - 1) * 1000 * S, vz = isMix ? mvz : (R() * 2 - 1) * 1000 * S; if (inZone(vx, vz, 120)) continue; for (let q = 0; q < 8; q++) houses.push({ x: vx + (R() - 0.5) * 70, z: vz + (R() - 0.5) * 70, r: R() * 0.3, s: 0.8 + R() * 0.5 }); }
     inst(new THREE.BoxGeometry(8, 4, 8).translate(0, 2, 0), 0xe4d8bf, houses.filter(p => inR('des', p.x, p.z)));
   } if (cfg.theme === 'channel' || cfg.theme === 'bocage' || isMix) { // channel / bocage
     const isB = cfg.theme === 'bocage' || isMix;
@@ -436,7 +444,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     inst(new THREE.IcosahedronGeometry(1.7, 0).scale(1.5, 1.2, 2.6).translate(0, 1.5, 0), 0x3a5428, hedges, { flat: true });
     // Pueblos normandos
     const houses = [], roofs = [];
-    const vill = isMix ? [[1500, -420], [900, -1300], [2000, -1600], [1200, 200], [2100, 300]] : isB ? zones.map(([x, z]) => [x + 70, z + 60]).concat([[-900, -500], [880, 520], [-300, 650], [1300, -900], [-1350, 800]].map(([x, z]) => [x * S, z * S])) : cfg.gen === 'normandy' ? [[zones[1][0] + 60, zones[1][1] + 50], [zones[1][0] - 70, zones[1][1] - 40], [-900 * S, -700 * S], [900 * S, -800 * S]] : [];
+    const vill = isMix ? [[55, 1350], [20, 1800], [85, 2000], [100, 900], [345, 1500], [35, 700]].map(([a, r]) => extra.polar(a, r)) : isB ? zones.map(([x, z]) => [x + 70, z + 60]).concat([[-900, -500], [880, 520], [-300, 650], [1300, -900], [-1350, 800]].map(([x, z]) => [x * S, z * S])) : cfg.gen === 'normandy' ? [[zones[1][0] + 60, zones[1][1] + 50], [zones[1][0] - 70, zones[1][1] - 40], [-900 * S, -700 * S], [900 * S, -800 * S]] : [];
     if (!isB) for (let k = 0; k < 10; k++) { const x = (R() * 2 - 1) * 1300 * S, z = (R() * 2 - 1) * 1300 * S; if (h(x, z) > 4) vill.push([x, z]); }
     for (const [vx, vz] of vill) for (let q = 0; q < 12; q++) { const x = vx + (R() - 0.5) * 110, z = vz + (R() - 0.5) * 110; if (h(x, z) < 2 || roadDist(x, z) < 8 || inZone(x, z, 25)) continue; const p = { x, z, r: (R() < 0.5 ? 0 : Math.PI / 2) + (R() - 0.5) * 0.2, s: 0.85 + R() * 0.4 }; houses.push(p); roofs.push(p); }
     inst(new THREE.BoxGeometry(7, 5, 10).translate(0, 2.5, 0), 0xcfc4ad, houses);

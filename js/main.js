@@ -181,7 +181,7 @@ function buildFrontMenu() {
       <span class="fb"><i>Naval</i><i>Aérea</i><i>Terrestre</i><i>Defensas</i></span>
     </button>
     <button class="front f-test" data-test="1">
-      <span class="fy">Sin puntos ni derrota</span><span class="fn">Campo de pruebas</span><span class="fv">Desierto, Europa y Pacífico</span>
+      <span class="fy">Sin puntos ni derrota</span><span class="fn">Campo de pruebas</span><span class="fv">Pacífico, África y Europa</span>
       <span class="fd">Elige cualquiera de los ${Object.keys(MODELS).length} modelos, coloca blancos fijos o enemigos con IA y prueba armas, blindajes, cámaras y controles.</span>
       <span class="fb"><i>Naval</i><i>Aérea</i><i>Tanques</i></span>
     </button>`;

@@ -37,7 +37,7 @@ La tarjeta **Hangar** del menú muestra las 73 unidades del juego (barcos, avion
 La tarjeta **Tutorial** del menú enseña lo básico en 10 pasos guiados (unos 5 minutos): moverse, cámara, zoom, fijar un blanco, disparar, munición, control de daños, órdenes a la escuadra, cambiar de unidad y mapa táctico.
 
 ## Campo de pruebas
-Mapa propio (unos 5 × 5 km jugables) que mezcla los tres frentes: **desierto** al oeste, **campiña europea** con setos y pueblos al este, una franja de estepa entre ambos y, al sur, el **Pacífico** con islas tropicales y atolones. Los botones **Desierto / Europa / Pacífico** del panel llevan tu unidad al terreno elegido (a tierra, al agua o por encima, según lo que manejes).
+Mapa propio (unos 5 × 5 km jugables) que mezcla los tres frentes: el **Pacífico** con islas tropicales y atolones al suroeste, el **desierto africano** al sur y la **campiña europea** con setos y pueblos al este y al norte, todos unidos por tierra en el centro. Los botones **Desierto / Europa / Pacífico** del panel llevan tu unidad al terreno elegido (a tierra, al agua o por encima, según lo que manejes).
 
 Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin puntos ni derrota. Desde el panel de la derecha puedes:
 - Ser **cualquier unidad** del catálogo, incluidas las del Eje.
