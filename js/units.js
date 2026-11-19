@@ -562,7 +562,11 @@ function driveShip(e, thr, steer, dt) {
   if (thr) e.speed += thr * s.acc * dt; else e.speed -= Math.sign(e.speed) * Math.min(Math.abs(e.speed), s.acc * 0.15 * dt);
   e.speed = clamp(e.speed, -mx * 0.35, mx);
   const tf = clamp(Math.abs(e.speed) / (s.max * 0.45), 0.15, 1);
-  e.h += steer * s.turn * tf * dt * Math.sign(e.speed || 1) * (e.mods.rudder ? 0.35 : 1);
+  // inercia: el giro entra poco a poco (de ~0,5 s en una lancha a ~2,5 s en un acorazado) y sigue un poco al soltar el timón
+  e.yawTau = clamp((s.len || 40) / 45, 0.5, 2.5);
+  const yrT = steer * s.turn * tf * Math.sign(e.speed || 1) * (e.mods.rudder ? 0.35 : 1);
+  e.yr = (e.yr || 0) + (yrT - (e.yr || 0)) * Math.min(1, dt / e.yawTau);
+  e.h += e.yr * dt;
   const f = fwdOf(e), nx = e.p.x + f.x * e.speed * dt, nz = e.p.z + f.z * e.speed * dt;
   const pr = (e.hl + 4) * Math.sign(e.speed || 1);
   if (okSurface(e, nx, nz) && okSurface(e, nx + f.x * pr, nz + f.z * pr)) { e.p.x = nx; e.p.z = nz; e.blocked = Math.max(0, e.blocked - dt); }
@@ -590,7 +594,11 @@ function driveTank(e, thr, steer, dt) {
   const mx = s.max * clamp(1 - slope * 2.2, 0.45, 1.15) * (e.mods.engine ? 0.5 : 1);
   if (thr) e.speed += thr * s.acc * dt; else e.speed -= Math.sign(e.speed) * Math.min(Math.abs(e.speed), s.acc * 1.6 * dt);
   e.speed = clamp(e.speed, -mx * 0.45, mx);
-  e.h += steer * s.turn * dt;
+  // inercia de giro: las orugas tardan ~0,3 s en coger el giro a fondo y otro tanto en pararlo (la infantería, casi nada);
+  // aceleración angular limitada, así las correcciones pequeñas siguen siendo rápidas
+  const acc = s.turn / (e.cls === 'inf' ? 0.08 : 0.3);
+  e.yr = (e.yr || 0) + clamp(steer * s.turn - (e.yr || 0), -acc * dt, acc * dt);
+  e.h += e.yr * dt;
   const f = fwdOf(e), nx = e.p.x + f.x * e.speed * dt, nz = e.p.z + f.z * e.speed * dt;
   const pr = (e.hl + 1) * Math.sign(e.speed || 1);
   let clear = okSurface(e, nx, nz) && okSurface(e, nx + f.x * pr, nz + f.z * pr);
@@ -609,6 +617,7 @@ function driveTank(e, thr, steer, dt) {
   if (Math.abs(e.speed) > 1) trackMark(e);
   if (Math.abs(e.speed) > 4 && Math.random() < (G.map.isDesert(e.p.x, e.p.z) ? 0.7 : 0.25)) FX.dust(e.p.clone().addScaledVector(f, -e.hl), G.map.isDesert(e.p.x, e.p.z) ? null : new THREE.Color(0x8d8166));
 }
+const BANK = 1.05, ROLL = 5; // alabeo máximo (~60°) y velocidad de alabeo (rad/s)
 function flyPlane(e, thr, steer, dt) {
   const s = e.s, eng = e.mods.engine ? 0.72 : 1, ctl = e.mods.controls ? 0.6 : 1;
   const ground = G.map.gy(e.p.x, e.p.z);
@@ -621,12 +630,15 @@ function flyPlane(e, thr, steer, dt) {
   const cruise = s.max * 0.82 * eng;
   e.speed = clamp(e.speed + (thr * s.acc * 0.6 + (cruise - e.speed) * 0.35 - e.vy * 0.45) * dt, s.min * 0.9, s.max * 1.2 * eng);
   const tf = 0.75 + 0.35 * clamp((s.max - e.speed) / (s.max - s.min), 0, 1);
-  e.h += steer * s.turn * tf * ctl * dt;
-  e.bank += (steer * 0.85 - e.bank) * Math.min(1, dt * 4);
+  // primero alabea y el giro sale del alabeo. Velocidad de alabeo limitada (~290°/s): las correcciones pequeñas
+  // son casi inmediatas (no se pierde puntería) y pasar de un giro a fondo al contrario tarda ~0,4 s
+  e.bank += clamp(steer * BANK - e.bank, -ROLL * ctl * dt, ROLL * ctl * dt);
+  e.yr = e.bank / BANK * s.turn * tf * ctl;
+  e.h += e.yr * dt;
   const f = fwdOf(e);
   e.p.x += f.x * e.speed * dt; e.p.z += f.z * e.speed * dt;
   const b = G.map.bounds + 150;
-  if (!e.leaving && (Math.abs(e.p.x) > b || Math.abs(e.p.z) > b)) { const back = Math.atan2(-e.p.x, -e.p.z); e.h += clamp(angDiff(back, e.h), -s.turn * dt * 1.2, s.turn * dt * 1.2); e.bank = 0.8 * Math.sign(angDiff(back, e.h)); }
+  if (!e.leaving && (Math.abs(e.p.x) > b || Math.abs(e.p.z) > b)) { const back = Math.atan2(-e.p.x, -e.p.z); e.h += clamp(angDiff(back, e.h), -s.turn * dt * 1.2, s.turn * dt * 1.2); e.bank = BANK * 0.9 * Math.sign(angDiff(back, e.h)); }
   e.mesh.rotation.y = e.h; e.mesh.rotation.z = -e.bank; e.mesh.rotation.x = -Math.atan2(e.vy, e.speed);
   if (e.mesh.userData.props) for (const pr of e.mesh.userData.props) pr.rotation.z += dt * 50;
   // estelas de condensación por encima de 180 m (desde los motores exteriores o las puntas de ala)
@@ -719,7 +731,9 @@ function sepSteer(e, rad) {
   for (const o of G.ents) { if (o === e || !o.alive || o.dom !== e.dom) continue; const dx = e.p.x - o.p.x, dz = e.p.z - o.p.z, d = Math.hypot(dx, dz); if (d < rad && d > 0.01) { const w = (rad - d) / rad; sx += dx / d * w; sz += dz / d * w; } }
   return [sx, sz];
 }
-function steerTo(e, ang, gain = 2.2) { return clamp(angDiff(ang, e.h) * gain, -1, 1); }
+// con inercia de giro la IA anticipa lo que el barco seguirá girando por sí solo (control PD)
+// (solo barcos: en aviones y tanques la inercia es corta y la anticipación les haría perder puntería al perseguir)
+function steerTo(e, ang, gain = 2.2) { return clamp((angDiff(ang, e.h) - (e.dom === 'sea' ? (e.yr || 0) * (e.yawTau || 0) : 0)) * gain, -1, 1); }
 function avoid(e, ang) {
   // barcos: apartarse de otros buques que están delante y cerca (evita choques en formación)
   if (e.dom === 'sea' && !e.submerged) {

@@ -116,6 +116,12 @@ El **modo veterano** (se elige en el menú principal o en la pausa) activa todo:
 - **Punto de anticipación**: círculo que marca dónde apuntar a un avión enemigo (verde cuando las ráfagas van a acertar), dónde se cruzarán los torpedos de submarinos y lanchas con el blanco (la guía se pone verde al estar bien alineada) y dónde caerán los proyectiles de la artillería naval.
 - **Pausa táctica** (<kbd>Intro</kbd>, Select en el mando, botón «Táctica» en pantalla táctil): congela la acción sin tapar el campo de batalla para dar órdenes, seleccionar o cambiar de unidad con calma. <kbd>P</kbd> sigue abriendo la pausa con la ayuda y las opciones.
 
+## Inercia de giro (v2.4)
+- **Barcos**: el giro entra poco a poco según el tamaño (≈0,5 s una lancha, ≈1 s un destructor, ≈2,5 s un acorazado) y sigue un poco al soltar el timón. La IA lo anticipa para no pasarse.
+- **Aviones**: primero alabean (hasta ~60°, a ~290°/s) y el giro sale del alabeo; invertir un giro a fondo tarda ~0,4 s.
+- **Tanques**: las orugas tardan ~0,3 s en coger el giro a fondo y en pararlo.
+- Las velocidades máximas de giro no cambian (mismo equilibrio).
+
 ## Controles
 
 | Tecla | Acción |
