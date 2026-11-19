@@ -128,7 +128,11 @@ function updateCamera(dt) {
   else if (G.strategic) tgt = V3(0, 0, 0);
   else if (p) {
     const look = G.zoom * 0.18 * (p.dom === 'air' ? 1.3 : 1) * Math.min(1, ct);
-    tgt = V3(p.p.x + Math.sin(p.h) * look, p.dom === 'air' ? p.p.y * (0.5 + 0.3 * clamp((p.p.y - 120) / 120, 0, 1) + 0.5 * (1 - Math.min(1, ct))) : Math.max(p.p.y, 0), p.p.z + Math.cos(p.h) * look);
+    // aviones: en cenital el foco queda entre el avión y el suelo; en las vistas bajas (desde atrás, laterales) va a la altura
+    // del avión, para que no se salga de pantalla al subir (antes el foco acababa por encima: hasta un 30 % de la altitud)
+    let fy = Math.max(p.p.y, 0);
+    if (p.dom === 'air') { const base = 0.5 + 0.3 * clamp((p.p.y - 120) / 120, 0, 1), low = clamp((0.75 - ct) / 0.5, 0, 1); fy = p.p.y * (base + (1 - base) * low); }
+    tgt = V3(p.p.x + Math.sin(p.h) * look, fy, p.p.z + Math.cos(p.h) * look);
   } else tgt = G.focus.clone();
   const zt = G.strategic ? (G.map.bounds * 3.1) : G.targetZoom;
   G.zoom += (zt - G.zoom) * Math.min(1, dt * 3);
@@ -529,4 +533,4 @@ $('squad').addEventListener('dblclick', ev => { const el = ev.target.closest('.s
 // ---------- arranque ----------
 buildFrontMenu(); show('scrFront'); startDemo();
 requestAnimationFrame(frame);
-if (location.hash === '#debug') window.__ww2 = { G, launch, startBattle, spawn: spawnUnit, step(dt) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); recordReplay(dt); updateTutorial(dt); updateDoctrine(dt); }, startReplay, showResults: r => showResults(r), issueOrder, setPlayer, toggleTactical, hud: () => { updateHud(0.03); updateAimMarkers(); } };
+if (location.hash === '#debug') window.__ww2 = { G, launch, startBattle, spawn: spawnUnit, step(dt) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); recordReplay(dt); updateTutorial(dt); updateDoctrine(dt); }, startReplay, showResults: r => showResults(r), issueOrder, setPlayer, toggleTactical, cam: dt => updateCamera(dt), camPreset: i => setCamPreset(i), hud: () => { updateHud(0.03); updateAimMarkers(); } };
