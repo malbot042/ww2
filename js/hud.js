@@ -4,9 +4,11 @@ import { envLabel } from './env.js';
 import { G } from './state.js';
 import { FRONTS } from './data.js';
 import { orderLabel } from './battle.js';
-import { bombImpact } from './units.js';
-import { canvasTex } from './util.js';
+import { bombImpact, lead } from './units.js';
+import { canvasTex, V3, angDiff } from './util.js';
 import { sightOf, SUPPORT, canUse , autoSupportKind } from './strategy.js';
+import { losWhy, coverOf } from './physics.js';
+import { torpLead } from './units.js';
 
 const $ = id => document.getElementById(id);
 let msgT = 0, hitT = 0, hurtT = 0, mmBg = null, squadT = 0, feed = [];
@@ -23,7 +25,23 @@ export function hudInit() {
 }
 export function hudHide() { $('hud').classList.add('hide'); }
 export function flash(a, b = '', t = 2.4) { $('msg').innerHTML = `${a}<small>${b}</small>`; $('msg').style.opacity = 1; msgT = t; }
-export function hitMark(txt, bad = false) { const h = $('hit'); h.textContent = txt; h.className = bad ? 'bad' : ''; h.style.opacity = 1; hitT = 0.9; }
+// marca de impacto: cls = hit | armor | crit | ammo | cover | saved · las más importantes no se pisan con un impacto normal
+const HIT_ICO = {
+  hit: '<svg viewBox="0 0 24 24"><path d="M12 2v6M12 16v6M2 12h6M16 12h6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>',
+  armor: '<svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 9-8 11-4.6-2-8-6-8-11V5z" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M7 7l10 10" stroke="currentColor" stroke-width="2.2"/></svg>',
+  crit: '<svg viewBox="0 0 24 24"><path d="M12 1l2.8 6.5 7 .6-5.3 4.6 1.6 6.9L12 16l-6.1 3.6 1.6-6.9L2.2 8.1l7-.6z" fill="currentColor"/></svg>',
+  ammo: '<svg viewBox="0 0 24 24"><path d="M12 1c1 4 6 6 6 12a6 6 0 01-12 0c0-3 2-5 3-7 0 2 1 3 2 3 0-3 0-6 1-8z" fill="currentColor"/></svg>',
+  cover: '<svg viewBox="0 0 24 24"><path d="M12 2C7 6 5 10 5 14a7 7 0 0014 0c0-4-2-8-7-12zM12 9v13" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>',
+  saved: '<svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 9-8 11-4.6-2-8-6-8-11V5z" fill="currentColor"/></svg>',
+};
+let hitPri = 0;
+export function hitMark(txt, cls = 'hit', pri = 1, sub = '') {
+  if (typeof cls === 'boolean') cls = cls ? 'armor' : 'hit';
+  if (hitT > 0.35 && pri < hitPri) return;
+  const h = $('hit'); h.innerHTML = `<span class="hi">${HIT_ICO[cls] || HIT_ICO.hit}</span><b>${txt}</b>${sub ? `<small>${sub}</small>` : ''}`;
+  h.className = 'h-' + cls; h.style.opacity = 1; hitT = pri >= 3 ? 1.6 : pri >= 2 ? 1.2 : 0.8; hitPri = pri;
+  h.classList.remove('pop'); void h.offsetWidth; h.classList.add('pop');
+}
 export function hurt() { $('vig').style.opacity = 1; hurtT = 0.3; }
 export function addFeed(txt, side) { feed.unshift({ txt, side, t: 6 }); feed = feed.slice(0, 6); renderFeed(); }
 function renderFeed() { $('feed').innerHTML = feed.map(f => `<div class="f ${f.side}">${f.txt}</div>`).join(''); }
@@ -62,11 +80,32 @@ function weaponLines(e) {
   else if (e.rearming || (A.ap !== undefined && n('ap') + n('he') < 1)) html += '<div class="mods"><span class="mod">Sin munición: vuelve a la base (R verde)</span></div>';
   return html;
 }
+// a cubierto / te ven / oculto
+const ICO = {
+  tree: '<svg viewBox="0 0 24 24"><path d="M12 2l6 8h-3l4 6H5l4-6H6zM11 16h2v6h-2z" fill="currentColor"/></svg>',
+  house: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10h-6v-6H9v6H3z" fill="currentColor"/></svg>',
+  eye: '<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></svg>',
+  eyeOff: '<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/><path d="M3 21L21 3" stroke="currentColor" stroke-width="2.4"/></svg>',
+};
+function statusLine(e) {
+  const b = [];
+  const c = coverOf(e);
+  if (c > 0.25) { const house = G.map.coverAt(e.p.x, e.p.z) >= 0.75; b.push(`<span class="st cov" title="Se te ve peor y parte de los disparos dan en la cobertura">${house ? ICO.house : ICO.tree}A cubierto${house ? ' (edificios)' : ''}</span>`); }
+  else if (e.dom === 'land') b.push('<span class="st open">Al descubierto</span>');
+  if (G.playerSeen === false) b.push(`<span class="st hid">${ICO.eyeOff}El enemigo no te ve</span>`);
+  else if (G.playerSeen) b.push(`<span class="st seen">${ICO.eye}Te están viendo</span>`);
+  return b.length ? `<div class="sts">${b.join('')}</div>` : '';
+}
 function targetPanel(e) {
   const t = e.target;
   if (e.dom === 'air') return '';
   if (!t || !t.alive) return `<div class="tg empty"><div class="tgh"><span>Sin blanco a tiro</span></div><div class="tgk"><kbd>T</kbd> buscar blanco · clic sobre un enemigo para fijarlo</div></div>`;
   const d = Math.round(t.p.distanceTo(e.p)), hp = Math.max(0, t.hp / t.s.hp);
+  const why = losWhy(e, t);
+  if (why) return `<div class="tg nolos"><div class="tgh"><span>Sin línea de tiro</span><b>${d} m</b></div>
+    <div class="tgn">${t.name}<i>${t.m.type || ''}</i></div>
+    <div class="tgk">${why === 'cover' ? 'Lo tapan setos, árboles o casas. Acércate o busca un hueco.' : 'Lo tapa el relieve (isla o colina). Rodéalo o sube a una loma.'}</div>
+    <div class="tgk"><kbd>T</kbd> otro blanco · <kbd>Y</kbd> automático</div></div>`;
   let extra = '';
   if ((e.cls === 'destroyer' || e.cls === 'cruiser' || e.cls === 'battleship') && e.tur.length) { const b = e.bear || 0; extra = `<div class="wp"><span>Torres que apuntan</span><b class="${b === e.tur.length ? 'ok' : b ? '' : 'bad'}">${b}/${e.tur.length}</b></div>` + (b < e.tur.length ? '<div class="tgk">Ponte de costado para disparar con todas</div>' : ''); }
   if (e.dom === 'land' && t.cls === 'tank') {
@@ -96,7 +135,7 @@ export function updateHud(dt) {
     $('uName').textContent = e.name + (e.rank ? ' ' + rankStars(e) : ''); $('uType').textContent = `${e.m.type} · ${e.fac === 'us' ? 'EE. UU.' : e.fac === 'uk' ? 'Reino Unido' : ''}`;
     const hp = Math.max(0, e.hp / e.s.hp); $('uHp').style.width = hp * 100 + '%'; $('uHp').style.background = hp < 0.35 ? 'var(--red)' : 'var(--hp)';
     const k = e.s.dispK || 1, kmh = e.dom === 'sea' ? `${Math.round(Math.abs(e.speed) * 0.95 * k)} nudos` : `${Math.round(Math.abs(e.speed) * (e.dom === 'air' ? 3.6 : 1.5) * k)} km/h`;
-    $('uW').innerHTML = weaponLines(e) + `<div class="wp"><span>Velocidad</span><b>${kmh}</b></div>` + targetPanel(e);
+    $('uW').innerHTML = statusLine(e) + weaponLines(e) + `<div class="wp"><span>Velocidad</span><b>${kmh}</b></div>` + targetPanel(e);
   }
   { const u = $('unit'), sq = $('squad'), sp = $('support'), top = u.offsetTop + u.offsetHeight + 8, bot = (sp.offsetHeight ? sp.offsetHeight + 96 : 70); const key = top + ':' + bot; if (sq.dataset.k !== key) { sq.style.top = top + 'px'; sq.style.maxHeight = `calc(100vh - ${top + bot}px)`; sq.dataset.k = key; } }
   // tickets
@@ -147,7 +186,7 @@ function renderSimpleBar() {
   if (G.objectives && G.objectives.length) L.push(kb(['1', '2', '3'], G.battle.kind === 'air' ? 'Atacar A·B·C' : 'Objetivo A·B·C'));
   L.push(kb(['Q'], 'Seguidme'), kb(['E'], 'Ataque libre'));
   if (G.cp && canUse('A', autoSupportKind())) L.push(kb(['7'], 'Apoyo'));
-  L.push(kb(['Tab'], 'Unidad'), kb(['M'], 'Mapa'), kb(['P'], 'Pausa y ayuda'));
+  L.push(kb(['Tab'], 'Unidad'), kb(['M'], 'Mapa'), kb(['Intro'], 'Pausa táctica'), kb(['P'], 'Ayuda'));
   const h = L.join(''); if ($('ordSim').dataset.h !== h) { $('ordSim').innerHTML = h; $('ordSim').dataset.h = h; }
 }
 function renderSupport() {
@@ -208,7 +247,7 @@ function drawMinimap() {
 }
 
 // ---------- indicadores 3D: mira de bombas y guía de torpedos ----------
-let bombRing, torpLine, tgtRing, tgtMark, altLine;
+let bombRing, torpLine, tgtRing, tgtMark, altLine, pip, pipLine, noLosTag;
 const YEL = 0xffd23a;
 export function initAimMarkers() {
   bombRing = new THREE.Mesh(new THREE.RingGeometry(5, 6.5, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthTest: false, side: THREE.DoubleSide }));
@@ -224,6 +263,53 @@ export function initAimMarkers() {
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
   torpLine = new THREE.Line(g, new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 12, gapSize: 10, transparent: true, opacity: 0.6, depthTest: false }));
   torpLine.renderOrder = 13; torpLine.frustumCulled = false; G.scene.add(torpLine);
+  // punto de anticipación: dónde apuntar para acertar a un blanco en movimiento
+  const ptex = canvasTex(64, g => { g.strokeStyle = 'rgba(0,0,0,0.6)'; g.lineWidth = 9; g.beginPath(); g.arc(32, 32, 20, 0, 7); g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath(); g.arc(32, 32, 20, 0, 7); g.stroke(); g.fillStyle = '#fff'; g.beginPath(); g.arc(32, 32, 5, 0, 7); g.fill(); });
+  pip = new THREE.Sprite(new THREE.SpriteMaterial({ map: ptex, sizeAttenuation: false, depthTest: false, transparent: true }));
+  pip.scale.set(0.046, 0.046, 1); pip.renderOrder = 15; G.scene.add(pip);
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+  pipLine = new THREE.Line(pg, new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 6, gapSize: 4, transparent: true, opacity: 0.8, depthTest: false }));
+  pipLine.frustumCulled = false; pipLine.renderOrder = 15; G.scene.add(pipLine);
+  // aviso sobre el blanco tapado
+  const ntex = canvasTex(256, g => { g.clearRect(0, 0, 256, 256); g.font = 'bold 34px "Barlow Condensed",sans-serif'; g.textAlign = 'center'; g.lineWidth = 7; g.strokeStyle = 'rgba(0,0,0,0.8)'; g.strokeText('SIN LÍNEA DE TIRO', 128, 140); g.fillStyle = '#d6d6d6'; g.fillText('SIN LÍNEA DE TIRO', 128, 140); });
+  noLosTag = new THREE.Sprite(new THREE.SpriteMaterial({ map: ntex, sizeAttenuation: false, depthTest: false, transparent: true }));
+  noLosTag.scale.set(0.16, 0.16, 1); noLosTag.center.set(0.5, 0.3); noLosTag.renderOrder = 15; G.scene.add(noLosTag);
+}
+const GREEN = 0x6dff7a, WHITE = 0xffffff, GREY = 0x9a9a9a;
+function setPip(p, from, ok) {
+  pip.visible = pipLine.visible = true; pip.position.copy(p); pip.material.color.setHex(ok ? GREEN : WHITE);
+  const a = pipLine.geometry.attributes.position.array; a[0] = from.x; a[1] = from.y; a[2] = from.z; a[3] = p.x; a[4] = p.y; a[5] = p.z;
+  pipLine.geometry.attributes.position.needsUpdate = true; pipLine.computeLineDistances(); pipLine.material.color.setHex(ok ? GREEN : WHITE);
+}
+function updatePip(e) {
+  pip.visible = pipLine.visible = false;
+  if (!e || G.opts?.lead === false) return;
+  // cazas: el enemigo más centrado delante del morro
+  if (e.dom === 'air' && e.s.guns) {
+    let best = null, ba = 0.9;
+    for (const o of G.ents) {
+      if (!o.alive || o.falling || o.side === e.side || o.dom !== 'air' || (G.fog && o.visA === false)) continue;
+      const d = o.p.distanceTo(e.p); if (d > e.s.guns.range * 2.2) continue;
+      const a = Math.abs(angDiff(Math.atan2(o.p.x - e.p.x, o.p.z - e.p.z), e.h)); if (a < ba) { ba = a; best = o; }
+    }
+    if (!best) return;
+    const ld = lead(e.p, best, 700), d = best.p.distanceTo(e.p);
+    const ok = Math.abs(angDiff(Math.atan2(ld.x - e.p.x, ld.z - e.p.z), e.h)) < 0.18 && Math.abs(best.p.y - e.p.y) < 60 && d < e.s.guns.range * 1.1;
+    setPip(ld, best.p, ok); return;
+  }
+  const t = e.target; if (!t || !t.alive || e.noLos || t.dom !== 'sea' && e.dom === 'sea' && e.cls === 'sub') return;
+  // submarino y lancha: los torpedos salen por la proa; el círculo marca dónde se cruzarán con el blanco
+  if ((e.cls === 'sub' || e.cls === 'pt') && e.s.torp && t.dom === 'sea' && t.vel.lengthSq() > 1) {
+    const ang = torpLead(e, t); let tp = t.p.clone();
+    for (let k = 0; k < 3; k++) { const d = Math.hypot(tp.x - e.p.x, tp.z - e.p.z); tp = t.p.clone().addScaledVector(t.vel, d / 55); }
+    tp.y = 1; const ok = Math.abs(angDiff(ang, e.h)) < 0.04;
+    setPip(tp, V3(t.p.x, 1, t.p.z), ok); torpLine.material.color.setHex(ok ? GREEN : WHITE); return;
+  }
+  // artillería naval: dónde caerán los proyectiles (la torre ya apunta ahí)
+  if (e.s.main && e.s.main.hs && (e.cls === 'destroyer' || e.cls === 'cruiser' || e.cls === 'battleship') && t.vel.lengthSq() > 4) {
+    const d = Math.hypot(t.p.x - e.p.x, t.p.z - e.p.z), tt = d / e.s.main.hs, tp = t.p.clone().addScaledVector(t.vel, tt); tp.y = Math.max(t.p.y, 0) + 1;
+    setPip(tp, V3(t.p.x, Math.max(t.p.y, 0) + 1, t.p.z), e.aimReady && e.cd.main <= 0);
+  }
 }
 export function updateAimMarkers() {
   const e = G.player, ok = e && e.alive && !G.demo && !G.replayCam;
@@ -233,11 +319,14 @@ export function updateAimMarkers() {
   const t = ok && e.target && e.target.alive ? e.target : null;
   tgtRing.visible = tgtMark.visible = !!t && e.dom !== 'air';
   if (t) {
-    tgtRing.material.color.setHex(YEL); tgtRing.material.opacity = e.aimReady && e.cd.main <= 0 ? 0.6 + 0.4 * Math.sin(performance.now() / 90) : e.lock ? 0.95 : 0.7;
+    tgtRing.material.opacity = e.aimReady && e.cd.main <= 0 ? 0.6 + 0.4 * Math.sin(performance.now() / 90) : e.lock ? 0.95 : 0.7;
     tgtMark.position.set(t.p.x, Math.max(t.p.y, 0) + (t.top || 6) + 4 + Math.sin(performance.now() / 200) * 1.5, t.p.z);
     tgtMark.material.opacity = e.lock ? 1 : 0.8;
   }
   if (t) { const s = Math.max(t.hl, t.hw) * 1.5 + 4; tgtRing.scale.set(s, s, s); tgtRing.rotation.z += 0.02; tgtRing.position.set(t.p.x, Math.max(t.p.y, 0) + 1, t.p.z); }
+  if (t) { const nl = !!e.noLos; const c = nl ? GREY : YEL; tgtRing.material.color.setHex(c); tgtMark.material.color.setHex(nl ? GREY : WHITE); noLosTag.visible = nl; if (nl) noLosTag.position.copy(tgtMark.position); } else noLosTag.visible = false;
+  torpLine.material.color.setHex(WHITE);
+  updatePip(ok ? e : null);
   torpLine.visible = ok && e.dom === 'sea' && !!e.s.torp && (e.cls === 'sub' || !e.target || e.cls === 'pt');
   if (torpLine.visible) { const a = torpLine.geometry.attributes.position.array; a[0] = e.p.x + Math.sin(e.h) * e.hl; a[1] = 0.5; a[2] = e.p.z + Math.cos(e.h) * e.hl; a[3] = e.p.x + Math.sin(e.h) * 800; a[4] = 0.5; a[5] = e.p.z + Math.cos(e.h) * 800; torpLine.geometry.attributes.position.needsUpdate = true; torpLine.computeLineDistances(); }
 }

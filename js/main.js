@@ -52,13 +52,28 @@ initFx(); initAimMarkers();
 
 // ---------- callbacks del juego ----------
 G.onMsg = (a, b) => flash(a, b);
+const CRIT_MARK = { engine: ['¡Motor!', 'Irá más lento'], rudder: ['¡Timón!', 'Le cuesta girar'], fire: ['¡Incendio!', 'Pierde vida poco a poco'], tracks: ['¡Orugas rotas!', 'Inmovilizado unos segundos'], turret: ['¡Torreta atascada!', 'Apunta mucho más lento'], controls: ['¡Mandos!', 'Vuela peor'], gun: ['¡Torre destruida!', 'Dispara con menos cañones'] };
 G.onCrit = (e, m, by) => {
   if (G.demo) return;
-  if (by && by === G.player) hitMark(`¡${MOD_NAME[m]}!`);
-  if (e === G.player) flash(m === 'fire' ? '¡Incendio!' : `¡${MOD_NAME[m]}!`, m === 'tracks' ? 'Se reparan solas en unos segundos' : 'Pulsa K para control de daños', 2);
+  if (by && by === G.player) { if (m === 'ammo') hitMark('¡SANTABÁRBARA!', 'ammo', 3, 'Impacto en su munición'); else hitMark(...(CRIT_MARK[m] ? [CRIT_MARK[m][0], 'crit', 2, CRIT_MARK[m][1]] : [`¡${MOD_NAME[m]}!`, 'crit', 2])); }
+  if (e === G.player) flash(m === 'fire' ? '¡Incendio!' : `¡${MOD_NAME[m]}!`, m === 'tracks' ? 'Se reparan solas en unos segundos' : m === 'ammo' ? 'Gran daño e incendio · pulsa K para apagarlo' : 'Pulsa K para control de daños', 2);
+};
+G.onCover = (e, by) => {
+  if (G.demo) return;
+  if (by && by === G.player) hitMark('Da en la cobertura', 'cover', 1, 'Setos, árboles o casas protegen al blanco');
+  else if (e === G.player) hitMark('La cobertura te protege', 'saved', 1);
 };
 G.onHurt = () => { hurt(); musicHeat(0.06); const p = G.player; if (p && p.hp < p.s.hp * 0.3) RADIO.hurt(); };
-G.onHit = (e, zone, mult, dmg) => { if (G.battle && G.battle.kind === 'test') sandboxHit(e, zone, mult, dmg); if (zone === null) return hitMark('Impacto'); hitMark(['Impacto frontal', 'Impacto lateral', 'Impacto trasero'][zone] + (mult < 0.8 ? ' · blindaje resiste' : mult > 1.3 ? ' · ¡crítico!' : ''), mult < 0.8); };
+G.onHit = (e, zone, mult, dmg, kind) => {
+  if (G.battle && G.battle.kind === 'test') sandboxHit(e, zone, mult, dmg);
+  if (kind === 'ammo') return;
+  if (kind === 'ram') return hitMark('¡Embestida!', 'crit', 2);
+  if (zone === null) return hitMark('Impacto', 'hit', 1);
+  const where = ['frontal', 'lateral', 'trasero'][zone];
+  if (mult < 0.8) return hitMark('Rebota en el blindaje', 'armor', 1, zone === 0 ? 'El frente es lo más duro: busca el lateral o la espalda' : `Impacto ${where} · daño ×${mult.toFixed(1)}`);
+  if (mult > 1.3) return hitMark(`¡Punto débil! Impacto ${where}`, 'hit', 1.5, `daño ×${mult.toFixed(1)}`);
+  hitMark(`Impacto ${where}`, 'hit', 1);
+};
 G.onKill = (e, by) => {
   if (G.demo) return;
   if (G.opts.cine && !G.over && (e.s.value >= 60 || (by === G.player && e.s.value >= 40)) && e.p.distanceTo(G.focus) < G.zoom * 2.5) { G.slowT = 1.4; G.shake = Math.max(G.shake || 0, 1.5); }
@@ -149,12 +164,12 @@ function frame(now) {
   // cámara lenta en los grandes derribos
   const dt = G.slowT > 0 ? rdt * 0.3 : rdt; if (G.slowT > 0) G.slowT -= rdt;
   if (G.map) {
-    const sim = G.running && !G.paused && !G.deploying;
+    const sim = G.running && !G.paused && !G.tactical && !G.deploying;
     if (sim) { recordReplay(dt); updateTutorial(dt); updateSplit(dt); updateDoctrine(dt); }
     if (sim || G.demo) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); }
     else if (G.deploying) { updateVision(dt); updateMarkers(); }
     updateWorld(dt); if (sim || G.demo) updateEnv(dt); updateCamera(dt);
-    if (G.running) { updateHud(dt); updateAimMarkers(); const p = G.player; if (p && p.alive) setEngine(engineProfile(p), Math.abs(p.speed) / p.s.max, !G.paused); }
+    if (G.running) { updateHud(dt); updateAimMarkers(); const p = G.player; if (p && p.alive) setEngine(engineProfile(p), Math.abs(p.speed) / p.s.max, !G.paused && !G.tactical); }
     else { updateAimMarkers(); setEngine('ship', 0, false); }
     updateMusic(dt);
   }
@@ -166,37 +181,71 @@ function frame(now) {
 // ---------- menús ----------
 function show(id) { for (const s of ['scrFront', 'scrBattle', 'scrDeploy', 'results', 'pause', 'loading']) $(s).classList.toggle('hide', s !== id); $('menu').classList.toggle('hide', !['scrFront', 'scrBattle', 'scrDeploy', 'loading'].includes(id)); }
 function rosterHtml(list) { return list.map(([k, n]) => `<li><b>${n}×</b> ${MODELS[k].name} <span>${MODELS[k].type}</span></li>`).join(''); }
+// ---------- portada: «Jugar» lleva a la siguiente batalla recomendada ----------
+// orden pensado para aprender: de lo más sencillo a lo más exigente
+const RECO = ['africa-land', 'europe-naval', 'pacific-air', 'africa-air', 'europe-land', 'pacific-naval', 'europe-air', 'africa-combined', 'pacific-combined', 'europe-combined'];
+let menuTab = null;
+function recommended() {
+  const keys = RECO.filter(k => BATTLES[k]);
+  const next = keys.find(k => !(recordOf(k) && recordOf(k).wins)); if (next) return { key: next, all: false };
+  return { key: keys.slice().sort((a, b) => (recordOf(a).wins - recordOf(b).wins) || (recordOf(a).best - recordOf(b).best))[0], all: true };
+}
+function showTab(t) {
+  menuTab = t;
+  $('more').querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  $('fronts').classList.toggle('hide', !t);
+  $('fronts').querySelectorAll('[data-grp]').forEach(c => c.classList.toggle('hide', c.dataset.grp !== t));
+}
+function buildHero(sc) {
+  const go = () => { initAudio(); applyVolumes(); };
+  if (sc) {
+    const k = sc.list[sc.i], b = BATTLES[k];
+    $('hero').innerHTML = `<button id="playBtn">JUGAR</button><div class="hinfo"><span class="hk">Continuar campaña · ${FRONTS[sc.front].name}</span><span class="ht">${b.title}, ${b.year}</span><span class="hs">Batalla ${sc.i + 1} de ${sc.list.length} · ${KIND_NAME[b.kind]} · ${sc.score} pts</span><div class="hl"><a id="hDrop">Descartar la campaña</a><a id="hOther">Elegir otra batalla</a></div></div>`;
+    $('playBtn').onclick = () => { go(); G.campaign = JSON.parse(JSON.stringify(sc)); toDeploy(G.campaign.list[G.campaign.i], true); };
+    $('hDrop').onclick = () => { saveCampaign(null); buildFrontMenu(); };
+  } else {
+    const { key, all } = recommended(), b = BATTLES[key], r = recordOf(key), front = key.split('-')[0];
+    const first = !RECO.some(k => recordOf(k));
+    const tip = r && r.plays - r.wins >= 2 && G.opts.diff !== 'easy' ? 'Se te resiste: prueba en dificultad Fácil (abajo).' : first ? 'Una batalla corta para empezar. Las teclas útiles salen abajo en pantalla; P abre la ayuda.' : b.brief;
+    $('hero').innerHTML = `<button id="playBtn">JUGAR</button><div class="hinfo"><span class="hk">${all ? 'Todas ganadas · a por un récord mejor' : first ? 'Tu primera batalla' : 'Siguiente batalla recomendada'}</span><span class="ht">${b.title}, ${b.year}</span><span class="hs">${FRONTS[front].name} · ${KIND_NAME[b.kind]}${r ? ` · ${r.wins} victoria${r.wins === 1 ? '' : 's'} en ${r.plays}` : ''}</span><span class="hs">${tip}</span><div class="hl">${first ? '<a id="hTut" class="first">¿Primera vez? Tutorial de 5 minutos</a>' : ''}<a id="hOther">Elegir otra batalla</a></div></div>`;
+    $('playBtn').onclick = () => { go(); launch(key, false, { fog: true }); };
+    if (first) $('hTut').onclick = () => { go(); launch('test-land', false, { tutorial: true }); };
+  }
+  $('hOther').onclick = () => showTab('fronts');
+}
 function buildFrontMenu() {
   $('fronts').innerHTML = Object.entries(FRONTS).map(([k, f]) => `
-    <button class="front f-${k}" data-front="${k}">
+    <button class="front f-${k}" data-front="${k}" data-grp="fronts">
       <span class="fy">${f.years}</span><span class="fn">${f.name}</span><span class="fv">${f.vs}</span>
       <span class="fd">${f.desc}</span>
       <span class="fb">${f.battles.map(b => `<i>${KIND_NAME[b]}</i>`).join('')}</span>
     </button>`).join('') + `
-    <button class="front f-tut" data-tut="1">
+    <button class="front f-tut" data-tut="1" data-grp="learn">
       <span class="fy">10 pasos · 5 minutos</span><span class="fn">Tutorial</span><span class="fv">Primeros pasos</span>
       <span class="fd">Aprende a moverte, manejar la cámara, fijar blancos, disparar, cambiar de munición, reparar y dar órdenes a tu escuadra.</span>
       <span class="fb"><i>Guiado</i></span>
     </button>
-    <button class="front f-school" data-school="1">
+    <button class="front f-school" data-school="1" data-grp="learn">
       <span class="fy">Naval · Aérea · Terrestre · Combinada</span><span class="fn">Escuela de mando</span><span class="fv">Estrategia de grupo</span>
       <span class="fd">Qué misión tiene cada tipo de unidad en el grupo, a qué distancia debe estar, quién entra primero en combate y los errores típicos, con demostraciones en 3D.</span>
       <span class="fb"><i>Manual</i><i>Demostraciones</i></span>
     </button>
-    <button class="front f-hangar" data-hangar="1">
+    <button class="front f-hangar" data-hangar="1" data-grp="hangar">
       <span class="fy">${Object.keys(MODELS).length} modelos en 3D</span><span class="fn">Hangar</span><span class="fv">Todas las unidades</span>
       <span class="fd">Gira cada barco, avión y carro en 3D, compara sus características, aprende su papel en combate y salta a una prueba rápida o a la batalla donde aparece.</span>
       <span class="fb"><i>Naval</i><i>Aérea</i><i>Terrestre</i><i>Defensas</i></span>
     </button>
-    <div class="front f-test" data-test="pick">
+    <div class="front f-test" data-test="pick" data-grp="test">
       <span class="fy">Sin puntos ni derrota</span><span class="fn">Campos de pruebas</span><span class="fv">Un escenario por modo</span>
       <span class="fd">Elige unidad, coloca blancos fijos o enemigos con IA y prueba armas, blindajes, cámaras y controles en un escenario hecho para cada modo.</span>
       <span class="fb tsel"><button data-testdom="sea">Naval</button><button data-testdom="air">Aéreo</button><button data-testdom="land">Terrestre</button></span>
     </div>`;
   const sc = savedCampaign();
-  $('contCamp').innerHTML = sc ? `<button class="btn" id="btnCont">Continuar campaña</button><span>${FRONTS[sc.front].name} · batalla ${sc.i + 1} de ${sc.list.length} · ${sc.score} pts${sc.unlocked.length ? ' · ' + sc.unlocked.length + (sc.unlocked.length === 1 ? ' unidad desbloqueada' : ' unidades desbloqueadas') : ''}</span><button class="ghost" id="btnDrop">Descartar</button>` : '';
-  if (sc) { $('btnCont').onclick = () => { initAudio(); applyVolumes(); G.campaign = JSON.parse(JSON.stringify(sc)); toDeploy(G.campaign.list[G.campaign.i], true); }; $('btnDrop').onclick = () => { saveCampaign(null); buildFrontMenu(); }; }
+  $('contCamp').innerHTML = ''; // la campaña en curso se continúa con «Jugar»
   $('fronts').querySelectorAll('.front').forEach(b => b.onclick = () => { initAudio(); applyVolumes(); if (b.dataset.school) { $('menu').classList.add('hide'); openSchool(); } else if (b.dataset.hangar) { $('menu').classList.add('hide'); openHangar(); } else if (b.dataset.tut) launch('test-land', false, { tutorial: true }); else if (b.dataset.test) launch('test-land'); else buildBattleMenu(b.dataset.front); });
+  buildHero(sc);
+  $('more').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { if (b.dataset.tab === 'hangar') { initAudio(); applyVolumes(); $('menu').classList.add('hide'); openHangar(); return; } showTab(menuTab === b.dataset.tab ? null : b.dataset.tab); });
+  showTab(menuTab);
   $('fronts').querySelectorAll('[data-testdom]').forEach(t => t.onclick = ev => { ev.stopPropagation(); initAudio(); applyVolumes(); launch(testKeyFor(t.dataset.testdom)); });
 }
 function buildBattleMenu(fk) {
@@ -225,7 +274,7 @@ function launch(key, keepCampaign = false, opts = {}) {
   if (!keepCampaign) G.campaign = null;
   show('loading'); $('loadTxt').textContent = `${BATTLES[key].title}, ${BATTLES[key].year}`;
   setTimeout(() => {
-    G.running = false; G.paused = false; G.strategic = false; G.slowT = 0;
+    G.running = false; G.paused = false; G.strategic = false; G.slowT = 0; toggleTactical(false);
     stopDoctrineDemo(); resetReplay(); stopSplit(); resize(); startBattle(key, false, opts);
     if (opts.split) setupSplit();
     const p = G.player; G.targetZoom = G.zoom = ZOOM_DEF[p.dom];
@@ -249,7 +298,7 @@ function startDemo() {
   G.running = false; startBattle(key, true); G.zoom = G.targetZoom = 950;
 }
 function showResults(res) {
-  G.running = false; hudHide();
+  toggleTactical(false); G.running = false; hudHide();
   const b = G.battle, win = res === 'win';
   const score = Math.round((G.tickets.A + G.stats.kills * 50 - G.stats.lost * 20 + (win ? 500 : 0)) * diff().score);
   if (G.campaign) G.campaign.score += score;
@@ -276,7 +325,7 @@ function showResults(res) {
   $('resReplay').onclick = () => { $('results').classList.add('hide'); $('replayTag').classList.remove('hide'); startReplay(() => { $('replayTag').classList.add('hide'); show('results'); }); };
   show('results');
 }
-function toMenu() { stopDoctrineDemo(); stopTutorial(false); if (G.split) { stopSplit(); resize(); } endPlacement(); sandboxHide(); hudHide(); G.running = false; buildFrontMenu(); show('scrFront'); startDemo(); }
+function toMenu() { toggleTactical(false); stopDoctrineDemo(); stopTutorial(false); if (G.split) { stopSplit(); resize(); } endPlacement(); sandboxHide(); hudHide(); G.running = false; buildFrontMenu(); show('scrFront'); startDemo(); }
 $('backFront').onclick = () => show('scrFront');
 $('backBattle').onclick = () => show('scrBattle');
 initDeployUI();
@@ -364,6 +413,7 @@ addEventListener('keydown', ev => {
     return;
   }
   const c = ev.code, simple = G.opts.mode !== 'veteran';
+  if (c === 'Enter' || c === 'NumpadEnter' || c === 'Pause') { toggleTactical(); return; }
   if (simple && ['KeyO', 'KeyR', 'KeyF', 'KeyG', 'Digit8', 'Digit9'].includes(c)) return; // solo en modo veterano
   if (c in ZONE_KEYS) { const q = ev.shiftKey && !simple, n = issueOrder('zone', { k: ZONE_KEYS[c] }, q); if (n) flash((q ? 'Encadenado: ' : '') + (G.battle.kind === 'air' ? `Atacar instalación ${'ABC'[ZONE_KEYS[c]]}` : `Objetivo ${'ABC'[ZONE_KEYS[c]]}`), q ? 'Irán cuando completen la orden actual' : `${n} unidades en camino`); }
   else if (c === 'Digit7') doSupport(simple ? autoSupportKind() : 'barrage');
@@ -410,7 +460,18 @@ function cycleGroup() {
     flash(`Selección: ${n}`, `${sel.length} unidades · ahora da una orden (1 2 3 Q E R F)`, 1.6); return;
   }
 }
+// pausa táctica: congela la acción sin tapar el campo de batalla; las órdenes, la selección y la cámara siguen funcionando
+let tacSel = false;
+export function toggleTactical(on = !G.tactical) {
+  if (on && (!G.running || G.deploying || G.paused || G.over || G.demo)) return;
+  if (on === !!G.tactical) return;
+  G.tactical = on; document.body.classList.toggle('tac', on); $('tacBar').classList.toggle('hide', !on);
+  if (on) { tacSel = G.showSel; G.showSel = true; flash('Pausa táctica', 'Da órdenes con calma · Intro para seguir', 1.4); }
+  else { G.showSel = tacSel; flash('¡Adelante!', '', 0.8); }
+}
+$('tacGo').onclick = () => toggleTactical(false);
 function togglePause() {
+  if (G.tactical) toggleTactical(false);
   if (!G.running && $('pause').classList.contains('hide')) return;
   G.paused = !G.paused; $('pause').classList.toggle('hide', !G.paused);
   if (G.paused) G.running = true;
@@ -468,4 +529,4 @@ $('squad').addEventListener('dblclick', ev => { const el = ev.target.closest('.s
 // ---------- arranque ----------
 buildFrontMenu(); show('scrFront'); startDemo();
 requestAnimationFrame(frame);
-if (location.hash === '#debug') window.__ww2 = { G, launch, startBattle, spawn: spawnUnit, step(dt) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); recordReplay(dt); updateTutorial(dt); updateDoctrine(dt); }, startReplay, showResults: r => showResults(r), issueOrder, setPlayer };
+if (location.hash === '#debug') window.__ww2 = { G, launch, startBattle, spawn: spawnUnit, step(dt) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); recordReplay(dt); updateTutorial(dt); updateDoctrine(dt); }, startReplay, showResults: r => showResults(r), issueOrder, setPlayer, toggleTactical, hud: () => { updateHud(0.03); updateAimMarkers(); } };

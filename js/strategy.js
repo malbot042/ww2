@@ -65,6 +65,9 @@ export function updateVision(dt) {
       if (v && o.alive) { o['seen' + side] = G.time; o['last' + side] = o.p.clone(); }
     }
   }
+  // ¿te ve algún enemigo? (indicador del HUD, con o sin niebla de guerra)
+  const P = G.player;
+  G.playerSeen = !!P && P.alive && G.ents.some(e => e.alive && e.side !== P.side && !e.falling && e.cls !== 'site' && canSee(e, P));
   // lo que no ve el jugador no se dibuja (los restos siguen visibles)
   for (const o of G.ents) if (o.side === 'E' && o.alive && !o.gone) o.mesh.visible = o.visA;
 }

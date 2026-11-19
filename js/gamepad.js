@@ -11,7 +11,7 @@ export const PAD_BUTTONS = {
   5: 'KeyM',        // RB: mapa táctico
   6: 'ShiftLeft',   // LT: arma secundaria
   7: 'Space',       // RT: disparar
-  8: 'KeyP',        // Select: pausa
+  8: 'Pause',       // Select: pausa táctica
   9: 'Enter',       // Start: empezar / pausa
   10: 'KeyZ',       // L3: acercar
   11: 'KeyX',       // R3: alejar
@@ -20,7 +20,7 @@ export const PAD_BUTTONS = {
   14: 'Digit1',     // cruceta ←: objetivo A
   15: 'Digit3',     // cruceta →: objetivo C
 };
-export const PAD_HELP = 'Stick izq.: mover · Stick der.: cámara · RT disparar · LT secundaria · A blanco · B reparar · X sígueme · Y vista · LB cambiar unidad · RB mapa · Cruceta: objetivos A/B/C y mantener · L3/R3 zoom · Select pausa';
+export const PAD_HELP = 'Stick izq.: mover · Stick der.: cámara · RT disparar · LT secundaria · A blanco · B reparar · X sígueme · Y vista · LB cambiar unidad · RB mapa · Cruceta: objetivos A/B/C y mantener · L3/R3 zoom · Select pausa táctica · Start pausa';
 const send = (type, code) => dispatchEvent(new KeyboardEvent(type, { code, bubbles: true }));
 const state = new Map(); // índice de mando → {botones, ejes}
 let announced = new Set();

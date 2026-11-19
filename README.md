@@ -108,6 +108,14 @@ El **modo veterano** (se elige en el menú principal o en la pausa) activa todo:
 - **Aire**: colisiones en el aire raras, solo entre enemigos que se cruzan de frente a gran velocidad.
 - **Tierra**: los carros arrollan infantería enemiga y se dañan al embestir otro vehículo a velocidad.
 
+## Ayudas en pantalla (v2.3)
+- **Portada sencilla**: un gran botón **Jugar** lleva a la siguiente batalla recomendada (de la más sencilla a la más exigente; si hay campaña en curso, la continúa). Frentes y campañas, Aprender (tutorial y escuela), Hangar y Campos de pruebas quedan en el menú de abajo.
+- **Línea de tiro**: si tu blanco está tapado, la retícula se vuelve gris con el aviso «SIN LÍNEA DE TIRO» y el panel explica si lo tapa el relieve o la vegetación y casas. Tu unidad no malgasta disparos contra el terreno.
+- **Estado de tu unidad**: «A cubierto» (vegetación o edificios) o «Al descubierto», y «El enemigo no te ve» / «Te están viendo».
+- **Marcas de impacto**: distintas al acertar, al rebotar en el blindaje (con consejo para buscar el lateral), en un punto débil, al causar averías (motor, orugas, timón, torre…), al alcanzar la **santabárbara** (munición: gran daño e incendio) y cuando la cobertura para el disparo.
+- **Punto de anticipación**: círculo que marca dónde apuntar a un avión enemigo (verde cuando las ráfagas van a acertar), dónde se cruzarán los torpedos de submarinos y lanchas con el blanco (la guía se pone verde al estar bien alineada) y dónde caerán los proyectiles de la artillería naval.
+- **Pausa táctica** (<kbd>Intro</kbd>, Select en el mando, botón «Táctica» en pantalla táctil): congela la acción sin tapar el campo de batalla para dar órdenes, seleccionar o cambiar de unidad con calma. <kbd>P</kbd> sigue abriendo la pausa con la ayuda y las opciones.
+
 ## Controles
 
 | Tecla | Acción |

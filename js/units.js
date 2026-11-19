@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { losBlocked, coverOf, collisions, landImpact } from './physics.js';
+import { losBlocked, losWhy, coverOf, collisions, landImpact } from './physics.js';
 import { diff } from './difficulty.js';
 import { trackMark } from './marks.js';
 import { updateDamageLook, onKillFx, crater } from './damagefx.js';
@@ -132,7 +132,17 @@ function playerTarget(e, filt, range) {
   if (e.lock) return e.lock;
   let best = null, bs = 1e9;
   for (const o of candidates(e, filt, range)) { const sc = playerScore(e, o, o.p.distanceTo(e.p), range); if (sc < bs) { bs = sc; best = o; } }
+  // si el blanco anterior se ha escondido tras el relieve o la cobertura, se mantiene (el HUD avisa de que no hay línea de tiro)
+  const o = e.target;
+  if (!best && o && o.alive && !o.falling && !o.submerged && filt(o) && seen(e, o) && o.p.distanceTo(e.p) <= range && losBlocked(e, o)) best = o;
   return best;
+}
+// línea de tiro del jugador hacia su blanco (para el HUD y para no disparar contra el relieve)
+function losCheck(e) {
+  const w = e.target ? losWhy(e, e.target) : null;
+  e.noLos = w;
+  if (w && G.keysOnce.has('Space') && G.onMsg) G.onMsg('Sin línea de tiro', w === 'cover' ? 'Setos, árboles o casas tapan el blanco: muévete para verlo' : 'El relieve (isla o colina) tapa el blanco: rodéalo', 1.4);
+  return !w;
 }
 export function weaponRange(e) {
   const s = e.s;
@@ -187,12 +197,18 @@ function ammoMult(q, e) {
   return 1;
 }
 // ---------- daño por partes ----------
-export const MOD_NAME = { engine: 'Motor dañado', rudder: 'Timón dañado', fire: 'Incendio', tracks: 'Orugas rotas', turret: 'Torreta atascada', controls: 'Mandos dañados', gun: 'Torre destruida' };
+export const MOD_NAME = { engine: 'Motor dañado', rudder: 'Timón dañado', fire: 'Incendio', tracks: 'Orugas rotas', turret: 'Torreta atascada', controls: 'Mandos dañados', gun: 'Torre destruida', ammo: 'Santabárbara alcanzada' };
 export function applyCrit(e, m, by, idx) {
   if (!e.alive) return;
   if (m === 'gun') { const t = e.tur[idx]; if (!t || t.userData.dead) return; t.userData.dead = true; t.rotation.z = 0.12; t.rotation.x = 0.08; }
   else if (m === 'fire') { if (e.mods.fire > 0) return; e.mods.fire = 16 + rnd(0, 10); }
   else if (m === 'tracks') { e.mods.tracks = 9; }
+  else if (m === 'ammo') { // impacto en la munición: daño enorme e incendio (no queda como avería)
+    G.onCrit && G.onCrit(e, m, by);
+    if (!e.mods.fire) e.mods.fire = 14;
+    damage(e, e.s.hp * (e.dom === 'sea' ? 0.3 : 0.5), by, null, 'ammo'); FX.explosion(e.p.clone().setY(Math.max(e.p.y, 0) + 2), e.dom === 'sea' ? 1.6 : 0.9);
+    return;
+  }
   else { if (e.mods[m]) return; e.mods[m] = true; }
   G.onCrit && G.onCrit(e, m, by);
 }
@@ -206,12 +222,14 @@ function rollCrit(e, q, dealt, hitP, zone) {
     if (lz < -0.55 && r() < 0.35) applyCrit(e, r() < 0.5 ? 'rudder' : 'engine', by);
     else if (r() < (q.kind === 'torp' ? 0.5 : 0.07)) applyCrit(e, 'engine', by);
     if (r() < (q.ammo === 'he' ? 0.28 : 0.09) + (q.kind === 'torp' ? 0.35 : 0)) applyCrit(e, 'fire', by);
+    if (q.kind === 'naval' && q.ammo !== 'he' && dealt >= 40 && Math.abs(lz) < 0.45 && e.cls !== 'pt' && r() < 0.03) applyCrit(e, 'ammo', by);
   } else if (e.cls === 'tank') {
     if (!big) return;
     if (zone === 1 && r() < 0.3) applyCrit(e, 'tracks', by);
     if (zone === 2 && r() < 0.35) applyCrit(e, 'engine', by);
     if ((zone === 2 && r() < 0.15) || (q.ammo === 'he' && r() < 0.06)) applyCrit(e, 'fire', by);
     if (zone === 0 && r() < 0.12) applyCrit(e, 'turret', by);
+    if (zone !== 0 && q.ammo !== 'he' && r() < (zone === 1 ? 0.06 : 0.04)) applyCrit(e, 'ammo', by);
   } else if (e.dom === 'air') {
     if (r() < (big ? 0.3 : 0.025)) applyCrit(e, ['engine', 'controls', 'fire'][(r() * 3) | 0], by);
   }
@@ -294,7 +312,7 @@ export function updateProjs(dt) {
         if (e.dom === 'air') { if (q.kind === 'bullet' && e.p.distanceToSquared(p) < (e.r + 1.2) ** 2) hit = true; }
         else if (q.kind !== 'bullet' || q.surface) hit = inBox(e, p, q.kind === 'naval' ? 0.8 : 0.2);
         // la cobertura (setos, árboles, casas) se traga parte de los disparos contra unidades de tierra
-        if (hit && q.owner && coverOf(e) > 0.25 && dist2(q.owner.p, e.p) > 60 && Math.random() < 0.4 * coverOf(e)) { FX.dirt(p.clone(), 0.6); if (q.owner === G.player && G.onMsg) G.onMsg('El disparo da en la cobertura', '', 0.8); done = true; break; }
+        if (hit && q.owner && coverOf(e) > 0.25 && dist2(q.owner.p, e.p) > 60 && Math.random() < 0.4 * coverOf(e)) { FX.dirt(p.clone(), 0.6); G.onCover && G.onCover(e, q.owner); done = true; break; }
         if (hit) {
           const mlt = ammoMult(q, e), zone = damage(e, q.dmg * mlt, q.owner, q.v, q.kind);
           rollCrit(e, q, q.dmg * mlt * (zone !== null && e.s.armor ? e.s.armor[zone] : 1), p, zone);
@@ -442,7 +460,7 @@ function fireFlak(e) {
   FX.muzzle(from, dir.clone().normalize(), 0.8);
   e.cd.main = s.rof * rnd(0.8, 1.2); FX.sfx('flak', e.p, 0.5);
 }
-function torpLead(e, t, sp = 55) {
+export function torpLead(e, t, sp = 55) {
   let tp = t.p.clone();
   for (let k = 0; k < 3; k++) { const d = dist2(e.p, tp); tp = t.p.clone().addScaledVector(t.vel, d / sp); }
   return Math.atan2(tp.x - e.p.x, tp.z - e.p.z);
@@ -662,8 +680,9 @@ export function controlPlayer(e, dt) {
     const filt = targetFilter(e), rng = e.cls === 'sub' ? 900 : weaponRange(e);
     e.target = playerTarget(e, filt, rng);
     e.bear = e.target ? bearingCount(e, e.target.p) : 0;
-    if (e.cls === 'destroyer' || e.cls === 'cruiser' || e.cls === 'battleship') { e.aimReady = aimTurrets(e, e.target?.p, dt, e.cls === 'battleship' ? 0.7 : e.cls === 'cruiser' ? 1.1 : 1.6); if (f1) fireNaval(e, e.target); fireAA(e); }
-    else if (e.cls === 'pt') { aimTurrets(e, e.target?.p, dt, 3); if (f1 && e.target) fireGuns(e, lead(e.p, e.target, 700).sub(e.p).setY(-0.5).normalize()); fireAA(e); }
+    const los = losCheck(e);
+    if (e.cls === 'destroyer' || e.cls === 'cruiser' || e.cls === 'battleship') { e.aimReady = aimTurrets(e, e.target?.p, dt, e.cls === 'battleship' ? 0.7 : e.cls === 'cruiser' ? 1.1 : 1.6); if (f1 && los) fireNaval(e, e.target); fireAA(e); }
+    else if (e.cls === 'pt') { aimTurrets(e, e.target?.p, dt, 3); if (f1 && e.target && los) fireGuns(e, lead(e.p, e.target, 700).sub(e.p).setY(-0.5).normalize()); fireAA(e); }
     else if (e.cls === 'sub') {
       aimTurrets(e, !e.submerged ? e.target?.p : null, dt, 1.2);
       if (f2 && !e.submerged && e.target && e.cd.main <= 0 && e.ammo.deck >= 1) { e.ammo.deck--; const t = e.target, from = e.p.clone().setY(2.5); const dx = t.p.x - from.x, dz = t.p.z - from.z, dd = Math.hypot(dx, dz), T = dd / 240; proj('naval', e, from, V3(dx / dd * 240, (0.5 * GRAV * T * T - 1) / T, dz / dd * 240), { grav: GRAV, dmg: e.s.deck.dmg, life: T + 1 }); e.cd.main = e.s.deck.rof; FX.muzzle(from, fwdOf(e), 0.7); FX.sfx('cannon', e.p, 0.6); }
@@ -676,7 +695,7 @@ export function controlPlayer(e, dt) {
     driveTank(e, thr, steer, dt);
     e.target = playerTarget(e, targetFilter(e), e.s.rifle.range);
     e.aimReady = e.target ? 1 : 0;
-    if (f1 && e.target) fireRifles(e, e.target);
+    if (losCheck(e) && f1 && e.target) fireRifles(e, e.target);
     if (f2) { const rt = e.target && e.target.cls === 'tank' && e.target.p.distanceTo(e.p) < e.s.rocket.range ? e.target : pickTarget(e, o => o.cls === 'tank' || o.cls === 'atgun', e.s.rocket.range); if (rt) fireRocket(e, rt); }
     return;
   }
@@ -685,7 +704,7 @@ export function controlPlayer(e, dt) {
     if (e.cls === 'tank') fireCoax(e);
     e.target = playerTarget(e, targetFilter(e), e.s.gun.range * 1.05);
     const ready = e.aimReady = aimTurrets(e, e.target?.p, dt, 1.6 * e.s.tsp * (e.mods.turret ? 0.3 : 1));
-    if (f1 && ready) fireTank(e, e.target);
+    if (losCheck(e) && f1 && ready) fireTank(e, e.target);
     if (f2 && smokeScreen(e)) G.onMsg && G.onMsg('Cortina de humo', '');
   }
 }

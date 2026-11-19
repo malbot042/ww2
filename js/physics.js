@@ -13,19 +13,25 @@ export function losBlocked(a, b) {
   const dx = b.p.x - a.p.x, dz = b.p.z - a.p.z, d = Math.hypot(dx, dz);
   if (d < 80) return false; // a corta distancia siempre se ve
   const key = a.id < b.id ? a.id * 65536 + b.id : b.id * 65536 + a.id, c = cache.get(key);
-  if (c && G.time - c.t < 0.5) return c.v;
+  if (c && G.time - c.t < 0.5) return c.v > 0;
   const ha = eye(a), hb = b.dom === 'sea' ? 2 : Math.max(b.p.y, G.map.gy(b.p.x, b.p.z)) + Math.max(1, (b.top || 3) * 0.5);
   const n = Math.min(90, Math.ceil(d / 14)), cov = G.map.coverAt;
-  let blocked = false, acc = 0, lastCell = -1;
+  let blocked = 0, acc = 0, lastCell = -1;
   for (let i = 1; i < n; i++) {
     const t = i / n, x = a.p.x + dx * t, z = a.p.z + dz * t, y = ha + (hb - ha) * t;
-    if (G.map.h(x, z) > y - 0.3) { blocked = true; break; }
+    if (G.map.h(x, z) > y - 0.3) { blocked = 1; break; }
     // cobertura: no cuenta la de los primeros 25 m (la del propio tirador)
-    if (cov && t * d > 25 && (1 - t) * d > 6) { const k = G.map.coverCell(x, z); if (k !== lastCell) { lastCell = k; acc += cov(x, z); if (acc >= 1) { blocked = true; break; } } }
+    if (cov && t * d > 25 && (1 - t) * d > 6) { const k = G.map.coverCell(x, z); if (k !== lastCell) { lastCell = k; acc += cov(x, z); if (acc >= 1) { blocked = 2; break; } } }
   }
   if (cache.size > 6000) cache.clear();
   cache.set(key, { t: G.time, v: blocked });
-  return blocked;
+  return blocked > 0;
+}
+// por qué está tapado: 'terrain' (islas, colinas), 'cover' (setos, bosques, casas) o null
+export function losWhy(a, b) {
+  if (!losBlocked(a, b)) return null;
+  const key = a.id < b.id ? a.id * 65536 + b.id : b.id * 65536 + a.id, c = cache.get(key);
+  return c && c.v === 2 ? 'cover' : 'terrain';
 }
 // cobertura en la posición de una unidad de tierra (0 = al descubierto, 1 = muy cubierta)
 export const coverOf = o => (o.dom === 'land' || o.dom === 'static') && G.map && G.map.coverAt ? Math.min(1, G.map.coverAt(o.p.x, o.p.z) * 1.5) : 0;

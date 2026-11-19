@@ -66,7 +66,7 @@
     <div class="ov-vet">
     <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Objetivo A·B·C</span>
     <span><kbd>Q</kbd> Seguirme</span><span><kbd>E</kbd> Ataque libre</span><span><kbd>R</kbd> Mantener</span><span><kbd>F</kbd> Defender</span>
-    <span><kbd>7</kbd><kbd>8</kbd><kbd>9</kbd> Apoyo</span><span><kbd>O</kbd> Formación</span><span><kbd>N</kbd> Munición</span><span><kbd>K</kbd> Reparar</span><span><kbd>T</kbd> Blanco</span><span><kbd>G</kbd> Grupo</span><span><kbd>Tab</kbd> Cambiar unidad</span><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Cámara</span><span><kbd>V</kbd> Vista: <b id="camName">Cenital</b></span><span><kbd>Z</kbd><kbd>X</kbd> Zoom</span><span><kbd>M</kbd> Mapa</span><span><kbd>P</kbd> Pausa</span>
+    <span><kbd>7</kbd><kbd>8</kbd><kbd>9</kbd> Apoyo</span><span><kbd>O</kbd> Formación</span><span><kbd>N</kbd> Munición</span><span><kbd>K</kbd> Reparar</span><span><kbd>T</kbd> Blanco</span><span><kbd>G</kbd> Grupo</span><span><kbd>Tab</kbd> Cambiar unidad</span><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Cámara</span><span><kbd>V</kbd> Vista: <b id="camName">Cenital</b></span><span><kbd>Z</kbd><kbd>X</kbd> Zoom</span><span><kbd>M</kbd> Mapa</span><span><kbd>Intro</kbd> Pausa táctica</span><span><kbd>P</kbd> Pausa</span>
     </div>
     <div class="ov-sim" id="ordSim"></div>
   </div>
@@ -77,15 +77,17 @@
   </div>
   <div id="msg"></div>
   <div id="hit"></div>
+  <div id="tacBar" class="hide"><b>PAUSA TÁCTICA</b><span>Da órdenes o cambia de unidad con calma</span><button class="btn" id="tacGo">Continuar <kbd>Intro</kbd></button></div>
 </div>
 
 <!-- MENÚ -->
 <div id="menu">
   <section id="scrFront" class="scr">
     <header class="brand"><h1>FRENTES <span>1939–45</span></h1><p>Mando táctico de escuadra · 10 contra 10 · Mar, aire y tierra</p></header>
+    <div id="hero"></div>
+    <nav id="more"><button data-tab="fronts">Frentes y campañas</button><button data-tab="learn">Aprender</button><button data-tab="hangar">Hangar</button><button data-tab="test">Campos de pruebas</button></nav>
     <div id="contCamp"></div>
-    <h2 class="pick">Elige el frente</h2>
-    <div id="fronts"></div>
+    <div id="fronts" class="hide"></div>
     <div class="qsel"><label>Dificultad <select id="optDiff2"><option value="easy">Fácil</option><option value="normal">Medio</option><option value="hard">Difícil</option></select></label><label>Mando aliado <select id="optCmd2"><option value="ai">IA coordinada</option><option value="me">Solo mis órdenes</option></select></label><label>Modo <select id="optMode2"><option value="simple">Sencillo</option><option value="veteran">Veterano</option></select></label><label>Calidad gráfica <select id="optQual2"></select></label></div>
     <p class="foot">Teclado: <kbd>← ↑ → ↓</kbd> mover tu unidad · <kbd>W A S D</kbd> cámara · <kbd>V</kbd> cambiar vista · <kbd>Espacio</kbd> disparar · <kbd>Shift</kbd> arma secundaria · <kbd>1 2 3</kbd> objetivos · <kbd>M</kbd> mapa táctico. El ratón es opcional: arrastra para seleccionar, clic derecho para ordenar, doble clic para tomar el mando.</p>
   </section>
@@ -114,8 +116,8 @@
 
 <div class="ov hide" id="pause">
   <div class="card">
-    <h2>Pausa táctica</h2>
-    <p class="note">El tiempo está detenido, pero puedes seguir dando órdenes, seleccionar con el ratón y cambiar de unidad.</p>
+    <h2>Pausa</h2>
+    <p class="note">Para dar órdenes viendo el campo de batalla usa la <b>pausa táctica</b>: <kbd>Intro</kbd> congela la acción y vuelve a pulsarla para seguir.</p>
     <p class="note">Con <b>Mando aliado: IA coordinada</b> (por defecto) la IA reparte la escuadra entre los objetivos cada pocos segundos, pide apoyo cuando sobran puntos de mando y te avisa por radio del esfuerzo principal. Las órdenes que des tú mandan sobre la IA durante 45 s.</p>
     <p class="note simple-only"><b>Modo sencillo:</b> la munición se elige sola (<kbd>N</kbd> para cambiarla a mano), <kbd>7</kbd> pide el apoyo más útil y la escuadra decide su formación. Mantener, defender, formaciones, grupos, órdenes encadenadas y los apoyos por separado (<kbd>8</kbd> <kbd>9</kbd>) están en el modo veterano.</p>
     <div class="help">
@@ -125,7 +127,7 @@
         <p><kbd>C</kbd> Sumergirse (submarino) · cargas de profundidad (destructor)</p><p><kbd>N</kbd> Munición perforante (AP) o explosiva (HE)</p><p><kbd>🎮</kbd> Mando: <span id="padHelp"></span></p><p><kbd>J</kbd> Bengala (de noche o al atardecer): ilumina la zona y revela a todos los que están debajo</p><p><kbd>K</kbd> Control de daños: apaga incendios y repara averías</p><p><kbd>Shift</kbd> en un portaaviones: lanzar avión · <kbd>L</kbd> aterrizar sobre él</p><p><kbd>T</kbd> Siguiente blanco (fijado) · <kbd>Y</kbd> volver a automático · clic sobre un enemigo para fijarlo</p></div>
       <div><h4>Escuadra</h4>
         <p><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Enviar a objetivo A, B o C</p><p><kbd>Q</kbd> Seguirme en formación</p><p><kbd>E</kbd> Ataque libre</p><p><kbd>R</kbd> Mantener posición</p><p><kbd>F</kbd> Defender lo nuestro</p>
-        <p><kbd>Shift</kbd>+<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Encadenar objetivos (A y luego B…)</p><p><kbd>O</kbd> Formación: cuña, línea o columna</p><p><kbd>7</kbd> Artillería · <kbd>8</kbd> Ataque aéreo · <kbd>9</kbd> Refuerzo (puntos de mando; apuntan al ratón, a tu blanco o al objetivo)</p><p>Ratón: <kbd>Shift</kbd>+clic derecho añade puntos de ruta</p><p><kbd>G</kbd> Seleccionar por tipo: todos, barcos, aviones o tanques</p><p><kbd>Tab</kbd> Tomar el mando de otra unidad</p><p><kbd>Esc</kbd> Seleccionar a toda la escuadra</p></div>
+        <p><kbd>Shift</kbd>+<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Encadenar objetivos (A y luego B…)</p><p><kbd>O</kbd> Formación: cuña, línea o columna</p><p><kbd>7</kbd> Artillería · <kbd>8</kbd> Ataque aéreo · <kbd>9</kbd> Refuerzo (puntos de mando; apuntan al ratón, a tu blanco o al objetivo)</p><p>Ratón: <kbd>Shift</kbd>+clic derecho añade puntos de ruta</p><p><kbd>G</kbd> Seleccionar por tipo: todos, barcos, aviones o tanques</p><p><kbd>Tab</kbd> Tomar el mando de otra unidad</p><p><kbd>Intro</kbd> Pausa táctica: congela la acción para dar órdenes con calma</p><p><kbd>Esc</kbd> Seleccionar a toda la escuadra</p></div>
       <div><h4>Vista</h4>
         <p><kbd>W</kbd><kbd>S</kbd> Bajar o subir la cámara (de cenital a vista de persecución)</p><p><kbd>A</kbd><kbd>D</kbd> Girar la cámara alrededor de tu unidad</p>
         <p><kbd>V</kbd> Vistas: cenital, desde atrás, laterales y mirando hacia atrás · <kbd>B</kbd> volver a cenital</p>

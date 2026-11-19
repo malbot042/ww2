@@ -7,7 +7,7 @@ const BTN = [
   ['Space', 'Fuego', 'fire'], ['ShiftLeft', 'Secund.', 'sec'], ['KeyT', 'Blanco', ''], ['KeyK', 'Reparar', ''],
   ['Tab', 'Unidad', ''], ['KeyV', 'Vista', ''], ['KeyM', 'Mapa', ''],
 ];
-const ORD = [['Digit1', 'A'], ['Digit2', 'B'], ['Digit3', 'C'], ['KeyQ', 'Sígueme'], ['KeyR', 'Mantener'], ['KeyP', 'Ⅱ']];
+const ORD = [['Digit1', 'A'], ['Digit2', 'B'], ['Digit3', 'C'], ['KeyQ', 'Sígueme'], ['KeyR', 'Mantener'], ['Enter', 'Táctica'], ['KeyP', 'Ⅱ']];
 let root = null, active = false, held = {};
 export function initTouch(canvas) {
   root = document.createElement('div'); root.id = 'touch'; root.className = 'hide';

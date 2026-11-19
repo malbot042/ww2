@@ -180,3 +180,4 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 | v2.0 | Selector de dificultad (fácil, medio, difícil) y equilibrio de Islas Salomón, Midway y Bocage comprobado con simulaciones |
 | v2.1 | Tres campos de pruebas, uno por modo (naval, aéreo y terrestre), con su escenario, unidades, maniobras y demostraciones |
 | v2.2 | Línea de visión (islas y colinas tapan), cobertura terrestre (setos, bosques, casas) y colisiones de barcos, aviones y tanques |
+| v2.3 | Portada con botón Jugar, aviso de línea de tiro y estado de cobertura/visibilidad, marcas de impacto por tipo (blindaje, averías, santabárbara, cobertura), punto de anticipación y pausa táctica |
