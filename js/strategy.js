@@ -1,5 +1,6 @@
 // Capa estratégica: niebla de guerra, puntos de mando y apoyo (artillería, ataque aéreo, refuerzos)
 import * as THREE from 'three';
+import { losBlocked, coverOf } from './physics.js';
 import { diff } from './difficulty.js';
 import { G } from './state.js';
 import { BATTLES, MODELS, CLS } from './data.js';
@@ -24,14 +25,6 @@ export function sightOf(e) {
   }
   return 500;
 }
-const losBlocked = (a, b) => {
-  const ya = a.p.y + 3, yb = b.p.y + 2;
-  for (let k = 1; k < 8; k++) {
-    const t = k / 8, x = a.p.x + (b.p.x - a.p.x) * t, z = a.p.z + (b.p.z - a.p.z) * t;
-    if (G.map.h(x, z) > ya + (yb - ya) * t + 0.8) return true;
-  }
-  return false;
-};
 const smokeOn = (a, b) => G.smokes.some(s => {
   const abx = b.x - a.x, abz = b.z - a.z, l2 = abx * abx + abz * abz || 1;
   const t = clamp(((s.x - a.x) * abx + (s.z - a.z) * abz) / l2, 0, 1);
@@ -47,13 +40,15 @@ function canSee(e, o) {
   let r = sightOf(e) * k;
   if (o.dom === 'air') r = Math.max(r, 1000 * k);
   else if (e.dom === 'air') r = Math.min(r, 750 + (e.p.y - G.map.gy(e.p.x, e.p.z)) * 1.5);
+  if (coverOf(o) > 0.25 && e.dom !== 'air') r *= 1 - 0.45 * coverOf(o); // a cubierto se ve peor
   if (o.cls === 'inf') r *= Math.abs(o.speed) < 1 ? 0.55 : 0.75;
   else if (o.cls === 'atgun') r *= 0.65;
   else if (o.cls === 'sub' || o.cls === 'pt') r *= 0.75;
   if (d > r) return false;
   if (o.revealT > 0 && d < r * 1.4) return true;
-  const ground = e.dom !== 'air' && o.dom !== 'air' && e.dom !== 'sea' && o.dom !== 'sea';
-  if (ground && (losBlocked(e, o) || smokeOn(e.p, o.p))) return false;
+  // relieve e islas (también entre barcos) y cobertura tapan la vista; el humo solo en tierra
+  if (e.dom !== 'air' && o.dom !== 'air' && !o.lit && losBlocked(e, o)) return false;
+  if (e.dom === 'land' && o.dom === 'land' && smokeOn(e.p, o.p)) return false;
   return true;
 }
 let visT = 0;

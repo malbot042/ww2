@@ -101,6 +101,13 @@ Por defecto el juego arranca en **modo sencillo**, pensado para jugar sin aprend
 
 El **modo veterano** (se elige en el menú principal o en la pausa) activa todo: presupuesto y colocación, niebla de guerra, mantener y defender, formaciones, grupos, órdenes encadenadas y los tres apoyos por separado. La tabla siguiente es la de este modo.
 
+## Línea de visión, cobertura y colisiones
+- **Islas y colinas tapan**: un barco o tanque detrás de una isla o una loma no se ve ni se puede apuntar; la IA tampoco dispara a través del terreno. Los aviones ven por encima de todo.
+- **Cobertura terrestre**: setos, bosques, palmeras, rocas y casas reducen la distancia a la que se ve una unidad (hasta −45 %) y paran parte de los disparos (≈40 % × cobertura, más con casas). Mucha vegetación entre tirador y blanco también corta la visión.
+- **Choques entre navíos**: los barcos se esquivan; si chocan, el daño depende de la masa y la velocidad relativa (menor entre propios). Un destructor puede embestir a un submarino en superficie, que recibe el doble.
+- **Aire**: colisiones en el aire raras, solo entre enemigos que se cruzan de frente a gran velocidad.
+- **Tierra**: los carros arrollan infantería enemiga y se dañan al embestir otro vehículo a velocidad.
+
 ## Controles
 
 | Tecla | Acción |

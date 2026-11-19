@@ -379,6 +379,10 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
 
   // ----- Vegetación y construcciones -----
   const d = new THREE.Object3D();
+  // rejilla de cobertura (setos, árboles, casas...) para la línea de visión y los impactos
+  const CS = 12, CN = Math.ceil(ext / CS), COVER = new Float32Array(CN * CN), half2 = ext / 2;
+  const cellOf = (x, z) => { const i = ((x + half2) / CS) | 0, j = ((z + half2) / CS) | 0; return i < 0 || j < 0 || i >= CN || j >= CN ? -1 : j * CN + i; };
+  const addCover = (list, w) => { for (const p of list) { const k = cellOf(p.x, p.z); if (k >= 0) COVER[k] = Math.min(1.2, COVER[k] + w); } };
   function inst(geo, color, list, opts = {}) {
     if (!list.length) return;
     const mat = new THREE.MeshStandardMaterial({ color, roughness: opts.rough ?? 0.92, flatShading: !!opts.flat });
@@ -396,31 +400,31 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
     const trunk = new THREE.CylinderGeometry(0.22, 0.38, 9, 6); trunk.translate(0, 4.5, 0); trunk.rotateZ(0.12);
     const fr = []; for (let k = 0; k < 8; k++) { const f = new THREE.BoxGeometry(0.5, 0.12, 4.2); f.translate(0, 0, 2.1); f.rotateX(0.45); f.rotateY(k / 8 * Math.PI * 2); fr.push(f); }
     const crown = mergeGeometries(fr); crown.translate(1.1, 9, 0);
-    inst(trunk, 0x7d6a50, palm); inst(crown, 0x4f7f34, palm, { flat: true });
+    inst(trunk, 0x7d6a50, palm); inst(crown, 0x4f7f34, palm, { flat: true }); addCover(palm, 0.12);
     const jt = mergeGeometries([new THREE.IcosahedronGeometry(3.4, 0).translate(0, 7, 0), new THREE.IcosahedronGeometry(2.6, 0).translate(2.2, 6, 1), new THREE.IcosahedronGeometry(2.4, 0).translate(-1.8, 6.5, -1.2), new THREE.IcosahedronGeometry(2.2, 0).translate(0.4, 8.8, 0.3)]);
-    inst(jt, 0x2e5427, jungle, { flat: true });
+    inst(jt, 0x2e5427, jungle, { flat: true }); addCover(jungle, 0.3);
     const huts = scatter(1200, (x, z, y) => y > 1.8 && y < 4 && R() < 0.06 && inR('trop', x, z));
-    inst(new THREE.BoxGeometry(5, 3, 6).translate(0, 1.5, 0), 0x8a7558, huts);
+    inst(new THREE.BoxGeometry(5, 3, 6).translate(0, 1.5, 0), 0x8a7558, huts); addCover(huts, 0.8);
     inst(new THREE.ConeGeometry(4.6, 3, 4).rotateY(Math.PI / 4).translate(0, 4.4, 0), 0x9b8a5e, huts, { flat: true });
   } if (cfg.theme === 'desert' || isMix) {
     const scrub = scatter(5000, (x, z, y) => y > 1.5 && R() < 0.4 && !inZone(x, z, 20) && inR('des', x, z), () => ({ sy: 0.5 }));
     inst(new THREE.IcosahedronGeometry(1.4, 0).translate(0, 0.6, 0), 0x6f6a3e, scrub, { flat: true });
     const rocks = scatter(2500, (x, z, y) => y > 1 && N.fbm(x * 0.004, z * 0.004, 2) > 0.15 && R() < 0.5 && inR('des', x, z), () => ({ sy: 0.55, sx: 1 + Math.random() }));
-    inst(new THREE.DodecahedronGeometry(2.2, 0), 0x8c7454, rocks, { flat: true, sink: 0.6 });
+    inst(new THREE.DodecahedronGeometry(2.2, 0), 0x8c7454, rocks, { flat: true, sink: 0.6 }); addCover(rocks, 0.2);
     // Oasis con palmeras
     const oasis = []; for (let k = 0; k < 3; k++) { const [mox, moz] = isMix ? extra.polar(125 + R() * 60, 900 + R() * 1500) : [0, 0], ox = isMix ? mox : (R() * 2 - 1) * 900 * S, oz = isMix ? moz : (R() * 2 - 1) * 900 * S; for (let q = 0; q < 26; q++) oasis.push({ x: ox + (R() - 0.5) * 90, z: oz + (R() - 0.5) * 90, r: R() * 6, s: 0.8 + R() * 0.4 }); }
     const trunk = new THREE.CylinderGeometry(0.22, 0.38, 9, 6).translate(0, 4.5, 0).rotateZ(0.1);
     const fr = []; for (let k = 0; k < 8; k++) { const f = new THREE.BoxGeometry(0.5, 0.12, 4); f.translate(0, 0, 2); f.rotateX(0.45); f.rotateY(k / 8 * Math.PI * 2); fr.push(f); }
-    inst(trunk, 0x7d6a50, oasis); inst(mergeGeometries(fr).translate(0.9, 9, 0), 0x5b7f39, oasis, { flat: true });
+    inst(trunk, 0x7d6a50, oasis); inst(mergeGeometries(fr).translate(0.9, 9, 0), 0x5b7f39, oasis, { flat: true }); addCover(oasis, 0.2);
     // Casas blancas y postes de telégrafo
     const houses = []; for (let k = 0; k < 6; k++) { const [mvx, mvz] = isMix ? extra.polar(120 + R() * 60, 800 + R() * 1500) : [0, 0], vx = isMix ? mvx : (R() * 2 - 1) * 1000 * S, vz = isMix ? mvz : (R() * 2 - 1) * 1000 * S; if (inZone(vx, vz, 120)) continue; for (let q = 0; q < 8; q++) houses.push({ x: vx + (R() - 0.5) * 70, z: vz + (R() - 0.5) * 70, r: R() * 0.3, s: 0.8 + R() * 0.5 }); }
-    inst(new THREE.BoxGeometry(8, 4, 8).translate(0, 2, 0), 0xe4d8bf, houses.filter(p => inR('des', p.x, p.z)));
+    inst(new THREE.BoxGeometry(8, 4, 8).translate(0, 2, 0), 0xe4d8bf, houses.filter(p => inR('des', p.x, p.z))); addCover(houses.filter(p => inR('des', p.x, p.z)), 1);
   } if (cfg.theme === 'channel' || cfg.theme === 'bocage' || isMix) { // channel / bocage
     const isB = cfg.theme === 'bocage' || isMix;
     const trees = scatter(isB ? 9000 : 6000, (x, z, y) => y > 3 && N.fbm(x * 0.0035, z * 0.0035, 3) > 0.12 && !inZone(x, z, 60) && inR('eur', x, z));
     const tg = mergeGeometries([new THREE.IcosahedronGeometry(3.6, 0).translate(0, 7.5, 0), new THREE.IcosahedronGeometry(2.8, 0).translate(2, 6.6, 1.4), new THREE.IcosahedronGeometry(2.6, 0).translate(-2, 7, -1), new THREE.IcosahedronGeometry(2.4, 0).translate(0.5, 9.4, 0.6)]);
     inst(tg, 0x3b5a2c, trees, { flat: true });
-    inst(new THREE.CylinderGeometry(0.3, 0.45, 5, 5).translate(0, 2.5, 0), 0x5a4a38, trees);
+    inst(new THREE.CylinderGeometry(0.3, 0.45, 5, 5).translate(0, 2.5, 0), 0x5a4a38, trees); addCover(trees, 0.2);
     // Setos (bocage) en los bordes de los campos
     const hedges = [], htrees = [];
     if (isB || cfg.gen === 'channelAir' || cfg.gen === 'normandy') {
@@ -440,14 +444,14 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
         }
       }
     }
-    inst(tg, 0x34522a, htrees, { flat: true });
-    inst(new THREE.IcosahedronGeometry(1.7, 0).scale(1.5, 1.2, 2.6).translate(0, 1.5, 0), 0x3a5428, hedges, { flat: true });
+    inst(tg, 0x34522a, htrees, { flat: true }); addCover(htrees, 0.2);
+    inst(new THREE.IcosahedronGeometry(1.7, 0).scale(1.5, 1.2, 2.6).translate(0, 1.5, 0), 0x3a5428, hedges, { flat: true }); addCover(hedges, 0.17);
     // Pueblos normandos
     const houses = [], roofs = [];
     const vill = isMix ? [[55, 1350], [20, 1800], [85, 2000], [100, 900], [345, 1500], [35, 700]].map(([a, r]) => extra.polar(a, r)) : isB ? zones.map(([x, z]) => [x + 70, z + 60]).concat([[-900, -500], [880, 520], [-300, 650], [1300, -900], [-1350, 800]].map(([x, z]) => [x * S, z * S])) : cfg.gen === 'normandy' ? [[zones[1][0] + 60, zones[1][1] + 50], [zones[1][0] - 70, zones[1][1] - 40], [-900 * S, -700 * S], [900 * S, -800 * S]] : [];
     if (!isB) for (let k = 0; k < 10; k++) { const x = (R() * 2 - 1) * 1300 * S, z = (R() * 2 - 1) * 1300 * S; if (h(x, z) > 4) vill.push([x, z]); }
     for (const [vx, vz] of vill) for (let q = 0; q < 12; q++) { const x = vx + (R() - 0.5) * 110, z = vz + (R() - 0.5) * 110; if (h(x, z) < 2 || roadDist(x, z) < 8 || inZone(x, z, 25)) continue; const p = { x, z, r: (R() < 0.5 ? 0 : Math.PI / 2) + (R() - 0.5) * 0.2, s: 0.85 + R() * 0.4 }; houses.push(p); roofs.push(p); }
-    inst(new THREE.BoxGeometry(7, 5, 10).translate(0, 2.5, 0), 0xcfc4ad, houses);
+    inst(new THREE.BoxGeometry(7, 5, 10).translate(0, 2.5, 0), 0xcfc4ad, houses); addCover(houses, 1);
     if (cfg.gen === 'normandy') { // erizos checos en la playa
       const hog = mergeGeometries([new THREE.BoxGeometry(0.35, 0.35, 3.4).rotateX(0.6), new THREE.BoxGeometry(0.35, 0.35, 3.4).rotateX(-0.6).rotateY(Math.PI / 2), new THREE.BoxGeometry(3.4, 0.35, 0.35).rotateZ(0.6)]).translate(0, 1, 0);
       const hogs = scatter(9000, (x, z, y) => y > -1.2 && y < 1.3 && R() < 0.5 && !inZone(x, z, 12), undefined, true);
@@ -492,6 +496,8 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
   G.map = {
     extra, key: mapKey, cfg, theme: cfg.theme, ext, n, H, h, isLand, isSea, isDeep, bounds: cfg.bounds, zones: zonePts, sitesA, sitesE, roadDist,
     gy: (x, z) => Math.max(h(x, z), 0),
+    coverAt: (x, z) => { const k = cellOf(x, z); return k < 0 ? 0 : COVER[k]; },
+    coverCell: cellOf,
     region: extra.region || null,
     isDesert: (x, z) => cfg.theme === 'desert' || (cfg.theme === 'mixed' && extra.region(x, z) === 'des'),
     waterMat: wmat, water,

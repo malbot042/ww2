@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { losBlocked, coverOf, collisions, landImpact } from './physics.js';
 import { diff } from './difficulty.js';
 import { trackMark } from './marks.js';
 import { updateDamageLook, onKillFx, crater } from './damagefx.js';
@@ -118,7 +119,7 @@ function playerScore(e, o, d, range) {
   return sc;
 }
 function candidates(e, filt, range) {
-  return G.ents.filter(o => o.alive && o.side !== e.side && !o.falling && filt(o) && seen(e, o) && o.p.distanceTo(e.p) <= range && !(e.dom === 'land' && smokeBlocks(e.p, o.p)));
+  return G.ents.filter(o => o.alive && o.side !== e.side && !o.falling && filt(o) && seen(e, o) && o.p.distanceTo(e.p) <= range && !(e.dom === 'land' && smokeBlocks(e.p, o.p)) && !losBlocked(e, o));
 }
 export function lockTarget(e, o) { e.lock = o; e.target = o; }
 function playerTarget(e, filt, range) {
@@ -143,6 +144,7 @@ export function pickTarget(e, filter, range, preferAim = false) {
     if (!o.alive || o.side === e.side || o.falling || !filter(o) || !seen(e, o)) continue;
     const d = o.p.distanceTo(e.p); if (d > range) continue;
     if (e.dom === 'land' && smokeBlocks(e.p, o.p)) continue;
+    if (losBlocked(e, o)) continue; // islas, colinas, setos, bosques y casas tapan la vista
     let sc = d;
     if (preferAim) { const a = Math.abs(angDiff(angTo(e, o.p), e.h + (e.tYaw[0] || 0))); sc = d * (1 + a * 1.5); }
     if (o === e.target) sc *= 0.75;
@@ -291,6 +293,8 @@ export function updateProjs(dt) {
         let hit = false;
         if (e.dom === 'air') { if (q.kind === 'bullet' && e.p.distanceToSquared(p) < (e.r + 1.2) ** 2) hit = true; }
         else if (q.kind !== 'bullet' || q.surface) hit = inBox(e, p, q.kind === 'naval' ? 0.8 : 0.2);
+        // la cobertura (setos, árboles, casas) se traga parte de los disparos contra unidades de tierra
+        if (hit && q.owner && coverOf(e) > 0.25 && dist2(q.owner.p, e.p) > 60 && Math.random() < 0.4 * coverOf(e)) { FX.dirt(p.clone(), 0.6); if (q.owner === G.player && G.onMsg) G.onMsg('El disparo da en la cobertura', '', 0.8); done = true; break; }
         if (hit) {
           const mlt = ammoMult(q, e), zone = damage(e, q.dmg * mlt, q.owner, q.v, q.kind);
           rollCrit(e, q, q.dmg * mlt * (zone !== null && e.s.armor ? e.s.armor[zone] : 1), p, zone);
@@ -572,7 +576,7 @@ function driveTank(e, thr, steer, dt) {
   const f = fwdOf(e), nx = e.p.x + f.x * e.speed * dt, nz = e.p.z + f.z * e.speed * dt;
   const pr = (e.hl + 1) * Math.sign(e.speed || 1);
   let clear = okSurface(e, nx, nz) && okSurface(e, nx + f.x * pr, nz + f.z * pr);
-  if (clear) for (const o of G.ents) if (o !== e && o.dom !== 'air' && (o.alive || o.dom === 'land') && Math.abs(o.p.x - nx) < 12 && Math.abs(o.p.z - nz) < 12 && Math.hypot(o.p.x - nx, o.p.z - nz) < o.hw + e.hw && Math.hypot(o.p.x - nx, o.p.z - nz) < Math.hypot(o.p.x - e.p.x, o.p.z - e.p.z)) { clear = false; break; }
+  if (clear) for (const o of G.ents) if (o !== e && o.dom !== 'air' && (o.alive || o.dom === 'land') && Math.abs(o.p.x - nx) < 12 && Math.abs(o.p.z - nz) < 12 && Math.hypot(o.p.x - nx, o.p.z - nz) < o.hw + e.hw && Math.hypot(o.p.x - nx, o.p.z - nz) < Math.hypot(o.p.x - e.p.x, o.p.z - e.p.z)) { if (o.alive && landImpact(e, o, damage)) continue; clear = false; break; }
   if (clear) { e.p.x = nx; e.p.z = nz; e.blocked = Math.max(0, e.blocked - dt); } else { e.speed *= 0.3; e.blocked += dt; }
   const fx = f.x * e.hl * 0.8, fz = f.z * e.hl * 0.8;
   const yf = map.gy(e.p.x + fx, e.p.z + fz), yb = map.gy(e.p.x - fx, e.p.z - fz), yl = map.gy(e.p.x + fz * 0.5, e.p.z - fx * 0.5), yr = map.gy(e.p.x - fz * 0.5, e.p.z + fx * 0.5);
@@ -698,6 +702,16 @@ function sepSteer(e, rad) {
 }
 function steerTo(e, ang, gain = 2.2) { return clamp(angDiff(ang, e.h) * gain, -1, 1); }
 function avoid(e, ang) {
+  // barcos: apartarse de otros buques que están delante y cerca (evita choques en formación)
+  if (e.dom === 'sea' && !e.submerged) {
+    for (const o of G.ents) {
+      if (o === e || !o.alive || o.dom !== 'sea' || o.submerged) continue;
+      const dx = o.p.x - e.p.x, dz = o.p.z - e.p.z, d = Math.hypot(dx, dz), lim = (e.hl + o.hl) * 1.6 + Math.abs(e.speed) * 2;
+      if (d > lim) continue;
+      const rel = angDiff(Math.atan2(dx, dz), ang);
+      if (Math.abs(rel) < 0.7 && (o.side === e.side || e.cls !== 'destroyer' || o.cls !== 'sub')) { ang -= Math.sign(rel || 1) * 0.8 * (1 - d / lim + 0.3); break; }
+    }
+  }
   // sondeo de obstáculos (agua/tierra) en abanico
   const L = e.dom === 'sea' ? 70 + Math.abs(e.speed) * 3 : 20 + Math.abs(e.speed);
   const free = a => { for (const k of [0.5, 1]) { const x = e.p.x + Math.sin(a) * L * k, z = e.p.z + Math.cos(a) * L * k; if (!okSurface(e, x, z)) return false; } return true; };
@@ -1040,6 +1054,7 @@ export function updateUnits(dt) {
     if (e.dom !== 'static' && e.cls !== 'inf' && e.hp < e.s.hp * 0.5 && Math.random() < 0.35) FX.trailSmoke(e.p.clone().setY(e.p.y + (e.dom === 'air' ? 0 : e.top * 0.6)), e.hp < e.s.hp * 0.25, e.dom === 'sea' ? 1.6 : 1);
     if (e.dom === 'static' && e.hp < e.s.hp * 0.6 && Math.random() < 0.2) FX.fire(e.p.clone().setY(e.p.y + 3), 1.4);
   }
+  collisions(dt, damage);
   for (let i = G.smokes.length - 1; i >= 0; i--) { const s = G.smokes[i]; s.t -= dt; if (Math.random() < 0.6) FX.smokeScreen(V3(s.x, G.map.gy(s.x, s.z), s.z)); if (s.t <= 0) G.smokes.splice(i, 1); }
 }
 // averías, incendios, reparación y reabastecimiento en base
