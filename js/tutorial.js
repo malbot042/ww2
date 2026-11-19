@@ -42,7 +42,7 @@ function render(done = false) {
   $('tutT').textContent = done ? (cfg.doneTitle || '¡Listo para el frente!') : s.t;
   $('tutD').innerHTML = done ? (cfg.done || 'Ya conoces lo básico. Elige un frente en el menú; en la pausa (<kbd>P</kbd>) tienes todos los controles.') : s.d;
   $('tutBar').style.width = ((done ? steps.length : i) / steps.length * 100) + '%';
-  $('tutSkip').classList.toggle('hide', done);
+  $('tutSkip').classList.toggle('hide', done); $('tutSkip').textContent = cfg.skipLabel || 'Saltar paso';
   $('tutExit').textContent = done ? (cfg.exitLabel || 'Volver al menú') : 'Salir';
 }
 function next() { i++; if (i >= steps.length) { render(true); G.onMsg && G.onMsg(cfg.title ? 'Maniobra completada' : 'Tutorial completado', ''); return; } begin(); }

@@ -1,5 +1,6 @@
 // Campo de pruebas: elegir cualquier unidad, añadir blancos y enemigos, invulnerabilidad
 import { G } from './state.js';
+import { runDoctrineDemo } from './doctrine.js';
 import { drillsFor, runDrill, DOM_NAME as DRILL_DOM } from './drills.js';
 import { MODELS, CLS, FAC_NAME } from './data.js';
 import { spawnUnit, spawnAA, spawnBattery, anchorFor, lockTarget } from './units.js';
@@ -51,6 +52,7 @@ export function initSandbox(opts) {
   $('sbDrill').innerHTML = ['sea', 'air', 'land'].map(d => `<optgroup label="${DRILL_DOM[d]}">${drillsFor(d).map(x => `<option value="${x.id}">${x.t}</option>`).join('')}</optgroup>`).join('');
   $('sbDrillGo').onclick = ev => { runDrill($('sbDrill').value, G.player && G.player.key, { clear: sandboxClear, quickTest }); ev.target.blur(); };
   $('sbDrill').addEventListener('change', () => $('sbDrill').blur());
+  document.querySelectorAll('#sbDoc [data-doc]').forEach(b => b.onclick = ev => { runDoctrineDemo(b.dataset.doc, { clear: sandboxClear, quickTest }); ev.target.blur(); });
   flash = opts.flash; onPlayerChange = opts.onPlayerChange;
   if (wired) return; wired = true;
   $('sbMe').innerHTML = options(false); $('sbUnit').innerHTML = options(true);

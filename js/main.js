@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { initSchool, openSchool, closeSchool, runDoctrineDemo, updateDoctrine, stopDoctrineDemo } from './doctrine.js';
 import { initHangar, openHangar, closeHangar, updateHangar, renderHangar } from './hangar.js';
 import { autoSupportKind } from './strategy.js';
 import { initPost, resizePost, renderPost } from './post.js';
@@ -148,7 +149,7 @@ function frame(now) {
   const dt = G.slowT > 0 ? rdt * 0.3 : rdt; if (G.slowT > 0) G.slowT -= rdt;
   if (G.map) {
     const sim = G.running && !G.paused && !G.deploying;
-    if (sim) { recordReplay(dt); updateTutorial(dt); updateSplit(dt); }
+    if (sim) { recordReplay(dt); updateTutorial(dt); updateSplit(dt); updateDoctrine(dt); }
     if (sim || G.demo) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); }
     else if (G.deploying) { updateVision(dt); updateMarkers(); }
     updateWorld(dt); if (sim || G.demo) updateEnv(dt); updateCamera(dt);
@@ -176,6 +177,11 @@ function buildFrontMenu() {
       <span class="fd">Aprende a moverte, manejar la cámara, fijar blancos, disparar, cambiar de munición, reparar y dar órdenes a tu escuadra.</span>
       <span class="fb"><i>Guiado</i></span>
     </button>
+    <button class="front f-school" data-school="1">
+      <span class="fy">Naval · Aérea · Terrestre · Combinada</span><span class="fn">Escuela de mando</span><span class="fv">Estrategia de grupo</span>
+      <span class="fd">Qué misión tiene cada tipo de unidad en el grupo, a qué distancia debe estar, quién entra primero en combate y los errores típicos, con demostraciones en 3D.</span>
+      <span class="fb"><i>Manual</i><i>Demostraciones</i></span>
+    </button>
     <button class="front f-hangar" data-hangar="1">
       <span class="fy">${Object.keys(MODELS).length} modelos en 3D</span><span class="fn">Hangar</span><span class="fv">Todas las unidades</span>
       <span class="fd">Gira cada barco, avión y carro en 3D, compara sus características, aprende su papel en combate y salta a una prueba rápida o a la batalla donde aparece.</span>
@@ -189,7 +195,7 @@ function buildFrontMenu() {
   const sc = savedCampaign();
   $('contCamp').innerHTML = sc ? `<button class="btn" id="btnCont">Continuar campaña</button><span>${FRONTS[sc.front].name} · batalla ${sc.i + 1} de ${sc.list.length} · ${sc.score} pts${sc.unlocked.length ? ' · ' + sc.unlocked.length + (sc.unlocked.length === 1 ? ' unidad desbloqueada' : ' unidades desbloqueadas') : ''}</span><button class="ghost" id="btnDrop">Descartar</button>` : '';
   if (sc) { $('btnCont').onclick = () => { initAudio(); applyVolumes(); G.campaign = JSON.parse(JSON.stringify(sc)); toDeploy(G.campaign.list[G.campaign.i], true); }; $('btnDrop').onclick = () => { saveCampaign(null); buildFrontMenu(); }; }
-  $('fronts').querySelectorAll('.front').forEach(b => b.onclick = () => { initAudio(); applyVolumes(); if (b.dataset.hangar) { $('menu').classList.add('hide'); openHangar(); } else if (b.dataset.tut) launch('test', false, { tutorial: true }); else if (b.dataset.test) launch('test'); else buildBattleMenu(b.dataset.front); });
+  $('fronts').querySelectorAll('.front').forEach(b => b.onclick = () => { initAudio(); applyVolumes(); if (b.dataset.school) { $('menu').classList.add('hide'); openSchool(); } else if (b.dataset.hangar) { $('menu').classList.add('hide'); openHangar(); } else if (b.dataset.tut) launch('test', false, { tutorial: true }); else if (b.dataset.test) launch('test'); else buildBattleMenu(b.dataset.front); });
 }
 function buildBattleMenu(fk) {
   const f = FRONTS[fk];
@@ -218,7 +224,7 @@ function launch(key, keepCampaign = false, opts = {}) {
   show('loading'); $('loadTxt').textContent = `${BATTLES[key].title}, ${BATTLES[key].year}`;
   setTimeout(() => {
     G.running = false; G.paused = false; G.strategic = false; G.slowT = 0;
-    resetReplay(); stopSplit(); resize(); startBattle(key, false, opts);
+    stopDoctrineDemo(); resetReplay(); stopSplit(); resize(); startBattle(key, false, opts);
     if (opts.split) setupSplit();
     const p = G.player; G.targetZoom = G.zoom = ZOOM_DEF[p.dom];
     G.cam.preset = 0; G.cam.pitch = 1.1; G.cam.yaw = 0; G.cam.ang = 0; G.cam.rel = false; $('camName').textContent = 'Cenital';
@@ -227,12 +233,12 @@ function launch(key, keepCampaign = false, opts = {}) {
     $('top').classList.toggle('hide', test);
     stopTutorial(false);
     if (test && opts.tutorial) { sandboxHide(); startTutorial(() => toMenu()); }
-    else if (test) { initSandbox({ flash, onPlayerChange: e => { G.targetZoom = ZOOM_DEF[e.dom]; } }); sandboxStart(); if (opts.testUnit) { quickTest(opts.testUnit); G.targetZoom = ZOOM_DEF[G.player.dom]; } if (opts.drill) { runDrill(opts.drill, opts.drillUnit, { clear: sandboxClear, quickTest }); G.targetZoom = ZOOM_DEF[G.player.dom]; } } else sandboxHide();
+    else if (test) { initSandbox({ flash, onPlayerChange: e => { G.targetZoom = ZOOM_DEF[e.dom]; } }); sandboxStart(); if (opts.testUnit) { quickTest(opts.testUnit); G.targetZoom = ZOOM_DEF[G.player.dom]; } if (opts.drill) { runDrill(opts.drill, opts.drillUnit, { clear: sandboxClear, quickTest }); G.targetZoom = ZOOM_DEF[G.player.dom]; } if (opts.doctrine) runDoctrineDemo(opts.doctrine, { clear: sandboxClear, quickTest }); } else sandboxHide();
     G.running = true;
     radioStop(); if (G.battle.kind !== 'test') setTimeout(() => RADIO.start(), opts.place ? 0 : 1200);
     if (opts.place && G.battle.kind !== 'test') { beginPlacement(); flash('Fase de despliegue', 'Coloca tus unidades y pulsa Enter para comenzar', 4); return; }
     if (opts.tutorial) { flash('Tutorial', 'Sigue las instrucciones del panel', 3); return; }
-    if (opts.drill) return; // el panel de la maniobra ya explica qué hacer
+    if (opts.drill || opts.doctrine) return; // el panel ya explica qué hacer
     flash(G.battle.kind === 'test' ? 'Campo de pruebas' : `${BATTLES[key].title}, ${BATTLES[key].year}`, G.battle.kind === 'test' ? 'Elige unidad y blancos en el panel de la derecha' : G.battle.kind === 'combined' ? G.battle.hint : G.battle.kind === 'air' ? 'Pulsa 1, 2 o 3 para enviar tu escuadrilla contra las instalaciones A, B o C' : 'Pulsa 1, 2 o 3 para enviar tu escuadra a los objetivos A, B o C', 5);
   }, 60);
 }
@@ -268,7 +274,7 @@ function showResults(res) {
   $('resReplay').onclick = () => { $('results').classList.add('hide'); $('replayTag').classList.remove('hide'); startReplay(() => { $('replayTag').classList.add('hide'); show('results'); }); };
   show('results');
 }
-function toMenu() { stopTutorial(false); if (G.split) { stopSplit(); resize(); } endPlacement(); sandboxHide(); hudHide(); G.running = false; buildFrontMenu(); show('scrFront'); startDemo(); }
+function toMenu() { stopDoctrineDemo(); stopTutorial(false); if (G.split) { stopSplit(); resize(); } endPlacement(); sandboxHide(); hudHide(); G.running = false; buildFrontMenu(); show('scrFront'); startDemo(); }
 $('backFront').onclick = () => show('scrFront');
 $('backBattle').onclick = () => show('scrBattle');
 initDeployUI();
@@ -317,11 +323,16 @@ function RADIO_plan(zn) { RADIO.plan && RADIO.plan(zn); }
 function applyCmd() { G.opts.aiCmd = G.opts.aiCmd !== false; for (const id of ['optCmd', 'optCmd2']) $(id).value = G.opts.aiCmd ? 'ai' : 'me'; }
 for (const id of ['optCmd', 'optCmd2']) $(id).onchange = ev => { G.opts.aiCmd = ev.target.value === 'ai'; applyCmd(); G.onOptions && G.onOptions(); flash(G.opts.aiCmd ? 'Mando aliado: IA' : 'Mando aliado: tú', G.opts.aiCmd ? 'La IA coordina la escuadra; tus órdenes mandan durante 45 s' : 'La escuadra solo obedece tus órdenes', 1.8); };
 applyCmd();
+initSchool({
+  onBack: () => { closeSchool(); show('scrFront'); },
+  onDemo: dom => { closeSchool(); launch('test', false, { doctrine: dom }); },
+});
 initHangar({
   onBack: () => { closeHangar(); show('scrFront'); },
   onTest: key => { closeHangar(); launch('test', false, { testUnit: key }); },
   onBattle: key => { closeHangar(); toDeploy(key); },
   onDrill: (id, key) => { closeHangar(); launch('test', false, { drill: id, drillUnit: key }); },
+  onSchool: dom => { closeHangar(); openSchool(dom); },
 });
 $('padHelp').textContent = PAD_HELP;
 function applyMode() { G.opts.mode = G.opts.mode === 'veteran' ? 'veteran' : 'simple'; document.body.classList.toggle('simple', G.opts.mode === 'simple'); for (const id of ['optMode', 'optMode2']) $(id).value = G.opts.mode; }
@@ -452,4 +463,4 @@ $('squad').addEventListener('dblclick', ev => { const el = ev.target.closest('.s
 // ---------- arranque ----------
 buildFrontMenu(); show('scrFront'); startDemo();
 requestAnimationFrame(frame);
-if (location.hash === '#debug') window.__ww2 = { G, launch, startBattle, spawn: spawnUnit, step(dt) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); recordReplay(dt); updateTutorial(dt); }, startReplay, showResults: r => showResults(r), issueOrder, setPlayer };
+if (location.hash === '#debug') window.__ww2 = { G, launch, startBattle, spawn: spawnUnit, step(dt) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); recordReplay(dt); updateTutorial(dt); updateDoctrine(dt); }, startReplay, showResults: r => showResults(r), issueOrder, setPlayer };

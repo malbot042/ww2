@@ -175,3 +175,4 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 | v1.5 | Mando aliado por IA activado por defecto: la escuadra se coordina sola, pide apoyo con reserva y respeta las órdenes del jugador durante 45 s |
 | v1.6 | Campo de pruebas reorganizado: Pacífico al suroeste, África al sur y Europa al este |
 | v1.7 | Maniobras básicas guiadas (3 navales, 3 aéreas, 3 de carros) en el campo de pruebas y en el hangar |
+| v1.8 | Escuela de mando: misión, posición, distancia y momento de entrada de cada tipo de unidad, con demostraciones en 3D y papel en el grupo en el hangar |

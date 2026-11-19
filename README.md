@@ -33,6 +33,11 @@ Los objetivos A (salida de la playa) y B (pueblo) los capturan los tanques; el C
 ## Hangar
 La tarjeta **Hangar** del menú muestra las 73 unidades del juego (barcos, aviones, carros, infantería, cañones y defensas) en 3D sobre una plataforma giratoria: arrastra para girarlas y usa la rueda para acercarte. Para cada una verás su papel en combate, barras comparativas (resistencia, velocidad, potencia de fuego, alcance, blindaje), el armamento en detalle, sus controles y el coste de despliegue. Desde ahí puedes saltar a una **prueba rápida** en el campo de pruebas (con la unidad ya colocada en su terreno y blancos delante) o a cualquier **batalla** en la que aparece.
 
+## Escuela de mando (estrategia de grupo)
+La tarjeta **Escuela de mando** del menú explica cómo combate cada grupo: naval, aéreo, terrestre y combinado. Para cada uno muestra la formación de partida (diagrama visto desde arriba), las fases del enfrentamiento, los errores típicos y una tabla con la **misión de cada tipo de unidad**, su **posición y distancia** dentro del grupo y **cuándo entra en combate** (por ejemplo: submarinos 1200–1500 m por delante explorando, pantalla de destructores a 500–700 m, acorazados abriendo fuego a máxima distancia y sin acercarse a menos de 1000 m, portaaviones 800–1000 m detrás).
+
+Cada grupo (salvo el combinado) tiene una **demostración en 3D** en el campo de pruebas: la formación aparece con el nombre y el anillo de alcance de cada unidad, y la IA ejecuta las fases (exploración, duelo artillero, ataque de destructores; cobertura alta y escolta cercana; avance por saltos, vigilancia y flanqueo) mientras el panel lo explica paso a paso. También se abre desde el panel del campo de pruebas, y la ficha de cada unidad en el hangar incluye su **papel en el grupo**.
+
 ## Maniobras básicas
 Lecciones cortas y guiadas (2–4 pasos que se comprueban solos) para aprender a combatir con cada tipo de unidad. Se practican en el campo de pruebas, eres invulnerable y los blancos no disparan salvo cuando la lección lo pide:
 - **Naval:** andanada de costado, ataque con torpedos (apuntar con ventaja) y caza de submarinos con cargas de profundidad.
@@ -178,6 +183,7 @@ js/tutorial.js    tutorial guiado
 js/split.js       multijugador local a pantalla partida
 js/hangar.js      hangar 3D con fichas de todas las unidades
 js/drills.js      maniobras básicas guiadas (naval, aérea y carros)
+js/doctrine.js    escuela de mando: doctrina de grupo y demostraciones en 3D
 v1.html           primer prototipo (v0.1)
 ```
 Con `#debug` en la URL queda disponible `window.__ww2` para pruebas automáticas.

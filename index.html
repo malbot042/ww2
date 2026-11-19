@@ -14,6 +14,9 @@
 <body>
 <canvas id="gl"></canvas>
 <div id="vig"></div>
+<div id="school" class="hide"><div class="scw panel">
+  <div class="sch"><button class="ghost" id="scBack">← Menú</button><h3>Escuela de mando</h3><div class="sctabs" id="scTabs"></div></div>
+  <div id="scBody"></div></div></div>
 <div id="hangar" class="hide">
   <aside class="hgl panel"><div class="hgh"><button class="ghost" id="hgBack">← Menú</button><h3>Hangar</h3></div>
     <div class="hgd" id="hgDoms"></div><select id="hgFac"></select><div id="hgList"></div></aside>
@@ -53,6 +56,8 @@
       <div class="r2"><button id="sbRepair">Reparar</button><label class="chk"><input type="checkbox" id="sbGod"> Invulnerable</label></div>
       <h5>Maniobras básicas</h5>
       <select id="sbDrill"></select><button id="sbDrillGo" class="full">Practicar maniobra</button>
+      <h5>Estrategia de grupo</h5>
+      <div class="r3" id="sbDoc"><button data-doc="sea">Naval</button><button data-doc="air">Aérea</button><button data-doc="land">Tierra</button></div>
       <div id="sbInfo"></div>
     </div>
     <div id="feed"></div></div>
