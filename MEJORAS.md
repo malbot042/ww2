@@ -176,3 +176,4 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 | v1.6 | Campo de pruebas reorganizado: Pacífico al suroeste, África al sur y Europa al este |
 | v1.7 | Maniobras básicas guiadas (3 navales, 3 aéreas, 3 de carros) en el campo de pruebas y en el hangar |
 | v1.8 | Escuela de mando: misión, posición, distancia y momento de entrada de cada tipo de unidad, con demostraciones en 3D y papel en el grupo en el hangar |
+| v1.9 | La IA de ambos bandos sigue la doctrina de grupo: formación y fases navales, escolta y cobertura alta, avance por saltos y vigilancia |

@@ -36,6 +36,12 @@ La tarjeta **Hangar** del menú muestra las 73 unidades del juego (barcos, avion
 ## Escuela de mando (estrategia de grupo)
 La tarjeta **Escuela de mando** del menú explica cómo combate cada grupo: naval, aéreo, terrestre y combinado. Para cada uno muestra la formación de partida (diagrama visto desde arriba), las fases del enfrentamiento, los errores típicos y una tabla con la **misión de cada tipo de unidad**, su **posición y distancia** dentro del grupo y **cuándo entra en combate** (por ejemplo: submarinos 1200–1500 m por delante explorando, pantalla de destructores a 500–700 m, acorazados abriendo fuego a máxima distancia y sin acercarse a menos de 1000 m, portaaviones 800–1000 m detrás).
 
+La IA de los dos bandos —y el mando aliado cuando coordina tu escuadra— sigue esta doctrina en las batallas:
+- **Flota:** el buque más pesado hace de insignia; los demás ocupan su puesto en la formación (pantalla de destructores por delante en arco, cruceros a los lados, submarinos muy adelantados, lanchas en los flancos y un destructor pegado al portaaviones). Las fases cambian solas: exploración, duelo artillero cuando el enemigo está a menos de 1700 m y, tras 25 s de duelo o si el enemigo se acerca a menos de 750 m, ataque con torpedos de destructores, cruceros, lanchas y submarinos.
+- **Aire:** de los cazas, 2 de cada 5 escoltan de cerca a los bombarderos, 2 hacen cobertura alta (unos 75 m más arriba, atacando picando) y 1 defiende las instalaciones propias.
+- **Tierra:** la infantería abre camino hacia el objetivo; los carros avanzan por saltos (la mitad espera cubriendo mientras la otra avanza, y se turnan cada 7 s) hasta el contacto; los carros de cañón largo se quedan vigilando a la distancia de su cañón; los antitanque defienden.
+- En las combinadas cada dominio aplica su doctrina; el orden aviación → flota → desembarco no se fuerza.
+
 Cada grupo (salvo el combinado) tiene una **demostración en 3D** en el campo de pruebas: la formación aparece con el nombre y el anillo de alcance de cada unidad, y la IA ejecuta las fases (exploración, duelo artillero, ataque de destructores; cobertura alta y escolta cercana; avance por saltos, vigilancia y flanqueo) mientras el panel lo explica paso a paso. También se abre desde el panel del campo de pruebas, y la ficha de cada unidad en el hangar incluye su **papel en el grupo**.
 
 ## Maniobras básicas

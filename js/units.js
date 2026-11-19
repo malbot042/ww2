@@ -760,6 +760,16 @@ export function orderPoint(e) {
     }
     case 'escort': { const L = G.ents.find(x => x.id === o.lead && x.alive); return L ? formationPoint(e, L, 50) : null; }
     case 'hold': return anchorFor(e, o.x, o.z);
+    case 'bound': return anchorFor(e, o.x, o.z); // espera cubriendo mientras la otra mitad avanza
+    case 'form': { // puesto en la formación de la flota, relativo al buque insignia y al rumbo de marcha
+      const L = G.ents.find(x => x.id === o.lead && x.alive); if (!L) return null;
+      const a = o.axis; return anchorFor(e, L.p.x + Math.sin(a) * o.oz + Math.cos(a) * o.ox, L.p.z + Math.cos(a) * o.oz - Math.sin(a) * o.ox);
+    }
+    case 'overwatch': { // a la distancia de su cañón del objetivo, por el lado propio
+      const z = G.objectives[o.k]; if (!z) return null;
+      const d = Math.hypot(e.p.x - z.pos.x, e.p.z - z.pos.z), r = Math.max(G.map.cfg.zoneR, Math.min(d, (e.s.gun ? e.s.gun.range : 500) * 0.8));
+      return anchorFor(e, z.pos.x + (e.p.x - z.pos.x) / Math.max(1, d) * r, z.pos.z + (e.p.z - z.pos.z) / Math.max(1, d) * r);
+    }
     case 'move': return anchorFor(e, o.x + (o.ox || 0), o.z + (o.oz || 0));
     case 'route': { const p = o.pts[Math.min(o.i, o.pts.length - 1)]; return anchorFor(e, p.x + (o.ox || 0), p.z + (o.oz || 0)); }
     case 'strike': return e.leaving ? V3(e.p.x + Math.sin(e.h) * 3000, 0, e.p.z + Math.cos(e.h) * 3000) : e.strike.clone();

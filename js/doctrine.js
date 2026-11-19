@@ -102,7 +102,7 @@ export function closeSchool() { $('school').classList.add('hide'); }
 function renderSchool(dom) {
   cur = dom; const D = DOCTRINE[dom];
   $('scTabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.d === dom));
-  $('scBody').innerHTML = `<p class="sci">${D.intro}</p>
+  $('scBody').innerHTML = `<p class="sci">${D.intro}</p><p class="scn">${dom === 'combined' ? 'En las batallas combinadas, la IA aplica la doctrina de cada dominio por separado; las fases entre dominios (aviación primero, después flota y desembarco) no se fuerzan.' : 'La IA de los dos bandos (y tu mando aliado) sigue esta doctrina en las batallas.'}</p>
     <div class="scg"><div>${diagram(dom)}${D.layout ? '<p class="scn">Formación de partida vista desde arriba. Las distancias son las del juego.</p>' : ''}</div>
     <div><h4>Fases del enfrentamiento</h4><ol class="scp">${D.phases.map(p => `<li>${p}</li>`).join('')}</ol>
     <h4>Errores típicos</h4><ul class="sce">${D.errors.map(p => `<li>${p}</li>`).join('')}</ul>

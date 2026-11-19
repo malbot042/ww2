@@ -158,7 +158,7 @@ export function startBattle(key, demo = false, opts = {}) {
   let slot = 0; allies.forEach(e => { if (e !== G.player) { e.slot = slot++; e.order = { type: 'follow' }; G.selection.add(e); } });
   if (demo) { allies.forEach(e => e.order = { type: 'attack' }); G.selection.clear(); }
   G.tickets = { A: air ? 450 : mixed ? 800 : 600, E: air ? 450 : mixed ? 800 : 600 }; G.ticketsMax = G.tickets.A;
-  G.time = 0; G.over = false; G.stats = { kills: 0, lost: 0 }; cmdT = { A: demo ? 0 : 3, E: 0 }; deadT = 0; lastMain = -1;
+  G.time = 0; G.over = false; G.stats = { kills: 0, lost: 0 }; cmdT = { A: demo ? 0 : 3, E: 0 }; deadT = 0; lastMain = -1; DOC.A = { phase: 'approach', since: 0, cyc: 0 }; DOC.E = { phase: 'approach', since: 0, cyc: 0 };
   // líneas de órdenes
   lines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x9fd0ff, transparent: true, opacity: 0.55, depthTest: false }));
   lines.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(240), 3)); lines.renderOrder = 11; lines.frustumCulled = false; markers.add(lines);
@@ -177,7 +177,7 @@ export function removeEntity(e) {
 }
 
 // ---------- órdenes ----------
-const ORDER_TXT = { follow: 'Seguirme', zone: 'Objetivo', attack: 'Ataque libre', hold: 'Mantener', defend: 'Defender', move: 'Mover', escort: 'Escolta', route: 'Ruta', strike: 'Ataque a tierra' };
+const ORDER_TXT = { form: 'Formación', overwatch: 'Vigilancia', bound: 'Cubre el avance', cover: 'Cobertura alta', follow: 'Seguirme', zone: 'Objetivo', attack: 'Ataque libre', hold: 'Mantener', defend: 'Defender', move: 'Mover', escort: 'Escolta', route: 'Ruta', strike: 'Ataque a tierra' };
 export function orderLabel(o, q) { const t = (o.byAI && G.running && !G.demo ? 'IA · ' : '') + (o.type === 'zone' ? `Objetivo ${'ABC'[o.k]}` : o.type === 'route' ? `Ruta ${Math.min(o.i + 1, o.pts.length)}/${o.pts.length}` : ORDER_TXT[o.type] || o.type); return q && q.length ? t + ' → ' + q.map(x => x.type === 'zone' ? 'ABC'[x.k] : ORDER_TXT[x.type]).join(' → ') : t; }
 export function issueOrder(type, arg = {}, queued = false) {
   const sel = [...G.selection].filter(e => e.alive && e !== G.player && !e.support);
@@ -214,6 +214,70 @@ export function setPlayer(e) {
 }
 
 // ---------- mando IA ----------
+// ---------- doctrina de grupo (igual para los dos bandos; ver la Escuela de mando) ----------
+const DOC = { A: { phase: 'approach', since: 0, cyc: 0 }, E: { phase: 'approach', since: 0, cyc: 0 } };
+export const docPhase = side => DOC[side].phase;
+// cazas de cobertura alta: vuelan más alto que el resto para atacar picando
+function airCover(units) {
+  for (const e of units) if (e.dom === 'air' && e.cls === 'fighter') {
+    if (e.baseAlt0 === undefined) e.baseAlt0 = e.baseAlt;
+    e.baseAlt = e.order.role === 'cover' ? e.baseAlt0 + 75 : e.baseAlt0;
+  }
+}
+const SLOTS = {
+  destroyer: [[0, 620], [-380, 540], [380, 540], [-640, 400], [640, 400], [-200, 700], [200, 700], [-820, 250], [820, 250]],
+  cruiser: [[-230, 300], [230, 300], [-460, 160], [460, 160]],
+  battleship: [[-320, -120], [320, -120]],
+  sub: [[-540, 1300], [540, 1300], [0, 1450]],
+  pt: [[-760, 260], [760, 260], [-900, 0], [900, 0]],
+};
+function doctrine(side, units, enemySide) {
+  const D = DOC[side]; D.cyc++;
+  const seen = o => o.alive && o.side === enemySide && o['vis' + side] !== false;
+  // ---- flota: pantalla, línea de batalla y fases (exploración → duelo artillero → ataque con torpedos) ----
+  const ships = units.filter(e => e.dom === 'sea' && e.cls !== 'carrier' && e.cls !== 'merchant');
+  if (ships.length >= 3) {
+    const rank = e => (e.cls === 'battleship' ? 3 : e.cls === 'cruiser' ? 2 : e.cls === 'destroyer' ? 1 : 0) * 1e5 + e.s.hp;
+    const flag = ships.slice().sort((a, b) => rank(b) - rank(a))[0];
+    const foes = G.ents.filter(o => seen(o) && o.dom === 'sea' && !o.submerged);
+    const near = foes.length ? foes.reduce((m, o) => Math.min(m, o.p.distanceTo(flag.p)), 1e9) : 1e9;
+    if (near > 1700) { D.phase = 'approach'; D.since = G.time; }
+    else if (D.phase === 'approach') { D.phase = 'duel'; D.since = G.time; }
+    else if (D.phase === 'duel' && (G.time - D.since > 25 || near < 750)) { D.phase = 'torpedo'; D.since = G.time; }
+    // rumbo de la flota: hacia el enemigo más cercano si se le ve; si no, hacia el objetivo del buque insignia
+    let tx, tz;
+    if (foes.length) { const f = foes.reduce((a, b) => a.p.distanceTo(flag.p) < b.p.distanceTo(flag.p) ? a : b); tx = f.p.x; tz = f.p.z; }
+    else { const z = flag.order.type === 'zone' ? G.objectives[flag.order.k] : null; tx = z ? z.pos.x : flag.p.x + Math.sin(flag.h) * 500; tz = z ? z.pos.z : flag.p.z + Math.cos(flag.h) * 500; }
+    const axis = Math.atan2(tx - flag.p.x, tz - flag.p.z);
+    const carrier = units.find(e => e.cls === 'carrier');
+    const used = {};
+    let escortDone = !carrier;
+    for (const e of ships) {
+      if (e === flag || e === G.player) continue;
+      if (!escortDone && e.cls === 'destroyer') { e.order = { type: 'escort', lead: carrier.id }; escortDone = true; continue; }
+      const free = D.phase === 'torpedo' ? ['destroyer', 'cruiser', 'pt', 'sub'] : D.phase === 'duel' ? ['sub'] : [];
+      if (free.includes(e.cls)) { e.order = { type: 'attack' }; continue; }
+      const list = SLOTS[e.cls] || SLOTS.cruiser, k = used[e.cls] = (used[e.cls] || 0) + 1, sl = list[(k - 1) % list.length];
+      const ring = Math.floor((k - 1) / list.length);
+      e.order = { type: 'form', lead: flag.id, ox: sl[0] * (1 + ring * 0.3), oz: sl[1] - ring * 120, axis };
+    }
+  }
+  // ---- tierra: la infantería abre camino, los carros avanzan por saltos y los de cañón largo vigilan ----
+  const land = units.filter(e => e.dom === 'land' && e !== G.player && e.order.type === 'zone');
+  const tanks = land.filter(e => e.cls === 'tank');
+  if (tanks.length >= 3) {
+    const longGun = e => e.s.gun && e.s.gun.range >= 560;
+    const over = tanks.filter(longGun);
+    const keepOver = over.length && over.length < tanks.length ? over : [];
+    for (const e of tanks) {
+      const z = G.objectives[e.order.k]; if (!z) continue;
+      const dz = e.p.distanceTo(z.pos);
+      const contact = G.ents.some(o => seen(o) && o.dom === 'land' && o.p.distanceTo(e.p) < 650);
+      if (keepOver.includes(e) && z.owner !== side) { e.order = { type: 'overwatch', k: e.order.k }; continue; }
+      if (!contact && dz > G.map.cfg.zoneR * 2.5 && (e.id + D.cyc) % 2 === 0) e.order = { type: 'bound', x: e.p.x, z: e.p.z, k: e.order.k };
+    }
+  }
+}
 function command(side) {
   const enemySide = side === 'A' ? 'E' : 'A';
   const units = G.ents.filter(e => e.alive && e.side === side && e.dom !== 'static' && (side === 'E' || (e !== G.player && !e.support && !(e.manualT > G.time))));
@@ -223,12 +287,14 @@ function command(side) {
     const bombers = units.filter(e => e.cls === 'bomber'), fighters = units.filter(e => e.cls === 'fighter');
     if (before) setTimeout(() => announce(units, before, -1), 0);
     bombers.forEach((b, i) => { const alive = targets.map((s, k) => [s, k]).filter(([s]) => s.alive); if (!alive.length) { b.order = { type: 'attack' }; return; } const [s, k] = alive.sort((a, c) => a[0].p.distanceTo(b.p) - c[0].p.distanceTo(b.p))[i % Math.min(2, alive.length)]; b.order = { type: 'zone', k }; });
-    fighters.forEach((f, i) => { const lead = bombers.filter(b => b.alive)[i % Math.max(1, bombers.length)]; f.order = lead && i % 2 === 0 ? { type: 'escort', lead: lead.id } : i % 3 === 1 ? { type: 'defend' } : { type: 'attack' }; });
+    fighters.forEach((f, i) => { const lead = bombers.filter(b => b.alive)[i % Math.max(1, bombers.length)]; f.order = lead && i % 5 < 2 ? { type: 'escort', lead: lead.id } : i % 5 === 4 ? { type: 'defend' } : { type: 'attack', role: 'cover' }; });
+    airCover(units);
     return;
   }
   const zs = G.objectives, R = G.map.cfg.zoneR, mixed = G.battle.kind === 'combined';
   if (mixed) {
-    units.filter(e => e.dom === 'air').forEach((e, i) => { e.order = e.cls === 'bomber' ? { type: 'attack' } : i % 2 ? { type: 'defend' } : { type: 'attack' }; });
+    units.filter(e => e.dom === 'air').forEach((e, i) => { e.order = e.cls === 'bomber' ? { type: 'attack' } : i % 3 === 2 ? { type: 'defend' } : { type: 'attack', role: 'cover' }; });
+    airCover(units);
   }
   // el mando solo cuenta a los enemigos que ve
   const vk = 'vis' + side;
@@ -250,6 +316,7 @@ function command(side) {
     cnt[best]++; e.order = { type: 'zone', k: best };
     if (e.cls === 'sub' || (e.cls === 'pt' && Math.random() < 0.5)) e.order = { type: 'attack' };
   }
+  doctrine(side, units, enemySide);
   if (before) announce(units, before, main);
 }
 // marca las órdenes de la IA aliada y avisa cuando cambia el plan
