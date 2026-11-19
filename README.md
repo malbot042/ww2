@@ -55,14 +55,13 @@ Se abren desde el panel **Maniobras básicas** del campo de pruebas o desde la f
 ## Tutorial
 La tarjeta **Tutorial** del menú enseña lo básico en 10 pasos guiados (unos 5 minutos): moverse, cámara, zoom, fijar un blanco, disparar, munición, control de daños, órdenes a la escuadra, cambiar de unidad y mapa táctico.
 
-## Campo de pruebas
-Mapa propio (unos 5 × 5 km jugables) que mezcla los tres frentes: el **Pacífico** con islas tropicales y atolones al suroeste, el **desierto africano** al sur y la **campiña europea** con setos y pueblos al este y al norte, todos unidos por tierra en el centro. Los botones **Desierto / Europa / Pacífico** del panel llevan tu unidad al terreno elegido (a tierra, al agua o por encima, según lo que manejes).
+## Campos de pruebas
+Sin puntos ni derrota, hay un escenario hecho para cada modo (se elige en la tarjeta del menú o con los botones Naval / Aéreo / Terrestre del panel):
+- **Naval:** mar abierto con islas y arrecifes; puedes llevar cualquier barco y añadir barcos o aviones como blancos.
+- **Aéreo:** el mapa mixto con el **Pacífico** y sus islas al suroeste, el **desierto africano** al sur y la **campiña europea** al este, para practicar combate aéreo y bombardeo contra blancos aéreos, navales y terrestres; los botones **Desierto / Europa / Pacífico** llevan tu avión a cada zona.
+- **Terrestre:** campiña normanda con setos, pueblos y colinas para probar blindajes, munición, flanqueos y avance por saltos.
 
-Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin puntos ni derrota. Desde el panel de la derecha puedes:
-- Ser **cualquier unidad** del catálogo, incluidas las del Eje.
-- Añadir enemigos o aliados de cualquier modelo, también baterías costeras y antiaéreos. Los enemigos pueden ser **pasivos**, quietos o en movimiento, o tener la IA activada.
-- Colocar **blancos fijos** adaptados a tu unidad: tanques orientados de distintas formas para probar el blindaje, barcos para practicar disparar de costado, aviones para practicar la puntería.
-- Reparar tu unidad, activar la **invulnerabilidad** y ver el **daño de cada impacto**, con el lado y el multiplicador de blindaje.
+En cada uno, el panel ofrece solo las unidades, maniobras básicas y demostraciones de estrategia de ese modo; «Blancos fijos» coloca blancos adecuados (barcos y un submarino; cazas, bombarderos y antiaéreos; carros, infantería y cañones). La prueba rápida del hangar, las maniobras y las demostraciones abren el campo del modo que corresponde.
 
 ## Marcas en amarillo
 - **Blanco seleccionado:** anillo y flecha amarilla sobre él en el mapa 3D (visible con cualquier cámara y zoom), círculo y línea discontinua en el minimapa, y panel del blanco con borde amarillo en el HUD.

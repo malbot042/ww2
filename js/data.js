@@ -76,9 +76,20 @@ export const BATTLES = {
     enemy: [['z1936', 1], ['sboot', 2], ['u7c', 1], ['bf109g', 2], ['fw190f', 1], ['pz4h', 2], ['panther', 1], ['stug', 1], ['inf_de', 2], ['pak40', 1]],
     statics: [['battery', 3], ['aa', 2]],
   },
-  'test': {
-    front: 'europe', kind: 'test', map: 'proving', title: 'Campo de pruebas', year: '',
-    brief: 'Mapa ampliado con el Pacífico y sus islas al suroeste, el desierto africano al sur y la campiña europea al este. Sin puntos ni derrota: elige cualquier unidad, añade blancos o enemigos y salta de un terreno a otro.',
+  // campos de pruebas: uno por modo (sin puntos ni derrota)
+  'test-sea': {
+    front: 'pacific', kind: 'test', testDom: 'sea', map: 'pacific_sea', title: 'Campo de pruebas naval', year: '',
+    brief: 'Mar abierto con islas y arrecifes. Prueba artillería, torpedos, cargas de profundidad y maniobras de flota.',
+    allies: [['fletcher', 1]], enemy: [],
+  },
+  'test-air': {
+    front: 'europe', kind: 'test', testDom: 'air', map: 'proving', title: 'Campo de pruebas aéreo', year: '',
+    brief: 'Cielo sobre el Pacífico, el desierto y la campiña europea, con blancos aéreos, navales y terrestres para practicar combate aéreo y bombardeo.',
+    allies: [['p51', 1]], enemy: [],
+  },
+  'test-land': {
+    front: 'europe', kind: 'test', testDom: 'land', map: 'europe_land', title: 'Campo de pruebas terrestre', year: '',
+    brief: 'Campiña normanda con setos, pueblos y colinas. Prueba blindajes, munición, flanqueos y avance por saltos.',
     allies: [['sherman', 1]], enemy: [],
   },
   'europe-land': {
@@ -193,6 +204,7 @@ export const FAC_NAME = { us: 'EE. UU.', uk: 'Reino Unido', jp: 'Japón', de: 'A
 // Ritmo arcade: barcos y tanques más rápidos que en la realidad; el HUD muestra la velocidad "real" (dispK)
 const PACE = { sea: { max: 1.45, acc: 2.0, turn: 1.3 }, land: { max: 1.4, acc: 1.8, turn: 1.2 } };
 export const AMMO_NAME = { ap: 'Perforante (AP)', he: 'Explosiva (HE)' };
+export const testKeyFor = dom => 'test-' + (dom === 'sea' || dom === 'air' ? dom : 'land');
 export function specOf(key) {
   const m = MODELS[key], c = CLS[m.cls], s = { ...c };
   if (m.stats) for (const k in m.stats) s[k] = typeof m.stats[k] === 'object' && !Array.isArray(m.stats[k]) ? { ...(c[k] || {}), ...m.stats[k] } : m.stats[k];

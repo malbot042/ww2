@@ -15,13 +15,13 @@ import { applyVolumes, updateMusic, musicHeat, RADIO, initSoundUI, radioStop } f
 import { updateDamageFx } from './damagefx.js';
 import { newCampaign, endCampaignBattle, restoreSnapshot, UNLOCKS } from './campaign.js';
 import { G } from './state.js';
-import { FRONTS, BATTLES, KIND_NAME, MODELS } from './data.js';
+import { FRONTS, BATTLES, KIND_NAME, MODELS, testKeyFor, specOf } from './data.js';
 import { updateWorld } from './world.js';
 import { updateEnv, launchFlare, envLabel } from './env.js';
 import { startBattle, updateBattle, issueOrder, setPlayer, orderLabel } from './battle.js';
 import { lockTarget, targetFilter, MOD_NAME } from './units.js';
 import { initSandbox, sandboxStart, sandboxHide, sandboxHit, quickTest, sandboxClear } from './sandbox.js';
-import { runDrill } from './drills.js';
+import { runDrill, DRILLS } from './drills.js';
 import { openDeploy, initDeployUI, beginPlacement, endPlacement, placeUnit, applyPreset, PRESETS } from './deploy.js';
 import { useSupport, updateVision, SUPPORT } from './strategy.js';
 import { updateMarkers } from './battle.js';
@@ -188,15 +188,16 @@ function buildFrontMenu() {
       <span class="fd">Gira cada barco, avión y carro en 3D, compara sus características, aprende su papel en combate y salta a una prueba rápida o a la batalla donde aparece.</span>
       <span class="fb"><i>Naval</i><i>Aérea</i><i>Terrestre</i><i>Defensas</i></span>
     </button>
-    <button class="front f-test" data-test="1">
-      <span class="fy">Sin puntos ni derrota</span><span class="fn">Campo de pruebas</span><span class="fv">Pacífico, África y Europa</span>
-      <span class="fd">Elige cualquiera de los ${Object.keys(MODELS).length} modelos, coloca blancos fijos o enemigos con IA y prueba armas, blindajes, cámaras y controles.</span>
-      <span class="fb"><i>Naval</i><i>Aérea</i><i>Tanques</i></span>
-    </button>`;
+    <div class="front f-test" data-test="pick">
+      <span class="fy">Sin puntos ni derrota</span><span class="fn">Campos de pruebas</span><span class="fv">Un escenario por modo</span>
+      <span class="fd">Elige unidad, coloca blancos fijos o enemigos con IA y prueba armas, blindajes, cámaras y controles en un escenario hecho para cada modo.</span>
+      <span class="fb tsel"><button data-testdom="sea">Naval</button><button data-testdom="air">Aéreo</button><button data-testdom="land">Terrestre</button></span>
+    </div>`;
   const sc = savedCampaign();
   $('contCamp').innerHTML = sc ? `<button class="btn" id="btnCont">Continuar campaña</button><span>${FRONTS[sc.front].name} · batalla ${sc.i + 1} de ${sc.list.length} · ${sc.score} pts${sc.unlocked.length ? ' · ' + sc.unlocked.length + (sc.unlocked.length === 1 ? ' unidad desbloqueada' : ' unidades desbloqueadas') : ''}</span><button class="ghost" id="btnDrop">Descartar</button>` : '';
   if (sc) { $('btnCont').onclick = () => { initAudio(); applyVolumes(); G.campaign = JSON.parse(JSON.stringify(sc)); toDeploy(G.campaign.list[G.campaign.i], true); }; $('btnDrop').onclick = () => { saveCampaign(null); buildFrontMenu(); }; }
-  $('fronts').querySelectorAll('.front').forEach(b => b.onclick = () => { initAudio(); applyVolumes(); if (b.dataset.school) { $('menu').classList.add('hide'); openSchool(); } else if (b.dataset.hangar) { $('menu').classList.add('hide'); openHangar(); } else if (b.dataset.tut) launch('test', false, { tutorial: true }); else if (b.dataset.test) launch('test'); else buildBattleMenu(b.dataset.front); });
+  $('fronts').querySelectorAll('.front').forEach(b => b.onclick = () => { initAudio(); applyVolumes(); if (b.dataset.school) { $('menu').classList.add('hide'); openSchool(); } else if (b.dataset.hangar) { $('menu').classList.add('hide'); openHangar(); } else if (b.dataset.tut) launch('test-land', false, { tutorial: true }); else if (b.dataset.test) launch('test-land'); else buildBattleMenu(b.dataset.front); });
+  $('fronts').querySelectorAll('[data-testdom]').forEach(t => t.onclick = ev => { ev.stopPropagation(); initAudio(); applyVolumes(); launch(testKeyFor(t.dataset.testdom)); });
 }
 function buildBattleMenu(fk) {
   const f = FRONTS[fk];
@@ -234,17 +235,17 @@ function launch(key, keepCampaign = false, opts = {}) {
     $('top').classList.toggle('hide', test);
     stopTutorial(false);
     if (test && opts.tutorial) { sandboxHide(); startTutorial(() => toMenu()); }
-    else if (test) { initSandbox({ flash, onPlayerChange: e => { G.targetZoom = ZOOM_DEF[e.dom]; } }); sandboxStart(); if (opts.testUnit) { quickTest(opts.testUnit); G.targetZoom = ZOOM_DEF[G.player.dom]; } if (opts.drill) { runDrill(opts.drill, opts.drillUnit, { clear: sandboxClear, quickTest }); G.targetZoom = ZOOM_DEF[G.player.dom]; } if (opts.doctrine) runDoctrineDemo(opts.doctrine, { clear: sandboxClear, quickTest }); } else sandboxHide();
+    else if (test) { initSandbox({ flash, onPlayerChange: e => { G.targetZoom = ZOOM_DEF[e.dom]; }, onMode: m => launch(testKeyFor(m)) }); sandboxStart(); if (opts.testUnit) { quickTest(opts.testUnit); G.targetZoom = ZOOM_DEF[G.player.dom]; } if (opts.drill) { runDrill(opts.drill, opts.drillUnit, { clear: sandboxClear, quickTest }); G.targetZoom = ZOOM_DEF[G.player.dom]; } if (opts.doctrine) runDoctrineDemo(opts.doctrine, { clear: sandboxClear, quickTest }); } else sandboxHide();
     G.running = true;
     radioStop(); if (G.battle.kind !== 'test') setTimeout(() => RADIO.start(), opts.place ? 0 : 1200);
     if (opts.place && G.battle.kind !== 'test') { beginPlacement(); flash('Fase de despliegue', 'Coloca tus unidades y pulsa Enter para comenzar', 4); return; }
     if (opts.tutorial) { flash('Tutorial', 'Sigue las instrucciones del panel', 3); return; }
     if (opts.drill || opts.doctrine) return; // el panel ya explica qué hacer
-    flash(G.battle.kind === 'test' ? 'Campo de pruebas' : `${BATTLES[key].title}, ${BATTLES[key].year}`, G.battle.kind === 'test' ? 'Elige unidad y blancos en el panel de la derecha' : G.battle.kind === 'combined' ? G.battle.hint : G.battle.kind === 'air' ? 'Pulsa 1, 2 o 3 para enviar tu escuadrilla contra las instalaciones A, B o C' : 'Pulsa 1, 2 o 3 para enviar tu escuadra a los objetivos A, B o C', 5);
+    flash(G.battle.kind === 'test' ? G.battle.title : `${BATTLES[key].title}, ${BATTLES[key].year}`, G.battle.kind === 'test' ? 'Elige unidad y blancos en el panel de la derecha' : G.battle.kind === 'combined' ? G.battle.hint : G.battle.kind === 'air' ? 'Pulsa 1, 2 o 3 para enviar tu escuadrilla contra las instalaciones A, B o C' : 'Pulsa 1, 2 o 3 para enviar tu escuadra a los objetivos A, B o C', 5);
   }, 60);
 }
 function startDemo() {
-  const keys = Object.keys(BATTLES).filter(k => k !== 'test'); const key = keys[(Math.random() * keys.length) | 0];
+  const keys = Object.keys(BATTLES).filter(k => BATTLES[k].kind !== 'test'); const key = keys[(Math.random() * keys.length) | 0];
   G.running = false; startBattle(key, true); G.zoom = G.targetZoom = 950;
 }
 function showResults(res) {
@@ -329,13 +330,13 @@ for (const id of ['optDiff', 'optDiff2']) $(id).onchange = ev => { G.opts.diff =
 applyDiff();
 initSchool({
   onBack: () => { closeSchool(); show('scrFront'); },
-  onDemo: dom => { closeSchool(); launch('test', false, { doctrine: dom }); },
+  onDemo: dom => { closeSchool(); launch(testKeyFor(dom), false, { doctrine: dom }); },
 });
 initHangar({
   onBack: () => { closeHangar(); show('scrFront'); },
-  onTest: key => { closeHangar(); launch('test', false, { testUnit: key }); },
+  onTest: key => { closeHangar(); launch(testKeyFor(specOf(key).dom), false, { testUnit: key }); },
   onBattle: key => { closeHangar(); toDeploy(key); },
-  onDrill: (id, key) => { closeHangar(); launch('test', false, { drill: id, drillUnit: key }); },
+  onDrill: (id, key) => { closeHangar(); launch(testKeyFor(DRILLS.find(d => d.id === id).dom), false, { drill: id, drillUnit: key }); },
   onSchool: dom => { closeHangar(); openSchool(dom); },
 });
 $('padHelp').textContent = PAD_HELP;

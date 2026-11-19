@@ -11,10 +11,10 @@ const $ = id => document.getElementById(id);
 const DOM_NAME = { sea: 'Naval', air: 'Aérea', land: 'Tanques' };
 let wired = false, flash = () => {}, onPlayerChange = () => {};
 
-function options(withStatics) {
+function options(withStatics, doms) {
   const groups = { sea: [], air: [], land: [] };
-  for (const [k, m] of Object.entries(MODELS)) groups[CLS[m.cls].dom].push(`<option value="${k}">${m.name} · ${FAC_NAME[m.fac]}</option>`);
-  let html = Object.entries(groups).map(([d, l]) => `<optgroup label="${DOM_NAME[d]}">${l.join('')}</optgroup>`).join('');
+  for (const [k, m] of Object.entries(MODELS)) if (!doms || doms.includes(CLS[m.cls].dom)) groups[CLS[m.cls].dom].push(`<option value="${k}">${m.name} · ${FAC_NAME[m.fac]}</option>`);
+  let html = Object.entries(groups).filter(([, l]) => l.length).map(([d, l]) => `<optgroup label="${DOM_NAME[d]}">${l.join('')}</optgroup>`).join('');
   if (withStatics) html += `<optgroup label="Defensas"><option value="battery">Batería costera</option><option value="aa">Antiaéreo</option></optgroup>`;
   return html;
 }
@@ -48,14 +48,21 @@ function addUnit(key, side, passive, pos) {
 }
 
 export function initSandbox(opts) {
+  // escenario del modo: unidades, maniobras y demostraciones de ese dominio
+  const dom = G.battle.testDom || 'land';
+  const ADD = { sea: ['sea', 'air'], air: ['air', 'sea', 'land'], land: ['land', 'air'] }[dom];
+  $('sbTitle').textContent = G.battle.title;
+  $('sbMe').innerHTML = options(false, [dom]); $('sbUnit').innerHTML = options(dom !== 'land', ADD);
+  $('sbRegions').classList.toggle('hide', !G.map.extra.spots);
+  document.querySelectorAll('#sbDoc [data-doc]').forEach(b => b.classList.toggle('hide', b.dataset.doc !== dom));
+  document.querySelectorAll('#sbModes [data-mode]').forEach(b => { b.classList.toggle('on', b.dataset.mode === dom); b.onclick = ev => { ev.target.blur(); if (b.dataset.mode !== dom) opts.onMode && opts.onMode(b.dataset.mode); }; });
   // maniobras básicas guiadas
-  $('sbDrill').innerHTML = ['sea', 'air', 'land'].map(d => `<optgroup label="${DRILL_DOM[d]}">${drillsFor(d).map(x => `<option value="${x.id}">${x.t}</option>`).join('')}</optgroup>`).join('');
+  $('sbDrill').innerHTML = [dom].map(d => `<optgroup label="${DRILL_DOM[d]}">${drillsFor(d).map(x => `<option value="${x.id}">${x.t}</option>`).join('')}</optgroup>`).join('');
   $('sbDrillGo').onclick = ev => { runDrill($('sbDrill').value, G.player && G.player.key, { clear: sandboxClear, quickTest }); ev.target.blur(); };
   $('sbDrill').addEventListener('change', () => $('sbDrill').blur());
   document.querySelectorAll('#sbDoc [data-doc]').forEach(b => b.onclick = ev => { runDoctrineDemo(b.dataset.doc, { clear: sandboxClear, quickTest }); ev.target.blur(); });
   flash = opts.flash; onPlayerChange = opts.onPlayerChange;
   if (wired) return; wired = true;
-  $('sbMe').innerHTML = options(false); $('sbUnit').innerHTML = options(true);
   const blur = ev => ev.target.blur();
   for (const id of ['sbMe', 'sbUnit', 'sbPassive', 'sbGod', 'sbMove']) $(id).addEventListener('change', blur);
   $('sbMe').addEventListener('change', () => changePlayer($('sbMe').value));
