@@ -18,7 +18,8 @@ import { updateWorld } from './world.js';
 import { updateEnv, launchFlare, envLabel } from './env.js';
 import { startBattle, updateBattle, issueOrder, setPlayer, orderLabel } from './battle.js';
 import { lockTarget, targetFilter, MOD_NAME } from './units.js';
-import { initSandbox, sandboxStart, sandboxHide, sandboxHit, quickTest } from './sandbox.js';
+import { initSandbox, sandboxStart, sandboxHide, sandboxHit, quickTest, sandboxClear } from './sandbox.js';
+import { runDrill } from './drills.js';
 import { openDeploy, initDeployUI, beginPlacement, endPlacement, placeUnit, applyPreset, PRESETS } from './deploy.js';
 import { useSupport, updateVision, SUPPORT } from './strategy.js';
 import { updateMarkers } from './battle.js';
@@ -226,11 +227,12 @@ function launch(key, keepCampaign = false, opts = {}) {
     $('top').classList.toggle('hide', test);
     stopTutorial(false);
     if (test && opts.tutorial) { sandboxHide(); startTutorial(() => toMenu()); }
-    else if (test) { initSandbox({ flash, onPlayerChange: e => { G.targetZoom = ZOOM_DEF[e.dom]; } }); sandboxStart(); if (opts.testUnit) { quickTest(opts.testUnit); G.targetZoom = ZOOM_DEF[G.player.dom]; } } else sandboxHide();
+    else if (test) { initSandbox({ flash, onPlayerChange: e => { G.targetZoom = ZOOM_DEF[e.dom]; } }); sandboxStart(); if (opts.testUnit) { quickTest(opts.testUnit); G.targetZoom = ZOOM_DEF[G.player.dom]; } if (opts.drill) { runDrill(opts.drill, opts.drillUnit, { clear: sandboxClear, quickTest }); G.targetZoom = ZOOM_DEF[G.player.dom]; } } else sandboxHide();
     G.running = true;
     radioStop(); if (G.battle.kind !== 'test') setTimeout(() => RADIO.start(), opts.place ? 0 : 1200);
     if (opts.place && G.battle.kind !== 'test') { beginPlacement(); flash('Fase de despliegue', 'Coloca tus unidades y pulsa Enter para comenzar', 4); return; }
     if (opts.tutorial) { flash('Tutorial', 'Sigue las instrucciones del panel', 3); return; }
+    if (opts.drill) return; // el panel de la maniobra ya explica qué hacer
     flash(G.battle.kind === 'test' ? 'Campo de pruebas' : `${BATTLES[key].title}, ${BATTLES[key].year}`, G.battle.kind === 'test' ? 'Elige unidad y blancos en el panel de la derecha' : G.battle.kind === 'combined' ? G.battle.hint : G.battle.kind === 'air' ? 'Pulsa 1, 2 o 3 para enviar tu escuadrilla contra las instalaciones A, B o C' : 'Pulsa 1, 2 o 3 para enviar tu escuadra a los objetivos A, B o C', 5);
   }, 60);
 }
@@ -319,6 +321,7 @@ initHangar({
   onBack: () => { closeHangar(); show('scrFront'); },
   onTest: key => { closeHangar(); launch('test', false, { testUnit: key }); },
   onBattle: key => { closeHangar(); toDeploy(key); },
+  onDrill: (id, key) => { closeHangar(); launch('test', false, { drill: id, drillUnit: key }); },
 });
 $('padHelp').textContent = PAD_HELP;
 function applyMode() { G.opts.mode = G.opts.mode === 'veteran' ? 'veteran' : 'simple'; document.body.classList.toggle('simple', G.opts.mode === 'simple'); for (const id of ['optMode', 'optMode2']) $(id).value = G.opts.mode; }

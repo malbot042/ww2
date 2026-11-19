@@ -166,6 +166,7 @@ export function damage(e, dmg, by, dir, kind) {
   }
   if (e.cls === 'inf' && Math.abs(e.speed) < 1) mult *= 0.6; // cuerpo a tierra
   if (by === G.player && G.onHit) G.onHit(e, zone, mult, dmg * mult, kind);
+  if (by === G.player && G.drillHook) G.drillHook(e, dmg * mult, kind, zone);
   if (e === G.player && G.godMode) { G.shake = Math.max(G.shake, 0.5); return zone; }
   e.hp -= dmg * mult;
   if (e === G.player) { G.shake = Math.max(G.shake, 0.8 + dmg / 40); G.onHurt && G.onHurt(); }
@@ -268,13 +269,13 @@ export function updateProjs(dt) {
     } else if (q.kind === 'dc') {
       if (p.y < -6 || q.age > 1.6) {
         FX.splash(p.clone().setY(0), 2.6);
-        for (const e of G.ents) if (e.alive && e.side !== q.side && e.cls === 'sub') { const d = dist2(e.p, p); if (d < 34) damage(e, 95 * (1 - d / 40), q.owner); }
+        for (const e of G.ents) if (e.alive && e.side !== q.side && e.cls === 'sub') { const d = dist2(e.p, p); if (d < 34) damage(e, 95 * (1 - d / 40), q.owner, null, 'dc'); }
         done = true;
       }
     } else if (q.kind === 'bomb') {
       if (p.y <= surf) {
         const w = ground < 0; if (w) FX.splash(p, 2.4); else crater(p.x, p.z, q.rad / 30); FX.explosion(V3(p.x, surf, p.z), w ? 1 : 1.8, { dust: !w, debris: !w });
-        for (const e of G.ents) if (e.alive && e.side !== q.side && e.dom !== 'air') { const d = dist2(e.p, p) - Math.min(e.hw, 25); if (d < q.rad) damage(e, q.dmg * (d < 4 ? 1 : 1 - d / q.rad * 0.6), q.owner); }
+        for (const e of G.ents) if (e.alive && e.side !== q.side && e.dom !== 'air') { const d = dist2(e.p, p) - Math.min(e.hw, 25); if (d < q.rad) damage(e, q.dmg * (d < 4 ? 1 : 1 - d / q.rad * 0.6), q.owner, null, 'bomb'); }
         done = true;
       }
     } else if (q.kind === 'flak') {
@@ -818,8 +819,8 @@ function think(e) {
 export function aiUnit(e, dt) {
   if (hasCrit(e) && e.cd.rep <= 0 && Math.random() < 0.015) startRepair(e);
   if (e.passive) { // blanco de pruebas: se mueve en línea/círculo sin disparar
-    if (e.dom === 'air') flyPlane(e, 0, 0.35, dt);
-    else if (e.dom === 'sea') driveShip(e, e.passiveMove ? 0.4 : 0, e.passiveMove ? 0.15 : 0, dt);
+    if (e.dom === 'air') flyPlane(e, 0, e.passiveSteer ?? 0.35, dt);
+    else if (e.dom === 'sea') driveShip(e, e.passiveMove ? 0.4 : 0, e.passiveMove ? (e.passiveSteer ?? 0.15) : 0, dt);
     else if (e.dom === 'land') driveTank(e, e.passiveMove ? 0.5 : 0, 0, dt);
     if (e.dom === 'land' && e.blocked > 0.5) { e.h += Math.PI; e.blocked = 0; }
     return;

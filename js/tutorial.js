@@ -4,9 +4,9 @@ import { spawnUnit, anchorFor, applyCrit } from './units.js';
 import { V3 } from './util.js';
 
 const $ = id => document.getElementById(id);
-let steps = [], i = 0, st = {}, onExit = null, doneT = 0;
-function spot(dist, ang = 0) { const p = G.player, a = p.h + ang; return anchorFor({ dom: 'land' }, p.p.x + Math.sin(a) * dist, p.p.z + Math.cos(a) * dist); }
-function enemy(key, dist, ang, hp) {
+let steps = [], i = 0, st = {}, onExit = null, doneT = 0, cfg = {};
+export function spot(dist, ang = 0) { const p = G.player, a = p.h + ang; return anchorFor({ dom: 'land' }, p.p.x + Math.sin(a) * dist, p.p.z + Math.cos(a) * dist); }
+export function enemy(key, dist, ang, hp) {
   const q = spot(dist, ang), e = spawnUnit(key, 'E', q.x, q.z, Math.atan2(G.player.p.x - q.x, G.player.p.z - q.z));
   e.passive = true; e.order = { type: 'hold', x: q.x, z: q.z }; if (hp) e.hp = hp; return e;
 }
@@ -26,8 +26,9 @@ const STEPS = [
   { t: 'Cambiar de unidad', d: 'Pulsa <kbd>Tab</kbd> para tomar el mando de otro carro de la escuadra (o doble clic sobre él).', init: () => { st.pl = G.player; }, ok: () => G.player !== st.pl },
   { t: 'Mapa táctico', d: 'Pulsa <kbd>M</kbd> para ver el mapa completo y planificar; vuelve a pulsarla para salir. En una batalla, <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> envían la escuadra a los objetivos A, B y C.', init: () => { st.m = false; }, ok: () => { if (G.strategic) st.m = true; return st.m && !G.strategic; } },
 ];
-export function startTutorial(exit) {
-  onExit = exit; steps = STEPS; i = 0; st = {}; doneT = 0; G.tutorial = true; G.godMode = true;
+// cfg: { steps, title, done, doneTitle, exitLabel, god } — sirve también para las maniobras (drills.js)
+export function startTutorial(exit, c = {}) {
+  cfg = c; onExit = exit; steps = c.steps || STEPS; i = 0; st = {}; doneT = 0; G.tutorial = true; G.godMode = c.god !== false;
   $('tut').classList.remove('hide');
   $('tutSkip').onclick = () => next();
   $('tutExit').onclick = () => stopTutorial(true);
@@ -36,17 +37,18 @@ export function startTutorial(exit) {
 function begin() { const s = steps[i]; st.ok = false; s.init && s.init(); render(); }
 function render(done = false) {
   const s = steps[i];
-  $('tutN').textContent = done ? 'Completado' : `Paso ${i + 1} de ${steps.length}`;
-  $('tutT').textContent = done ? '¡Listo para el frente!' : s.t;
-  $('tutD').innerHTML = done ? 'Ya conoces lo básico. Elige un frente en el menú; en la pausa (<kbd>P</kbd>) tienes todos los controles.' : s.d;
+  const pre = cfg.title ? cfg.title + ' · ' : '';
+  $('tutN').textContent = done ? pre + 'Completado' : `${pre}Paso ${i + 1} de ${steps.length}`;
+  $('tutT').textContent = done ? (cfg.doneTitle || '¡Listo para el frente!') : s.t;
+  $('tutD').innerHTML = done ? (cfg.done || 'Ya conoces lo básico. Elige un frente en el menú; en la pausa (<kbd>P</kbd>) tienes todos los controles.') : s.d;
   $('tutBar').style.width = ((done ? steps.length : i) / steps.length * 100) + '%';
   $('tutSkip').classList.toggle('hide', done);
-  $('tutExit').textContent = done ? 'Volver al menú' : 'Salir';
+  $('tutExit').textContent = done ? (cfg.exitLabel || 'Volver al menú') : 'Salir';
 }
-function next() { i++; if (i >= steps.length) { render(true); G.onMsg && G.onMsg('Tutorial completado', ''); return; } begin(); }
+function next() { i++; if (i >= steps.length) { render(true); G.onMsg && G.onMsg(cfg.title ? 'Maniobra completada' : 'Tutorial completado', ''); return; } begin(); }
 export function updateTutorial(dt) {
   if (!G.tutorial || i >= steps.length || !G.player) return;
   if (doneT > 0) { doneT -= dt; if (doneT <= 0) next(); return; }
-  if (steps[i].ok()) { doneT = 1.2; $('tutT').textContent = '✔ ' + steps[i].t; G.onMsg && G.onMsg('¡Bien hecho!', '', 0.9); }
+  if (steps[i].ok(dt)) { doneT = 1.2; $('tutT').textContent = '✔ ' + steps[i].t; G.onMsg && G.onMsg('¡Bien hecho!', '', 0.9); }
 }
 export function stopTutorial(exit) { G.tutorial = false; G.godMode = false; $('tut').classList.add('hide'); if (exit && onExit) onExit(); }

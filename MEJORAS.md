@@ -174,3 +174,4 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 | v1.4 | Campos de batalla ×1,4 en todos los mapas y Hangar 3D con fichas de las 73 unidades, prueba rápida y acceso a sus batallas |
 | v1.5 | Mando aliado por IA activado por defecto: la escuadra se coordina sola, pide apoyo con reserva y respeta las órdenes del jugador durante 45 s |
 | v1.6 | Campo de pruebas reorganizado: Pacífico al suroeste, África al sur y Europa al este |
+| v1.7 | Maniobras básicas guiadas (3 navales, 3 aéreas, 3 de carros) en el campo de pruebas y en el hangar |

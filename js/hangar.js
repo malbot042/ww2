@@ -5,6 +5,7 @@ import { MODELS, CLS, FAC_NAME, BATTLES, FRONTS, KIND_NAME, specOf } from './dat
 import { buildModel, buildAA, buildBattery, buildSite } from './models.js';
 import { costOf } from './deploy.js';
 import { UNLOCKS } from './campaign.js';
+import { drillsFor } from './drills.js';
 
 const $ = id => document.getElementById(id);
 let scene = null, cam = null, turntable = null, current = null, sel = null, opts = {};
@@ -162,9 +163,11 @@ function select(key) {
     ${bars}<h4>Armamento y capacidades</h4><ul class="hga">${arms}</ul>
     ${r[2] !== '—' ? `<h4>Controles</h4><p class="hgk">${r[2]}</p>` : ''}
     ${st ? '' : `<p class="hgk">Coste de despliegue: <b>${costOf(key)}</b> puntos</p>`}
+    ${!st && drillsFor(domOf(key)).length ? `<h4>Maniobras básicas</h4><div class="hgw">${drillsFor(domOf(key)).filter(dr => MODELS[key].cls !== 'inf' && MODELS[key].cls !== 'atgun').map(dr => `<button class="hgb" data-drill="${dr.id}"><b>${dr.t}</b><span>${dr.d}</span></button>`).join('')}</div>` : ''}
     <h4>Dónde combatir con él</h4><div class="hgw">${whereHtml(key)}</div>
     ${st ? '' : '<button class="btn" id="hgTest">Prueba rápida con esta unidad</button>'}`;
   if (!st) $('hgTest').onclick = () => opts.onTest && opts.onTest(key);
+  $('hgInfo').querySelectorAll('[data-drill]').forEach(b => b.onclick = () => opts.onDrill && opts.onDrill(b.dataset.drill, key));
   $('hgInfo').querySelectorAll('[data-battle]').forEach(b => b.onclick = () => opts.onBattle && opts.onBattle(b.dataset.battle));
   $('hgList').querySelectorAll('.hgi').forEach(b => b.classList.toggle('on', b.dataset.k === key));
   const on = $('hgList').querySelector('.hgi.on'); if (on) on.scrollIntoView({ block: 'nearest' });

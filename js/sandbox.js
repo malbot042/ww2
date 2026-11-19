@@ -1,5 +1,6 @@
 // Campo de pruebas: elegir cualquier unidad, añadir blancos y enemigos, invulnerabilidad
 import { G } from './state.js';
+import { drillsFor, runDrill, DOM_NAME as DRILL_DOM } from './drills.js';
 import { MODELS, CLS, FAC_NAME } from './data.js';
 import { spawnUnit, spawnAA, spawnBattery, anchorFor, lockTarget } from './units.js';
 import { setPlayer, removeEntity } from './battle.js';
@@ -46,6 +47,10 @@ function addUnit(key, side, passive, pos) {
 }
 
 export function initSandbox(opts) {
+  // maniobras básicas guiadas
+  $('sbDrill').innerHTML = ['sea', 'air', 'land'].map(d => `<optgroup label="${DRILL_DOM[d]}">${drillsFor(d).map(x => `<option value="${x.id}">${x.t}</option>`).join('')}</optgroup>`).join('');
+  $('sbDrillGo').onclick = ev => { runDrill($('sbDrill').value, G.player && G.player.key, { clear: sandboxClear, quickTest }); ev.target.blur(); };
+  $('sbDrill').addEventListener('change', () => $('sbDrill').blur());
   flash = opts.flash; onPlayerChange = opts.onPlayerChange;
   if (wired) return; wired = true;
   $('sbMe').innerHTML = options(false); $('sbUnit').innerHTML = options(true);
@@ -72,7 +77,7 @@ export function sandboxStart() {
   $('sbInfo').innerHTML = 'Dispara a un blanco para ver el daño.';
 }
 // prueba rápida desde el hangar: cambia a la unidad, la lleva a su terreno y pone blancos delante
-export function quickTest(key) {
+export function quickTest(key, targets = true) {
   changePlayer(key);
   const e = G.player, m = MODELS[key], sp = G.map.extra.spots;
   if (sp) {
@@ -82,8 +87,9 @@ export function quickTest(key) {
     G.focus.copy(e.p);
   }
   $('sbMe').value = key;
-  targetSet();
+  if (targets) targetSet();
 }
+export function sandboxClear() { for (const e of G.ents.filter(x => x !== G.player && (x.side === 'E' || x.side === 'A'))) removeEntity(e); G.smokes.length = 0; }
 export function sandboxHide() { $('sandbox').classList.add('hide'); G.godMode = false; }
 export function sandboxHit(e, zone, mult, dmg) {
   const side = zone === null || zone === undefined ? '' : ` · ${['frontal', 'lateral', 'trasero'][zone]} ×${mult.toFixed(2)}`;

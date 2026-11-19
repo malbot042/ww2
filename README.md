@@ -33,6 +33,14 @@ Los objetivos A (salida de la playa) y B (pueblo) los capturan los tanques; el C
 ## Hangar
 La tarjeta **Hangar** del menú muestra las 73 unidades del juego (barcos, aviones, carros, infantería, cañones y defensas) en 3D sobre una plataforma giratoria: arrastra para girarlas y usa la rueda para acercarte. Para cada una verás su papel en combate, barras comparativas (resistencia, velocidad, potencia de fuego, alcance, blindaje), el armamento en detalle, sus controles y el coste de despliegue. Desde ahí puedes saltar a una **prueba rápida** en el campo de pruebas (con la unidad ya colocada en su terreno y blancos delante) o a cualquier **batalla** en la que aparece.
 
+## Maniobras básicas
+Lecciones cortas y guiadas (2–4 pasos que se comprueban solos) para aprender a combatir con cada tipo de unidad. Se practican en el campo de pruebas, eres invulnerable y los blancos no disparan salvo cuando la lección lo pide:
+- **Naval:** andanada de costado, ataque con torpedos (apuntar con ventaja) y caza de submarinos con cargas de profundidad.
+- **Aérea:** altitud y energía (subir, picar, viraje cerrado), ponerse a las seis de un bombardero y bombardeo en picado.
+- **Carros:** dar el frente (blindaje), flanqueo de un Panther y munición AP/HE con cortina de humo.
+
+Se abren desde el panel **Maniobras básicas** del campo de pruebas o desde la ficha de cada unidad en el **Hangar**. Si la unidad elegida sirve para la lección (por ejemplo, tiene torpedos), se usa esa; si no, una adecuada.
+
 ## Tutorial
 La tarjeta **Tutorial** del menú enseña lo básico en 10 pasos guiados (unos 5 minutos): moverse, cámara, zoom, fijar un blanco, disparar, munición, control de daños, órdenes a la escuadra, cambiar de unidad y mapa táctico.
 
@@ -169,6 +177,7 @@ js/save.js        guardado en localStorage
 js/tutorial.js    tutorial guiado
 js/split.js       multijugador local a pantalla partida
 js/hangar.js      hangar 3D con fichas de todas las unidades
+js/drills.js      maniobras básicas guiadas (naval, aérea y carros)
 v1.html           primer prototipo (v0.1)
 ```
 Con `#debug` en la URL queda disponible `window.__ww2` para pruebas automáticas.

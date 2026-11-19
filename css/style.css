@@ -224,3 +224,5 @@ body:not(.simple) .simple-only{display:none}
 .front.f-hangar{background:linear-gradient(135deg,#3b4048,#23272d)}
 @media(max-width:900px){.hgl{width:200px}.hgr2{width:260px}.hgs,.hgtip{display:none}}
 .qrow{flex-wrap:wrap;row-gap:8px}.qsel{flex-wrap:wrap}
+#sandbox h5{margin:10px 0 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.7}#sbDrill{min-width:0;font:inherit;font-size:12px;padding:5px;border-radius:6px;background:#1c2329;color:inherit;border:1px solid rgba(255,255,255,.18)}
+#sbDrill{width:100%;margin-bottom:6px}#sandbox button.full{width:100%;padding:7px}
