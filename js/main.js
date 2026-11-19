@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { DIFFS, diff } from './difficulty.js';
 import { initSchool, openSchool, closeSchool, runDoctrineDemo, updateDoctrine, stopDoctrineDemo } from './doctrine.js';
 import { initHangar, openHangar, closeHangar, updateHangar, renderHangar } from './hangar.js';
 import { autoSupportKind } from './strategy.js';
@@ -249,7 +250,7 @@ function startDemo() {
 function showResults(res) {
   G.running = false; hudHide();
   const b = G.battle, win = res === 'win';
-  const score = Math.round(G.tickets.A + G.stats.kills * 50 - G.stats.lost * 20 + (win ? 500 : 0));
+  const score = Math.round((G.tickets.A + G.stats.kills * 50 - G.stats.lost * 20 + (win ? 500 : 0)) * diff().score);
   if (G.campaign) G.campaign.score += score;
   const camp = endCampaignBattle(win);
   const newRec = b.kind !== 'test' && record(G.battleKey, score, win);
@@ -323,6 +324,9 @@ function RADIO_plan(zn) { RADIO.plan && RADIO.plan(zn); }
 function applyCmd() { G.opts.aiCmd = G.opts.aiCmd !== false; for (const id of ['optCmd', 'optCmd2']) $(id).value = G.opts.aiCmd ? 'ai' : 'me'; }
 for (const id of ['optCmd', 'optCmd2']) $(id).onchange = ev => { G.opts.aiCmd = ev.target.value === 'ai'; applyCmd(); G.onOptions && G.onOptions(); flash(G.opts.aiCmd ? 'Mando aliado: IA' : 'Mando aliado: tú', G.opts.aiCmd ? 'La IA coordina la escuadra; tus órdenes mandan durante 45 s' : 'La escuadra solo obedece tus órdenes', 1.8); };
 applyCmd();
+function applyDiff() { if (!DIFFS[G.opts.diff]) G.opts.diff = 'normal'; for (const id of ['optDiff', 'optDiff2']) { $(id).value = G.opts.diff; $(id).title = DIFFS[G.opts.diff].d; } }
+for (const id of ['optDiff', 'optDiff2']) $(id).onchange = ev => { G.opts.diff = ev.target.value; applyDiff(); G.onOptions && G.onOptions(); flash(`Dificultad: ${DIFFS[G.opts.diff].n}`, DIFFS[G.opts.diff].d + (G.running ? ' (en vigor desde ya; los puntos de batalla se aplican en la próxima batalla)' : ''), 2.4); };
+applyDiff();
 initSchool({
   onBack: () => { closeSchool(); show('scrFront'); },
   onDemo: dom => { closeSchool(); launch('test', false, { doctrine: dom }); },

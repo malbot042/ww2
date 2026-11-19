@@ -1,5 +1,6 @@
 // Capa estratégica: niebla de guerra, puntos de mando y apoyo (artillería, ataque aéreo, refuerzos)
 import * as THREE from 'three';
+import { diff } from './difficulty.js';
 import { G } from './state.js';
 import { BATTLES, MODELS, CLS } from './data.js';
 import { spawnUnit, damage, anchorFor } from './units.js';
@@ -183,7 +184,7 @@ function allySupportAI(dt) {
   if (mine < G.startCount.A * 0.6 && G.supCount.A < 4 && useSupport('A', 'reinf')) G.onAllySupport && G.onAllySupport('reinf');
 }
 function enemySupportAI(dt) {
-  aiT -= dt; if (aiT > 0) return; aiT = 9;
+  aiT -= dt; if (aiT > 0) return; aiT = diff().sup;
   const foes = G.ents.filter(e => e.alive && e.side === 'A' && e.dom !== 'air' && e.dom !== 'static' && e.visE !== false && !e.submerged);
   let best = null, bn = 1;
   for (const f of foes) { const n = foes.filter(o => o.p.distanceTo(f.p) < 70).length; if (n > bn) { bn = n; best = f; } }
@@ -191,5 +192,5 @@ function enemySupportAI(dt) {
   const armor = foes.filter(e => e.cls === 'tank' || e.dom === 'sea')[0];
   if (armor && G.battle.kind !== 'naval' && Math.random() < 0.5 && useSupport('E', 'air', armor.p.clone())) return;
   const mine = G.ents.filter(e => e.alive && e.side === 'E' && e.dom !== 'static').length;
-  if (mine < G.startCount.E * 0.75 && G.supCount.E < 4) useSupport('E', 'reinf');
+  if (diff().reinf && mine < G.startCount.E * diff().reinfK && G.supCount.E < 4) useSupport('E', 'reinf');
 }

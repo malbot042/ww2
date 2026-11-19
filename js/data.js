@@ -23,7 +23,7 @@ export const BATTLES = {
   'pacific-naval': {
     front: 'pacific', kind: 'naval', map: 'pacific_sea', title: 'Islas Salomón', year: '1942',
     brief: 'Controla los tres pasos entre islas (A, B, C). Los destructores japoneses llevan torpedos Long Lance de largo alcance: pon tus cañones de costado y usa los submarinos para emboscar.',
-    allies: [['yorktown', 1], ['washington', 1], ['baltimore', 1], ['fletcher', 5], ['gato', 2], ['pt109', 2]],
+    allies: [['yorktown', 1], ['washington', 1], ['baltimore', 1], ['fletcher', 6], ['gato', 2], ['pt109', 1]],
     enemy: [['akagi', 1], ['kirishima', 1], ['takao', 1], ['kagero', 7], ['i15', 2]],
   },
   'pacific-air': {
@@ -84,7 +84,7 @@ export const BATTLES = {
   'europe-land': {
     front: 'europe', kind: 'land', map: 'europe_land', title: 'Bocage normando', year: '1944',
     brief: 'Toma los cruces de caminos (A, B, C). Panther y Tiger destrozan a cualquier Sherman de frente: usa a los Firefly y al M10 para el trabajo duro y flanquea entre los setos.',
-    allies: [['sherman', 5], ['firefly', 2], ['cromwell', 2], ['m10', 1], ['inf_us', 3], ['at_us', 1]], enemy: [['pz4h', 4], ['panther', 3], ['stug', 2], ['tiger', 1], ['inf_de', 3], ['pak40', 2]],
+    allies: [['sherman', 5], ['firefly', 3], ['cromwell', 2], ['m10', 1], ['inf_us', 3], ['at_us', 1]], enemy: [['pz4h', 5], ['panther', 1], ['stug', 2], ['tiger', 1], ['inf_de', 3], ['pak40', 2]],
   },
 };
 
@@ -118,8 +118,8 @@ export const CLS = {
 const HEAVY = { hp: 900, min: 62, max: 84, acc: 16, turn: 0.55, value: 60, r: 18, alt: 210, guns: { range: 300, rof: 0.14, dmg: 1.1 }, bomb: { dmg: 150, rad: 30, cd: 0.28, stick: 6 }, ammo: { guns: 1600, bomb: 12 }, heavy: { n: 4 } };
 export const MODELS = {
   // ---------- Naval ----------
-  fletcher: { cls: 'destroyer', fac: 'us', name: 'USS Fletcher', type: 'Destructor', hull: 0x4b5864, sup: 0x8b949a, deck: 0x4a5056, turrets: [0.36, 0.26, -0.2, -0.3, -0.4], tw: 1, funnels: [0.07, -0.07], tubes: [-0.02, -0.13] },
-  kagero: { cls: 'destroyer', fac: 'jp', name: 'IJN Kagero', type: 'Destructor', hull: 0x595f63, sup: 0x6e7478, deck: 0x7a5a3e, turrets: [0.34, -0.26, -0.37], tw: 2, funnels: [0.12, -0.02], tubes: [0.04, -0.13], stats: { torp: { n: 4, cd: 26, dmg: 180 }, main: { range: 640, rof: 2.4, dmg: 24, hs: 270, n: 2 } } },
+  fletcher: { cls: 'destroyer', fac: 'us', name: 'USS Fletcher', type: 'Destructor', hull: 0x4b5864, sup: 0x8b949a, deck: 0x4a5056, turrets: [0.36, 0.26, -0.2, -0.3, -0.4], tw: 1, funnels: [0.07, -0.07], tubes: [-0.02, -0.13], stats: { main: { n: 2 } } }, // 5 piezas de 127 mm: dos proyectiles por salva
+  kagero: { cls: 'destroyer', fac: 'jp', name: 'IJN Kagero', type: 'Destructor', hull: 0x595f63, sup: 0x6e7478, deck: 0x7a5a3e, turrets: [0.34, -0.26, -0.37], tw: 2, funnels: [0.12, -0.02], tubes: [0.04, -0.13], stats: { torp: { n: 4, cd: 26, dmg: 160 }, main: { range: 640, rof: 2.4, dmg: 24, hs: 270, n: 2 } } },
   tribal: { cls: 'destroyer', fac: 'uk', name: 'HMS Tartar (Tribal)', type: 'Destructor', hull: 0x7f888c, sup: 0xadb4b7, deck: 0x6b6a64, turrets: [0.35, 0.25, -0.27, -0.37], tw: 2, funnels: [0.04], tubes: [-0.07], stats: { main: { range: 660, rof: 2.4, dmg: 22, hs: 270, n: 2 } } },
   z1936: { cls: 'destroyer', fac: 'de', name: 'Z 28 (Zerstörer 1936)', type: 'Destructor', hull: 0x868d91, sup: 0xa4aaad, deck: 0x9a7d5d, turrets: [0.35, 0.26, -0.22, -0.31, -0.4], tw: 1, funnels: [0.1, -0.06], tubes: [0.02, -0.14] },
   baltimore: { cls: 'cruiser', fac: 'us', name: 'USS Baltimore', type: 'Crucero pesado', hull: 0x4b5864, sup: 0x8b949a, deck: 0x4a5056, turrets: [0.33, 0.23, -0.3], tw: 3, funnels: [0.04, -0.1] },
@@ -142,7 +142,7 @@ export const MODELS = {
   mtb: { cls: 'pt', fac: 'uk', name: 'MTB Vosper', type: 'Lancha torpedera', hull: 0x8c9599, sup: 0xa8afb2, deck: 0x707070 },
   sboot: { cls: 'pt', fac: 'de', name: 'S-Boot (Schnellboot)', type: 'Lancha torpedera', hull: 0x8d9397, sup: 0xa1a7aa, deck: 0x8a7a62, stats: { hp: 240, max: 54 } },
   // ---------- Aire ----------
-  wildcat: { cls: 'fighter', fac: 'us', name: 'F4F Wildcat', type: 'Caza embarcado', len: 8.8, span: 11.6, radial: true, color: 0x6c7f93, under: 0xc8ccc8, stats: { hp: 170, max: 130, turn: 1.42 } },
+  wildcat: { cls: 'fighter', fac: 'us', name: 'F4F Wildcat', type: 'Caza embarcado', len: 8.8, span: 11.6, radial: true, color: 0x6c7f93, under: 0xc8ccc8, stats: { hp: 195, max: 130, turn: 1.6 } }, // robusto y con tácticas de pareja
   zero: { cls: 'fighter', fac: 'jp', name: 'A6M2 Zero', type: 'Caza embarcado', len: 9.1, span: 12, radial: true, color: 0xc9c5ae, cowl: 0x1d1d1d, stats: { hp: 104, max: 136, turn: 1.95 } },
   sbd: { cls: 'bomber', fac: 'us', name: 'SBD Dauntless', type: 'Bombardero en picado', len: 10.1, span: 12.7, radial: true, color: 0x6c8096 },
   val: { cls: 'bomber', fac: 'jp', name: 'D3A Val', type: 'Bombardero en picado', len: 10.2, span: 14.4, radial: true, color: 0x4f5c3d, fixedGear: true, stats: { hp: 210 } },
@@ -159,7 +159,7 @@ export const MODELS = {
   bf109g: { cls: 'fighter', fac: 'de', name: 'Bf 109 G-6', type: 'Caza', len: 9, span: 9.9, color: 0x707a80, nose: 0xd8b42c, stats: { hp: 130, max: 148, turn: 1.55 } },
   fw190f: { cls: 'bomber', fac: 'de', name: 'Fw 190 F-8', type: 'Cazabombardero', len: 9, span: 10.5, radial: true, color: 0x6f797e, nose: 0x3a3f3a, stats: { hp: 250, max: 132, turn: 1.3, guns: { range: 320, rof: 0.08, dmg: 1.7 } } },
   // ---------- Tierra ----------
-  sherman: { cls: 'tank', fac: 'us', name: 'M4A1 Sherman', type: 'Carro medio', color: 0x4b5320, L: 5.9, W: 2.6, H: 2.7, tur: 'cast', gun: 3.1, gr: 0.075, wheels: 6, wr: 0.42, glacis: 0.55, stats: { hp: 280, max: 27, gun: { range: 470, rof: 3.2, dmg: 55 }, armor: [0.9, 1.25, 1.6] } },
+  sherman: { cls: 'tank', fac: 'us', name: 'M4A1 Sherman', type: 'Carro medio', color: 0x4b5320, L: 5.9, W: 2.6, H: 2.7, tur: 'cast', gun: 3.1, gr: 0.075, wheels: 6, wr: 0.42, glacis: 0.55, stats: { hp: 280, max: 27, gun: { range: 530, rof: 3.2, dmg: 55 }, armor: [0.9, 1.25, 1.6] } },
   sherman_uk: { cls: 'tank', fac: 'uk', name: 'Sherman II', type: 'Carro medio', color: 0xb9a27a, L: 5.9, W: 2.6, H: 2.7, tur: 'cast', gun: 3.1, gr: 0.075, wheels: 6, wr: 0.42, glacis: 0.55, stats: { hp: 280, max: 27, gun: { range: 470, rof: 3.2, dmg: 55 }, armor: [0.9, 1.25, 1.6] } },
   firefly: { cls: 'tank', fac: 'uk', name: 'Sherman Firefly', type: 'Carro medio (17 lb)', color: 0x55593a, L: 5.9, W: 2.6, H: 2.7, tur: 'cast', gun: 4.4, gr: 0.085, brake: true, wheels: 6, wr: 0.42, glacis: 0.55, stats: { hp: 270, max: 25, gun: { range: 580, rof: 3.9, dmg: 92 }, armor: [0.9, 1.25, 1.6] } },
   cromwell: { cls: 'tank', fac: 'uk', name: 'Cromwell IV', type: 'Carro crucero', color: 0x58593c, L: 6.4, W: 3.0, H: 2.5, tur: 'boxy', gun: 2.9, gr: 0.075, wheels: 5, wr: 0.6, christie: true, glacis: 0.15, stats: { hp: 240, max: 35, turn: 1.6, gun: { range: 450, rof: 3.0, dmg: 52 }, armor: [0.95, 1.25, 1.6] } },

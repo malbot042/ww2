@@ -1,5 +1,6 @@
 // Fase de despliegue: composición con presupuesto y colocación de unidades
 import * as THREE from 'three';
+import { diffName } from './difficulty.js';
 import { vetCount } from './campaign.js';
 import { G } from './state.js';
 import { BATTLES, FRONTS, MODELS, CLS, specOf, KIND_NAME, FAC_NAME } from './data.js';
@@ -50,6 +51,7 @@ function render() {
   $('dpSub').textContent = state.quick ? `${KIND_NAME[b.kind]} · Fuerza recomendada` : `${KIND_NAME[b.kind]} · Elige tu fuerza dentro del presupuesto (máximo ${maxN} unidades)`;
   $('dpSimple').innerHTML = `<h4>Tu fuerza</h4><ul>${Object.entries(counts).filter(([, c]) => c > 0).map(([k, c]) => `<li><b>${c}×</b>${MODELS[k].name}${vetCount(k) ? ' <em class="vet">★</em>' : ''}</li>`).join('')}</ul>
     <p>${b.hint || 'Lleva tu escuadra a los objetivos A, B y C y mantenlos para que el enemigo pierda puntos.'}</p>
+    <p>Dificultad: <b>${diffName()}</b> (se cambia en el menú principal o en la pausa)</p>
     <button class="lnk" id="dpCustom">Personalizar fuerza, hora, clima y colocación…</button>`;
   $('dpCustom').onclick = () => { state.quick = false; render(); };
   $('dpList').querySelectorAll('button[data-k]').forEach(bt => bt.onclick = () => { state.counts[bt.dataset.k] = Math.max(0, state.counts[bt.dataset.k] + +bt.dataset.d); render(); });

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { diff } from './difficulty.js';
 import { trackMark } from './marks.js';
 import { updateDamageLook, onKillFx, crater } from './damagefx.js';
 import { gainXp } from './campaign.js';
@@ -157,6 +158,7 @@ export function lead(from, t, speed) {
 
 // ---------- daño ----------
 export function damage(e, dmg, by, dir, kind) {
+  if (by && by.side === 'E' && e.side === 'A') dmg *= diff().dmg; // dificultad
   if (!e.alive || dmg <= 0) return null;
   if (G.tally && kind) G.tally[e.side + kind] = (G.tally[e.side + kind] || 0) + dmg;
   let mult = 1, zone = null;
@@ -371,7 +373,7 @@ function fireNaval(e, t) {
     if (Math.abs(angDiff(want, base)) > 2.55 || Math.abs(angDiff(want, e.tYaw[i])) > 0.08) continue;
     const from = turretWorld(e, i); from.y += 1.2;
     for (let b = 0; b < (s.n || 1); b++) {
-      const d = dist2(from, aimP), err = (d * (e === G.player ? 0.02 : 0.03) + 4) * (G.env ? G.env.errK * (e.dom === 'sea' ? 1 + 0.3 * G.env.seaState : 1) : 1) * (e.accK || 1);
+      const d = dist2(from, aimP), err = (d * (e === G.player ? 0.02 : 0.03) + 4) * (G.env ? G.env.errK * (e.dom === 'sea' ? 1 + 0.3 * G.env.seaState : 1) : 1) * (e.accK || 1) * (e.side === 'E' ? diff().err : 1);
       const tp = aimP.clone().add(V3(rnd(-1, 1) * err, 0, rnd(-1, 1) * err * 1.6));
       const dx = tp.x - from.x, dz = tp.z - from.z, dd = Math.hypot(dx, dz), T = dd / s.hs;
       const ty = t.dom === 'sea' ? 1.5 : t.p.y + 1.5, vy = (ty - from.y + 0.5 * GRAV * T * T) / T;
@@ -391,12 +393,12 @@ function fireTank(e, t) {
   const d = from.distanceTo(tp), sp = 520;
   tp.addScaledVector(t.vel, d / sp);
   const moving = Math.abs(e.speed) / e.s.max;
-  const err = ((e === G.player ? 0.004 : 0.008) + moving * 0.018 + d / 60000) * (G.env ? G.env.errK : 1) * (e.accK || 1);
+  const err = ((e === G.player ? 0.004 : 0.008) + moving * 0.018 + d / 60000) * (G.env ? G.env.errK : 1) * (e.accK || 1) * (e.side === 'E' ? diff().err : 1);
   const dir = tp.sub(from).normalize().add(V3(rnd(-err, err), rnd(-err, err) * 0.4, rnd(-err, err))).normalize();
   proj('ap', e, from, dir.multiplyScalar(sp), { dmg: s.dmg, life: s.range / sp * 1.15, ammo: am });
   if (am !== 'x') e.ammo[am]--;
   FX.muzzle(from, dir.clone().normalize(), 1.1); FX.dust(V3(from.x, e.p.y, from.z));
-  e.cd.main = s.rof * (e.side === 'E' ? rnd(1.0, 1.25) : 1) * (e.mods.turret ? 1.4 : 1);
+  e.cd.main = s.rof * rnd(0.95, 1.05) * (e.mods.turret ? 1.4 : 1);
   FX.sfx('cannon', e.p, 0.9);
   return true;
 }
@@ -1021,7 +1023,7 @@ export function updateUnits(dt) {
   for (const e of G.ents) {
     if (!e.alive) { updateWreck(e, dt); continue; }
     updateDamageLook(e, dt);
-    const rk = e.rofK || 1; for (const k in e.cd) e.cd[k] -= dt * rk;
+    const rk = (e.rofK || 1) / (e.side === 'E' ? diff().rof : 1); for (const k in e.cd) e.cd[k] -= dt * rk;
     if (e.detected > 0) e.detected -= dt;
     if (e.cls === 'sub') { e.battery = clamp(e.battery + (e.submerged ? -dt / 50 : dt / 28), 0, 1); if (e.submerged && e.battery <= 0) toggleDive(e); }
     const px = e.p.x, py = e.p.y, pz = e.p.z;

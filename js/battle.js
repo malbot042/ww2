@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { diff } from './difficulty.js';
 import { initMarks } from './marks.js';
 import { initDamageFx } from './damagefx.js';
 import { applyVeterans } from './campaign.js';
@@ -158,6 +159,7 @@ export function startBattle(key, demo = false, opts = {}) {
   let slot = 0; allies.forEach(e => { if (e !== G.player) { e.slot = slot++; e.order = { type: 'follow' }; G.selection.add(e); } });
   if (demo) { allies.forEach(e => e.order = { type: 'attack' }); G.selection.clear(); }
   G.tickets = { A: air ? 450 : mixed ? 800 : 600, E: air ? 450 : mixed ? 800 : 600 }; G.ticketsMax = G.tickets.A;
+  if (!demo) { G.tickets.A = Math.round(G.tickets.A * diff().tickets); G.ticketsMax = Math.max(G.tickets.A, G.tickets.E); }
   G.time = 0; G.over = false; G.stats = { kills: 0, lost: 0 }; cmdT = { A: demo ? 0 : 3, E: 0 }; deadT = 0; lastMain = -1; DOC.A = { phase: 'approach', since: 0, cyc: 0 }; DOC.E = { phase: 'approach', since: 0, cyc: 0 };
   // líneas de órdenes
   lines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x9fd0ff, transparent: true, opacity: 0.55, depthTest: false }));
@@ -332,7 +334,7 @@ export function updateBattle(dt) {
   G.time += dt;
   const b = G.battle;
   // mando IA
-  if (b.kind !== 'test') for (const s of ['A', 'E']) { if (s === 'A' && !G.demo && !aiAllies()) continue; cmdT[s] -= dt; if (cmdT[s] <= 0) { command(s); cmdT[s] = 7; } }
+  if (b.kind !== 'test') for (const s of ['A', 'E']) { if (s === 'A' && !G.demo && !aiAllies()) continue; cmdT[s] -= dt; if (cmdT[s] <= 0) { command(s); cmdT[s] = s === 'E' ? diff().cmd : 7; } }
   updateVision(dt); updateStrategy(dt);
   // zonas
   if (b.kind !== 'air') {

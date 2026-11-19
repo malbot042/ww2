@@ -72,6 +72,21 @@ Una tarjeta aparte en el menú lleva a un mapa con mar, playa y tierra, sin punt
 - **Naval y tanques:** cada bando tiene 600 puntos. Si controlas más objetivos (A, B, C) que el enemigo, él pierde puntos cada segundo. Cada unidad destruida también resta puntos a su bando.
 - **Aérea:** cada bando tiene 3 instalaciones (aeródromo, depósito y radar) protegidas por antiaéreos. Gana quien destruye las del rival o agota sus puntos.
 
+## Dificultad
+Se elige en el menú principal o en la pausa (se guarda) y solo afecta al enemigo:
+
+| | Fácil | Medio | Difícil |
+|---|---|---|---|
+| Daño enemigo | ×0,75 | ×1 | ×1,15 |
+| Dispersión del tiro enemigo | ×1,5 | ×1 | ×0,85 |
+| Recarga enemiga | 30 % más lenta | 10 % más lenta | igual que la tuya |
+| Apoyos enemigos | cada 18 s, sin refuerzos | cada 9 s | cada 7 s y refuerzos antes |
+| Replanificación del mando enemigo | cada 14 s | cada 7 s | cada 5 s |
+| Puntos de batalla aliados | +25 % | — | — |
+| Puntuación | ×0,75 | ×1 | ×1,25 |
+
+En el campo de pruebas y en las demostraciones no se aplica.
+
 ## Mando aliado coordinado por IA
 Por defecto la escuadra aliada actúa coordinada bajo un **mando aliado de IA**: cada pocos segundos reparte las unidades entre los objetivos (concentra el esfuerzo donde el enemigo es más débil o donde hay que defender), mantiene los portaaviones atrás y los cañones antitanque en posición, organiza escoltas en las batallas aéreas y pide apoyo de artillería, aviación o refuerzos cuando sobran puntos de mando (siempre deja una reserva para ti). Te avisa por radio del esfuerzo principal, y en la lista de escuadra las órdenes de la IA aparecen como «IA · …».
 
