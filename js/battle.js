@@ -4,7 +4,7 @@ import { initMarks } from './marks.js';
 import { initDamageFx } from './damagefx.js';
 import { applyVeterans } from './campaign.js';
 import { G } from './state.js';
-import { coverNear } from './physics.js';
+import { claimCover } from './physics.js';
 import { BATTLES, MODELS, CLS } from './data.js';
 import { buildWorld } from './world.js';
 import { applyEnv } from './env.js';
@@ -14,7 +14,7 @@ import { updateVision, updateStrategy, resetStrategy } from './strategy.js';
 import { formationOffset } from './units.js';
 import { V3, clamp, canvasTex } from './util.js';
 
-let markers = null, icons = new Map(), iconTex = {}, lines = null, selRings = new Map(), cmdT = { A: 0, E: 0 }, deadT = 0, lastMain = -1;
+let markers = null, icons = new Map(), ghosts = new Map(), ghostTex = null, iconTex = {}, lines = null, selRings = new Map(), cmdT = { A: 0, E: 0 }, deadT = 0, lastMain = -1;
 // mando aliado por IA: activo salvo que el jugador elija dar todas las órdenes; una orden manual manda sobre la IA durante este tiempo
 export const MANUAL_S = 45;
 const aiAllies = () => G.opts?.aiCmd !== false;
@@ -30,7 +30,7 @@ function clearBattle() {
   G.unitsGroup = new THREE.Group(); G.scene.add(G.unitsGroup);
   if (markers) { G.scene.remove(markers); }
   markers = new THREE.Group(); G.scene.add(markers); G.markersGroup = markers;
-  icons = new Map(); selRings = new Map();
+  icons = new Map(); ghosts = new Map(); selRings = new Map();
   G.ents = []; G.smokes = []; G.bases = null; G.objectives = []; G.sitesA = []; G.sitesE = []; G.player = null; G.selection = new Set();
   resetFx();
 }
@@ -202,7 +202,7 @@ export function issueOrder(type, arg = {}, queued = false) {
     } else o = { type, ...arg };
     if (offs) { o.ox = offs[i][0]; o.oz = offs[i][1]; }
     // en tierra, cada unidad busca el seto, bosque o casa más próximo a su puesto (si hay alguno cerca)
-    if (type === 'move' && e.dom === 'land' && e.cls !== 'atgun') { const cp = coverNear(o.x + (o.ox || 0), o.z + (o.oz || 0), 40); if (cp) { o.cx = cp.x; o.cz = cp.z; } }
+    if (type === 'move' && e.dom === 'land' && e.cls !== 'atgun') { const cp = claimCover(e, o.x + (o.ox || 0), o.z + (o.oz || 0), 40); if (cp) { o.cx = cp.x; o.cz = cp.z; } }
     e.manualT = G.time + MANUAL_S; // la IA aliada respeta esta orden un tiempo
     if (queued && type !== 'route') { e.queue = e.queue || []; e.queue.push(o); if (e.order.type === 'follow' || e.order.type === 'hold') e.order = e.queue.shift(); }
     else { e.order = o; e.queue = []; }
@@ -376,6 +376,7 @@ export function updateBattle(dt) {
     let res = null;
     if (G.tickets.E <= 0 || !mob('E') || sitesDead('E')) res = 'win';
     else if (G.tickets.A <= 0 || !mob('A') || sitesDead('A')) res = 'lose';
+    else if (b.timeLimit && G.time >= b.timeLimit) res = G.tickets.A >= G.tickets.E ? 'win' : 'lose'; // escaramuza con tiempo
     if (res) { G.over = true; G.onEnd && G.onEnd(res); }
   }
   if (G.demo && (!G.ents.some(u => u.alive && u.side === 'E' && u.dom !== 'static') || !G.ents.some(u => u.alive && u.side === 'A' && u.dom !== 'static') || G.time > 240)) G.onDemoEnd && G.onDemoEnd();
@@ -389,6 +390,14 @@ export function updateBattle(dt) {
 
 // ---------- iconos, anillos de selección y líneas de órdenes ----------
 const ringGeo = new THREE.RingGeometry(0.85, 1, 32);
+const GHOST_T = 20;
+function ghostTexture() {
+  return ghostTex || (ghostTex = canvasTex(64, g => {
+    g.clearRect(0, 0, 64, 64); g.setLineDash([6, 5]); g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.6)'; g.beginPath(); g.arc(32, 32, 24, 0, 7); g.stroke();
+    g.lineWidth = 2.5; g.strokeStyle = '#ff6a5a'; g.beginPath(); g.arc(32, 32, 24, 0, 7); g.stroke(); g.setLineDash([]);
+    g.font = 'bold 30px "Barlow Condensed",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText('?', 32, 34); g.fillStyle = '#ff8a7a'; g.fillText('?', 32, 34);
+  }));
+}
 export function updateMarkers() {
   const far = G.zoom > 650 || G.strategic;
   for (const e of G.ents) {
@@ -400,11 +409,19 @@ export function updateMarkers() {
     sp.visible = far && e.alive && (e.cls !== 'aa') && !e.gone;
     if (e.cls === 'battery') sp.visible = far && e.alive;
     sp.material.opacity = 1;
+    let gh = ghosts.get(e);
     if (e.side === 'E' && G.fog && e.alive && e.visA === false) {
-      const t = e.seenA, lp = e.lastA; sp.visible = sp.visible && t !== undefined && G.time - t < 25;
-      if (sp.visible) { sp.position.set(lp.x, Math.max(lp.y, 0) + 8, lp.z); sp.material.opacity = 0.35; }
+      // último avistamiento: marca fantasma donde se le vio por última vez, que se apaga en 20 s
+      const t = e.seenA, lp = e.lastA, age = t === undefined ? 99 : G.time - t, on = age < GHOST_T;
+      sp.visible = sp.visible && on;
+      if (sp.visible) { sp.position.set(lp.x, Math.max(lp.y, 0) + 8, lp.z); sp.material.opacity = 0.45 * (1 - age / GHOST_T); }
+      if (on && !far && !G.demo) {
+        if (!gh) { gh = new THREE.Sprite(new THREE.SpriteMaterial({ map: ghostTexture(), sizeAttenuation: false, depthTest: false, transparent: true })); gh.renderOrder = 12; gh.scale.set(0.05, 0.05, 1); markers.add(gh); ghosts.set(e, gh); }
+        gh.visible = true; gh.position.set(lp.x, Math.max(lp.y, 0) + (e.dom === 'air' ? 0 : 6), lp.z); gh.material.opacity = 0.85 * Math.min(1, (GHOST_T - age) / 4);
+      } else if (gh) gh.visible = false;
       continue;
     }
+    if (gh) gh.visible = false;
     const sz = e === G.player ? 0.034 : e.cls === 'site' ? 0.032 : 0.026; sp.scale.set(sz, sz, 1);
     sp.position.set(e.p.x, Math.max(e.p.y, 0) + 8, e.p.z);
     if (e.submerged) sp.material.opacity = 0.55;

@@ -135,6 +135,14 @@ Con <kbd>V</kbd> se llega a la vista **Hacia el blanco**: la cámara se coloca d
 - **Estrellas por batalla**: ★ ganar · ★★ con menos del 30 % de bajas · ★★★ con menos del 15 % en dificultad media o difícil. Se ven en la portada, en cada frente y en las batallas de la campaña.
 - **Medallas** (pestaña Medallas de la portada): Bautismo de fuego, As del aire, Cazador de submarinos, Pez de acero, Matagigantes, Cazacarros, Embestida, Santabárbara, Buen tirador, Superviviente, Victoria impecable, Veterano, Perfeccionista y Campaña completada.
 
+## Mando más cómodo y escaramuza (v2.7)
+- **Órdenes desde el minimapa**: clic (o clic derecho) en el minimapa manda a las unidades seleccionadas a ese punto; sobre una zona, a tomarla; con Shift, añade puntos de ruta.
+- **La IA aliada usa la cobertura**: al defender una zona propia, esperar o apoyar, las unidades de tierra se colocan en setos, bosques o casas cercanos, cada una en un sitio distinto. Al atacar una zona siguen empujando hasta dentro.
+- **Sugerencias del mando por radio** (texto arriba y voz): blindado o barco enemigo aislado cerca, submarino detectado, bombarderos enemigos, zona propia sin defender con el enemigo cerca, zona libre para tomar y aviso si llevas rato lejos del combate. Se desactivan en Pausa → opciones.
+- **Último avistamiento**: con niebla de guerra, el enemigo que se esconde deja una marca «?» donde se le vio por última vez, que se apaga en 20 s (también en el minimapa).
+- **Círculo de alcance**: círculo tenue en el suelo con el alcance de tu arma principal (barcos, tanques, infantería); se pone verde cuando tu blanco está dentro.
+- **Escaramuza a medida** (pestaña Escaramuza de la portada): frente y tipo de batalla (su mapa), tus fuerzas y las del enemigo (hasta 16 por bando, con las unidades de ese frente y las desbloqueables), duración (5, 10, 15 min o sin límite: al acabar el tiempo gana quien tenga más puntos de batalla) y niebla de guerra. No cuenta para récords, estrellas ni medallas.
+
 ## Controles
 
 | Tecla | Acción |

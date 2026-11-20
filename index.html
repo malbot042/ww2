@@ -77,6 +77,7 @@
   </div>
   <div id="msg"></div>
   <div id="hit"></div>
+  <div id="advTip"></div>
   <div id="tacBar" class="hide"><b>PAUSA TÁCTICA</b><span>Da órdenes o cambia de unidad con calma</span><button class="btn" id="tacGo">Continuar <kbd>Intro</kbd></button></div>
 </div>
 
@@ -85,7 +86,7 @@
   <section id="scrFront" class="scr">
     <header class="brand"><h1>FRENTES <span>1939–45</span></h1><p>Mando táctico de escuadra · 10 contra 10 · Mar, aire y tierra</p></header>
     <div id="hero"></div>
-    <nav id="more"><button data-tab="fronts">Frentes y campañas</button><button data-tab="learn">Aprender</button><button data-tab="hangar">Hangar</button><button data-tab="test">Campos de pruebas</button><button data-tab="medals">Medallas</button></nav>
+    <nav id="more"><button data-tab="fronts">Frentes y campañas</button><button data-tab="learn">Aprender</button><button data-tab="hangar">Hangar</button><button data-tab="test">Campos de pruebas</button><button data-tab="medals">Medallas</button><button data-tab="skirm">Escaramuza</button></nav>
     <div id="contCamp"></div>
     <div id="fronts" class="hide"></div>
     <div class="qsel"><label>Dificultad <select id="optDiff2"><option value="easy">Fácil</option><option value="normal">Medio</option><option value="hard">Difícil</option></select></label><label>Mando aliado <select id="optCmd2"><option value="ai">IA coordinada</option><option value="me">Solo mis órdenes</option></select></label><label>Modo <select id="optMode2"><option value="simple">Sencillo</option><option value="veteran">Veterano</option></select></label><label>Calidad gráfica <select id="optQual2"></select></label></div>
@@ -94,6 +95,20 @@
   <section id="scrBattle" class="scr hide">
     <header class="bhead"><button class="ghost" id="backFront">← Frentes</button><div><h2 id="bfName"></h2><p id="bfVs"></p></div></header>
     <div id="battles"></div>
+  </section>
+  <section id="scrSkirm" class="scr hide">
+    <header class="bhead"><button class="ghost" id="backSkirm">← Portada</button><div><h2>Escaramuza a medida</h2><p>Elige el mapa, las fuerzas de cada bando y la duración. No cuenta para récords, estrellas ni medallas.</p></div></header>
+    <div id="skirm">
+      <div class="skRow"><span class="skL">Frente</span><div class="skOpts" id="skFront"></div></div>
+      <div class="skRow"><span class="skL">Batalla</span><div class="skOpts" id="skKind"></div></div>
+      <p class="skMap" id="skMap"></p>
+      <div class="skRow"><span class="skL">Duración</span><div class="skOpts" id="skDur"></div><label class="chk"><input type="checkbox" id="skFog" checked> Niebla de guerra</label></div>
+      <div class="skSides">
+        <div><h4>Tus fuerzas <em id="skAn"></em></h4><div id="skA" class="skList"></div></div>
+        <div><h4><span id="skEname">Enemigo</span> <em id="skEn"></em></h4><div id="skE" class="skList"></div></div>
+      </div>
+      <div class="row"><button class="btn" id="skGo">Empezar escaramuza</button><button class="ghost" id="skReset">Fuerzas de la batalla original</button></div>
+    </div>
   </section>
   <section id="scrDeploy" class="scr hide">
     <header class="bhead"><button class="ghost" id="backBattle">← Batallas</button><div><h2 id="dpTitle"></h2><p id="dpSub"></p></div></header>
@@ -134,7 +149,7 @@
         <p><kbd>Z</kbd><kbd>X</kbd> / rueda: zoom</p><p><kbd>M</kbd> Mapa táctico completo</p>
         <h4>Consejos</h4><p>Los barcos disparan con todas sus torres de costado. Los tanques son más débiles por los lados y por detrás. Mantener más objetivos que el enemigo le resta puntos cada segundo. La munición es limitada: vuelve a tu base (círculo verde con R) para rearmarte y reparar. AP contra blindados y barcos, HE contra infantería, cañones y defensas.</p></div>
     </div>
-    <h4 class="vh">Sonido y cámara</h4><div id="vols" class="vols"></div><label class="chk cine"><input type="checkbox" id="optCine" checked> Cámara lenta en los grandes derribos</label><div class="qrow"><label>Dificultad <select id="optDiff"><option value="easy">Fácil</option><option value="normal">Medio</option><option value="hard">Difícil</option></select></label><label>Mando aliado <select id="optCmd"><option value="ai">IA coordinada</option><option value="me">Solo mis órdenes</option></select></label><label>Modo <select id="optMode"><option value="simple">Sencillo</option><option value="veteran">Veterano</option></select></label><label>Calidad gráfica <select id="optQual"></select></label><label class="chk"><input type="checkbox" id="optCrt" checked> Efecto CRT</label><label class="chk"><input type="checkbox" id="optAutoCam" checked> Cámara automática hacia el blanco en combate</label><label class="chk"><input type="checkbox" id="optThreats" checked> Avisos de peligro (flechas, daño, torpedos)</label><label class="chk"><input type="checkbox" id="optFps"> Mostrar FPS</label></div><p class="note small">La resolución es siempre baja (360 líneas). La densidad de vegetación se aplica al cargar la próxima batalla.</p>
+    <h4 class="vh">Sonido y cámara</h4><div id="vols" class="vols"></div><label class="chk cine"><input type="checkbox" id="optCine" checked> Cámara lenta en los grandes derribos</label><div class="qrow"><label>Dificultad <select id="optDiff"><option value="easy">Fácil</option><option value="normal">Medio</option><option value="hard">Difícil</option></select></label><label>Mando aliado <select id="optCmd"><option value="ai">IA coordinada</option><option value="me">Solo mis órdenes</option></select></label><label>Modo <select id="optMode"><option value="simple">Sencillo</option><option value="veteran">Veterano</option></select></label><label>Calidad gráfica <select id="optQual"></select></label><label class="chk"><input type="checkbox" id="optCrt" checked> Efecto CRT</label><label class="chk"><input type="checkbox" id="optAutoCam" checked> Cámara automática hacia el blanco en combate</label><label class="chk"><input type="checkbox" id="optThreats" checked> Avisos de peligro (flechas, daño, torpedos)</label><label class="chk"><input type="checkbox" id="optAdvisor" checked> Sugerencias del mando por radio</label><label class="chk"><input type="checkbox" id="optRange" checked> Círculo de alcance de tu arma</label><label class="chk"><input type="checkbox" id="optFps"> Mostrar FPS</label></div><p class="note small">La resolución es siempre baja (360 líneas). La densidad de vegetación se aplica al cargar la próxima batalla.</p>
     <div class="row"><button class="btn" id="resume">Continuar</button><button class="ghost dark" id="quit">Abandonar al menú</button></div>
   </div>
 </div>

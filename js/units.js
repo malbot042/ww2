@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { losBlocked, losWhy, coverOf, collisions, landImpact, coverNear } from './physics.js';
+import { losBlocked, losWhy, coverOf, collisions, landImpact, coverNear, claimCover } from './physics.js';
 import { diff } from './difficulty.js';
 import { trackMark } from './marks.js';
 import { updateDamageLook, onKillFx, crater } from './damagefx.js';
@@ -795,7 +795,25 @@ export function anchorFor(e, x, z) {
   }
   return anchorCache.get(key).clone();
 }
+// la IA aliada también usa la cobertura: al llegar a su puesto (zona ya tomada, defensa, espera, apoyo) las unidades de
+// tierra se colocan en el seto, bosque o casa más próximo (sin repetir sitio ni salirse de la zona)
+const COVER_ORD = { zone: 1, defend: 1, hold: 1, bound: 1, overwatch: 1 };
 export function orderPoint(e) {
+  const p = basePoint(e), o = e.order;
+  if (!p || e.side !== 'A' || e.dom !== 'land' || e.cls === 'atgun' || !COVER_ORD[o.type] || G.battle.kind === 'test') return p;
+  if (Math.hypot(p.x - e.p.x, p.z - e.p.z) > 90) { e.covO = null; return p; }
+  // al atacar una zona se empuja hasta dentro; la cobertura es para defender lo que ya es tuyo, esperar o apoyar
+  if (o.type === 'zone' && G.battle.kind !== 'air') { const zz = G.objectives[o.k]; if (!zz || zz.owner !== 'A') return p; }
+  const key = o.type + ':' + (o.k ?? '') + ':' + Math.round(p.x / 30) + ':' + Math.round(p.z / 30);
+  if (!e.covO || e.covO.key !== key || G.time - e.covO.t > 6) {
+    let c = claimCover(e, p.x, p.z, 40);
+    const z = (o.type === 'zone' || o.type === 'defend') && G.battle.kind !== 'air' ? G.objectives.find(z => Math.hypot(z.pos.x - p.x, z.pos.z - p.z) < G.map.cfg.zoneR) : null;
+    if (c && z && Math.hypot(c.x - z.pos.x, c.z - z.pos.z) > G.map.cfg.zoneR * 0.85) c = null;
+    e.covO = { key, t: G.time, p: c };
+  }
+  return e.covO.p ? anchorFor(e, e.covO.p.x, e.covO.p.z) : p;
+}
+function basePoint(e) {
   const o = e.order;
   const jit = (r) => V3(Math.sin(e.id * 2.39) * r, 0, Math.cos(e.id * 2.39) * r);
   const at = (x, z, r) => { const j = jit(r), p = anchorFor(e, x + j.x, z + j.z); return p; };
@@ -809,7 +827,7 @@ export function orderPoint(e) {
         if (e.dom === 'land' && e.cls !== 'atgun' && fp) {
           if (Math.abs(L.speed) < 2.5) {
             if (!L.stopT) L.stopT = G.time;
-            if (G.time - L.stopT > 1.5 && (!e.covF || G.time - e.covF.t > 3)) e.covF = { t: G.time, p: coverNear(fp.x, fp.z, 45) };
+            if (G.time - L.stopT > 1.5 && (!e.covF || G.time - e.covF.t > 3)) e.covF = { t: G.time, p: claimCover(e, fp.x, fp.z, 45) };
             if (e.covF && e.covF.p) return anchorFor(e, e.covF.p.x, e.covF.p.z);
           } else { L.stopT = 0; e.covF = null; }
         }

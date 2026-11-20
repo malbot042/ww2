@@ -4,7 +4,7 @@ import { envLabel } from './env.js';
 import { G } from './state.js';
 import { FRONTS } from './data.js';
 import { orderLabel } from './battle.js';
-import { bombImpact, lead } from './units.js';
+import { bombImpact, lead, weaponRange } from './units.js';
 import { canvasTex, V3, angDiff } from './util.js';
 import { sightOf, SUPPORT, canUse , autoSupportKind } from './strategy.js';
 import { losWhy, coverOf } from './physics.js';
@@ -145,7 +145,8 @@ export function updateHud(dt) {
   const ordK = orderedZone();
   for (const z of G.objectives) { const el = $('z' + z.k); if (el) el.className = 'z ' + (z.owner === 'A' ? 'a' : z.owner === 'E' ? 'e' : '') + (z.na && z.ne ? ' c' : '') + (z.k === ordK ? ' ord' : ''); }
   if (G.battle.kind === 'air') $('zones').innerHTML = `<span class="zl a">${G.sitesA.filter(s => s.alive).length}/3</span><span class="zl">Instalaciones</span><span class="zl e">${G.sitesE.filter(s => s.alive).length}/3</span>`;
-  $('clock').textContent = `${Math.floor(G.time / 60)}:${String(Math.floor(G.time % 60)).padStart(2, '0')}`;
+  const ct = G.battle.timeLimit ? Math.max(0, G.battle.timeLimit - G.time) : G.time;
+  $('clock').textContent = `${G.battle.timeLimit ? '⏱ ' : ''}${Math.floor(ct / 60)}:${String(Math.floor(ct % 60)).padStart(2, '0')}`;
   squadT -= dt; if (squadT <= 0) { renderSquad(); renderSupport(); squadT = 0.3; }
   if (msgT > 0) { msgT -= dt; if (msgT <= 0) $('msg').style.opacity = 0; }
   if (hitT > 0) { hitT -= dt; if (hitT <= 0) $('hit').style.opacity = 0; }
@@ -212,10 +213,12 @@ function drawMinimap() {
   }
   g.font = 'bold 12px "Barlow Condensed",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
   for (const z of G.objectives) { const [x, y] = worldToMM(z.pos.x, z.pos.z), r = G.map.cfg.zoneR / (2 * (G.map.bounds + 100)) * S; g.strokeStyle = z.owner === 'A' ? '#4a90e8' : z.owner === 'E' ? '#e0503f' : '#ddd'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke(); g.fillStyle = '#fff'; g.fillText(z.name, x, y); }
+  // orden dada desde el minimapa: aro que se cierra
+  if (G.mmPing && G.mmPing.t > 0) { const [x, y] = worldToMM(G.mmPing.x, G.mmPing.z), k = G.mmPing.t / 1.4; G.mmPing.t -= 1 / 20; g.strokeStyle = `rgba(159,208,255,${k})`; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 4 + 14 * k, 0, 7); g.stroke(); g.beginPath(); g.arc(x, y, 2, 0, 7); g.stroke(); }
   for (const e of G.ents) {
     if (!e.alive || e.cls === 'aa' || e.gone) continue;
     if (e.side === 'E' && G.fog && e.visA === false) { // última posición conocida
-      if (e.seenA !== undefined && G.time - e.seenA < 25) { const [x, y] = worldToMM(e.lastA.x, e.lastA.z); g.strokeStyle = 'rgba(255,82,70,0.6)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x - 3, y - 3); g.lineTo(x + 3, y + 3); g.moveTo(x + 3, y - 3); g.lineTo(x - 3, y + 3); g.stroke(); }
+      if (e.seenA !== undefined && G.time - e.seenA < 20) { const [x, y] = worldToMM(e.lastA.x, e.lastA.z); g.strokeStyle = 'rgba(255,82,70,0.6)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x - 3, y - 3); g.lineTo(x + 3, y + 3); g.moveTo(x + 3, y - 3); g.lineTo(x - 3, y + 3); g.stroke(); }
       continue;
     }
     const [x, y] = worldToMM(e.p.x, e.p.z);
@@ -247,7 +250,7 @@ function drawMinimap() {
 }
 
 // ---------- indicadores 3D: mira de bombas y guía de torpedos ----------
-let bombRing, torpLine, tgtRing, tgtMark, altLine, pip, pipLine, noLosTag;
+let bombRing, torpLine, tgtRing, tgtMark, altLine, pip, pipLine, noLosTag, rangeRing;
 const YEL = 0xffd23a;
 export function initAimMarkers() {
   bombRing = new THREE.Mesh(new THREE.RingGeometry(5, 6.5, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthTest: false, side: THREE.DoubleSide }));
@@ -270,12 +273,22 @@ export function initAimMarkers() {
   const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
   pipLine = new THREE.Line(pg, new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 6, gapSize: 4, transparent: true, opacity: 0.8, depthTest: false }));
   pipLine.frustumCulled = false; pipLine.renderOrder = 15; G.scene.add(pipLine);
+  // alcance del arma principal: círculo tenue en el suelo (verde si tu blanco está dentro)
+  const rp = []; for (let i = 0; i <= 128; i++) { const a = i / 128 * Math.PI * 2; rp.push(Math.sin(a), 0, Math.cos(a)); }
+  const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(rp, 3));
+  rangeRing = new THREE.Line(rg, new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.025, gapSize: 0.018, transparent: true, opacity: 0.32, depthTest: false }));
+  rangeRing.computeLineDistances(); rangeRing.renderOrder = 7; rangeRing.frustumCulled = false; rangeRing.visible = false; G.scene.add(rangeRing);
   // aviso sobre el blanco tapado
   const ntex = canvasTex(256, g => { g.clearRect(0, 0, 256, 256); g.font = 'bold 34px "Barlow Condensed",sans-serif'; g.textAlign = 'center'; g.lineWidth = 7; g.strokeStyle = 'rgba(0,0,0,0.8)'; g.strokeText('SIN LÍNEA DE TIRO', 128, 140); g.fillStyle = '#d6d6d6'; g.fillText('SIN LÍNEA DE TIRO', 128, 140); });
   noLosTag = new THREE.Sprite(new THREE.SpriteMaterial({ map: ntex, sizeAttenuation: false, depthTest: false, transparent: true }));
   noLosTag.scale.set(0.16, 0.16, 1); noLosTag.center.set(0.5, 0.3); noLosTag.renderOrder = 15; G.scene.add(noLosTag);
 }
 const GREEN = 0x6dff7a, WHITE = 0xffffff, GREY = 0x9a9a9a;
+function playerRange(e) {
+  if (e.dom === 'sea') return e.cls === 'sub' ? 900 : weaponRange(e);
+  if (e.cls === 'inf') return e.s.rifle ? e.s.rifle.range : 0;
+  return e.s.gun ? e.s.gun.range * 1.05 : 0;
+}
 function setPip(p, from, ok) {
   pip.visible = pipLine.visible = true; pip.position.copy(p); pip.material.color.setHex(ok ? GREEN : WHITE);
   const a = pipLine.geometry.attributes.position.array; a[0] = from.x; a[1] = from.y; a[2] = from.z; a[3] = p.x; a[4] = p.y; a[5] = p.z;
@@ -327,6 +340,14 @@ export function updateAimMarkers() {
   if (t) { const nl = !!e.noLos; const c = nl ? GREY : YEL; tgtRing.material.color.setHex(c); tgtMark.material.color.setHex(nl ? GREY : WHITE); noLosTag.visible = nl; if (nl) noLosTag.position.copy(tgtMark.position); } else noLosTag.visible = false;
   torpLine.material.color.setHex(WHITE);
   updatePip(ok ? e : null);
+  // alcance
+  const rr = ok && G.opts?.range !== false && e.dom !== 'air' && e.dom !== 'static' && e.cls !== 'carrier' ? playerRange(e) : 0;
+  rangeRing.visible = rr > 0;
+  if (rr > 0) {
+    rangeRing.scale.set(rr, 1, rr); rangeRing.position.set(e.p.x, Math.max(0, e.p.y) + 1.5, e.p.z);
+    const inR = e.target && e.target.alive && Math.hypot(e.target.p.x - e.p.x, e.target.p.z - e.p.z) <= rr;
+    rangeRing.material.color.setHex(inR && !e.noLos ? GREEN : WHITE); rangeRing.material.opacity = inR ? 0.45 : 0.3;
+  }
   torpLine.visible = ok && e.dom === 'sea' && !!e.s.torp && (e.cls === 'sub' || !e.target || e.cls === 'pt');
   if (torpLine.visible) { const a = torpLine.geometry.attributes.position.array; a[0] = e.p.x + Math.sin(e.h) * e.hl; a[1] = 0.5; a[2] = e.p.z + Math.cos(e.h) * e.hl; a[3] = e.p.x + Math.sin(e.h) * 800; a[4] = 0.5; a[5] = e.p.z + Math.cos(e.h) * 800; torpLine.geometry.attributes.position.needsUpdate = true; torpLine.computeLineDistances(); }
 }

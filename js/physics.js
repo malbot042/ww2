@@ -108,7 +108,8 @@ export function landImpact(e, o, damage) {
 
 // ---------- cobertura cercana (órdenes de mover y «Sígueme») ----------
 // mejor punto a cubierto en un radio: más cobertura y más cerca puntúan mejor; null si no hay nada que merezca la pena
-export function coverNear(x, z, R = 40, min = 0.3) {
+// avoid: puntos ya ocupados por otras unidades (no se amontonan en el mismo seto)
+export function coverNear(x, z, R = 40, min = 0.3, avoid = null) {
   const m = G.map; if (!m || !m.coverAt) return null;
   let best = null, bs = -1;
   const st = 8;
@@ -117,6 +118,7 @@ export function coverNear(x, z, R = 40, min = 0.3) {
     const px = x + dx, pz = z + dz;
     if (m.h(px, pz) < 0.5) continue; // nada de agua
     const c = Math.min(1, m.coverAt(px, pz)); if (c < min) continue;
+    if (avoid && avoid.some(q => (q.x - px) ** 2 + (q.z - pz) ** 2 < 15 * 15)) continue;
     const sc = c - d / R * 0.45;
     if (sc > bs) { bs = sc; best = V3(px, 0, pz); }
   }
@@ -135,4 +137,14 @@ export function coverSpots(x, z, R = 160, n = 10) {
   const out = [];
   for (const p of cand) { if (out.every(q => (q.x - p.x) ** 2 + (q.z - p.z) ** 2 > 38 * 38)) out.push(p); if (out.length >= n) break; }
   return out;
+}
+
+// puestos a cubierto ya elegidos por cada unidad (para repartirlos)
+const claims = new Map();
+export function claimCover(e, x, z, R = 40) {
+  for (const [id, c] of claims) if (G.time - c.t > 8 || c.t > G.time) claims.delete(id);
+  const avoid = []; for (const [id, c] of claims) if (id !== e.id && c.p) avoid.push(c.p);
+  const p = coverNear(x, z, R, 0.3, avoid);
+  claims.set(e.id, { t: G.time, p });
+  return p;
 }

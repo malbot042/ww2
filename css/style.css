@@ -280,3 +280,18 @@ body:not(.simple) .simple-only{display:none}
 #results .card{max-height:92vh;overflow:auto}
 
 #thr{position:fixed;inset:0;pointer-events:none;z-index:1}
+#advTip{position:fixed;top:112px;left:50%;transform:translate(-50%,-8px);z-index:3;max-width:min(520px,46vw);padding:7px 12px 8px;background:rgba(14,18,22,.86);border-left:3px solid #9fd0ff;border-radius:3px;font-size:14px;color:var(--paper);opacity:0;transition:opacity .4s,transform .4s;pointer-events:none}
+#advTip.on{opacity:1;transform:translate(-50%,0)}#advTip b{color:#9fd0ff;margin-right:6px;text-transform:uppercase;font-size:12px;letter-spacing:.08em}#advTip small{display:block;opacity:.8;font-size:13px;margin-top:2px}
+
+/* escaramuza */
+#skirm{display:flex;flex-direction:column;gap:10px;max-width:1100px}
+.skRow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.skL{width:80px;font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.06em;opacity:.75}
+.skOpts{display:flex;gap:6px;flex-wrap:wrap}.skOpts button{background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:3px;padding:6px 12px;font:600 15px Barlow,sans-serif;color:var(--paper);cursor:pointer}
+.skOpts button.on{background:#d9a441;border-color:#8a6421;color:#1d1f17}.skMap{margin:0 0 0 92px;font-size:14px;opacity:.75}
+.skSides{display:grid;grid-template-columns:1fr 1fr;gap:18px}.skSides h4{margin:4px 0 6px;font:700 19px "Barlow Condensed",sans-serif}.skSides em{font-style:normal;font-weight:500;font-size:14px;opacity:.6;margin-left:6px}
+.skList{display:flex;flex-direction:column;gap:3px;max-height:46vh;overflow:auto;padding-right:4px}
+.skU{display:flex;justify-content:space-between;align-items:center;padding:4px 8px;border-radius:3px;background:rgba(255,255,255,.05);color:var(--paper)}.skU.on{background:rgba(217,164,65,.22)}
+.skU span:first-child{display:flex;flex-direction:column}.skU b{font-size:14.5px}.skU i{font-style:normal;font-size:12px;opacity:.65}
+.skN{display:flex;align-items:center;gap:6px}.skN button{width:28px;height:28px;border-radius:3px;border:1px solid var(--line);background:rgba(255,255,255,.12);font:700 17px Barlow,sans-serif;cursor:pointer;color:var(--paper)}.skN button:hover{background:rgba(217,164,65,.45)}.skN em{width:22px;text-align:center;font-style:normal;font-weight:700;font-size:16px;color:var(--paper)}
+#skGo:disabled{opacity:.45;cursor:default}
+@media(max-width:900px){.skSides{grid-template-columns:1fr}.skMap{margin-left:0}}

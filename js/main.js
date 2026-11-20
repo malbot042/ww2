@@ -15,6 +15,8 @@ import { applyVolumes, updateMusic, musicHeat, RADIO, initSoundUI, radioStop } f
 import { updateDamageFx } from './damagefx.js';
 import { newCampaign, endCampaignBattle, restoreSnapshot, UNLOCKS } from './campaign.js';
 import { G } from './state.js';
+import { updateAdvisor, resetAdvisor } from './advisor.js';
+import { initSkirmish, openSkirmish } from './skirmish.js';
 import { initThreats, updateThreats, threatHurt, clearThreats } from './threats.js';
 import { battleSummary, summaryHtml, starsHtml, medalSvg, STAR_RULES, medalsListHtml } from './medals.js';
 import { FRONTS, BATTLES, KIND_NAME, MODELS, testKeyFor, specOf } from './data.js';
@@ -216,7 +218,7 @@ function frame(now) {
   const dt = G.slowT > 0 ? rdt * 0.3 : rdt; if (G.slowT > 0) G.slowT -= rdt;
   if (G.map) {
     const sim = G.running && !G.paused && !G.tactical && !G.deploying;
-    if (sim) { recordReplay(dt); updateTutorial(dt); updateSplit(dt); updateDoctrine(dt); }
+    if (sim) { recordReplay(dt); updateTutorial(dt); updateSplit(dt); updateDoctrine(dt); updateAdvisor(dt); }
     if (sim || G.demo) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); }
     else if (G.deploying) { updateVision(dt); updateMarkers(); }
     updateWorld(dt); if (sim || G.demo) updateEnv(dt); if (sim) autoCam(dt); updateCamera(dt);
@@ -231,7 +233,9 @@ function frame(now) {
 }
 
 // ---------- menús ----------
-function show(id) { for (const s of ['scrFront', 'scrBattle', 'scrDeploy', 'results', 'pause', 'loading']) $(s).classList.toggle('hide', s !== id); $('menu').classList.toggle('hide', !['scrFront', 'scrBattle', 'scrDeploy', 'loading'].includes(id)); }
+function show(id) { for (const s of ['scrFront', 'scrBattle', 'scrDeploy', 'scrSkirm', 'results', 'pause', 'loading']) $(s).classList.toggle('hide', s !== id); $('menu').classList.toggle('hide', !['scrFront', 'scrBattle', 'scrDeploy', 'scrSkirm', 'loading'].includes(id)); }
+initSkirmish((k, keep, o) => { initAudio(); applyVolumes(); launch(k, keep, o); });
+$('backSkirm').onclick = () => show('scrFront');
 function rosterHtml(list) { return list.map(([k, n]) => `<li><b>${n}×</b> ${MODELS[k].name} <span>${MODELS[k].type}</span></li>`).join(''); }
 // ---------- portada: «Jugar» lleva a la siguiente batalla recomendada ----------
 // orden pensado para aprender: de lo más sencillo a lo más exigente
@@ -297,7 +301,7 @@ function buildFrontMenu() {
   $('contCamp').innerHTML = ''; // la campaña en curso se continúa con «Jugar»
   $('fronts').querySelectorAll('.front:not(.f-medals)').forEach(b => b.onclick = () => { initAudio(); applyVolumes(); if (b.dataset.school) { $('menu').classList.add('hide'); openSchool(); } else if (b.dataset.hangar) { $('menu').classList.add('hide'); openHangar(); } else if (b.dataset.tut) launch('test-land', false, { tutorial: true }); else if (b.dataset.test) launch('test-land'); else buildBattleMenu(b.dataset.front); });
   buildHero(sc);
-  $('more').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { if (b.dataset.tab === 'hangar') { initAudio(); applyVolumes(); $('menu').classList.add('hide'); openHangar(); return; } showTab(menuTab === b.dataset.tab ? null : b.dataset.tab); });
+  $('more').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { if (b.dataset.tab === 'hangar') { initAudio(); applyVolumes(); $('menu').classList.add('hide'); openHangar(); return; } if (b.dataset.tab === 'skirm') { openSkirmish(); show('scrSkirm'); return; } showTab(menuTab === b.dataset.tab ? null : b.dataset.tab); });
   showTab(menuTab);
   $('fronts').querySelectorAll('[data-testdom]').forEach(t => t.onclick = ev => { ev.stopPropagation(); initAudio(); applyVolumes(); launch(testKeyFor(t.dataset.testdom)); });
 }
@@ -328,7 +332,7 @@ function launch(key, keepCampaign = false, opts = {}) {
   show('loading'); $('loadTxt').textContent = `${BATTLES[key].title}, ${BATTLES[key].year}`;
   setTimeout(() => {
     G.running = false; G.paused = false; G.strategic = false; G.slowT = 0; toggleTactical(false);
-    stopDoctrineDemo(); resetReplay(); stopSplit(); resize(); startBattle(key, false, opts);
+    stopDoctrineDemo(); resetReplay(); stopSplit(); resize(); resetAdvisor(); startBattle(key, false, opts);
     if (opts.split) setupSplit();
     const p = G.player; G.targetZoom = G.zoom = ZOOM_DEF[p.dom];
     G.cam.preset = 0; G.cam.pitch = 1.1; G.cam.yaw = 0; G.cam.ang = 0; G.cam.rel = false; G.cam.autoOn = G.cam.autoSupp = false; G.cam.combatT = 0; $('camName').textContent = 'Cenital';
@@ -356,9 +360,9 @@ function showResults(res) {
   const score = Math.round((G.tickets.A + G.stats.kills * 50 - G.stats.lost * 20 + (win ? 500 : 0)) * diff().score);
   if (G.campaign) G.campaign.score += score;
   const camp = endCampaignBattle(win);
-  const newRec = b.kind !== 'test' && record(G.battleKey, score, win);
+  const newRec = b.kind !== 'test' && !b.skirmish && record(G.battleKey, score, win);
   const campDone = !!(G.campaign && win && G.campaign.i + 1 >= G.campaign.list.length);
-  const sum = battleSummary(win, G.battleKey, b.kind, campDone);
+  const sum = battleSummary(win, G.battleKey, b.skirmish ? 'test' : b.kind, campDone);
   $('resTitle').textContent = win ? 'Victoria' : 'Derrota';
   $('resTitle').className = win ? 'win' : 'lose';
   $('resSub').textContent = `${KIND_NAME[b.kind]} · ${b.title}, ${b.year}`;
@@ -369,7 +373,7 @@ function showResults(res) {
     ...(G.campaign ? [['Campaña acumulada', `${G.campaign.score}`]] : []),
     ...(camp ? [['Veteranos en la fuerza', `${camp.nVet}`], ...(camp.bonus ? [['Puntos extra de despliegue', `+${camp.bonus}`]] : []), ...(camp.unlocked ? [['Nueva unidad disponible', camp.unlocked]] : []), ...camp.promos.slice(0, 6).map(p => ['Ascenso', p])] : []),
   ].map(([a, v]) => `<div><span>${a}</span><b>${v}</b></div>`).join('');
-  $('resStars').innerHTML = b.kind === 'test' ? '' : `${starsHtml(sum.stars)}<span>${sum.stars ? STAR_RULES[sum.stars - 1] : 'Gana la batalla para conseguir estrellas'}${sum.starUp && sum.stars ? ' · ¡mejor resultado!' : sum.best > sum.stars ? ` · tu mejor: ${sum.best} ★` : ''}</span>${sum.stars < 3 ? `<small>Siguiente estrella: ${STAR_RULES[sum.stars]}</small>` : ''}`;
+  $('resStars').innerHTML = b.kind === 'test' || b.skirmish ? '' : `${starsHtml(sum.stars)}<span>${sum.stars ? STAR_RULES[sum.stars - 1] : 'Gana la batalla para conseguir estrellas'}${sum.starUp && sum.stars ? ' · ¡mejor resultado!' : sum.best > sum.stars ? ` · tu mejor: ${sum.best} ★` : ''}</span>${sum.stars < 3 ? `<small>Siguiente estrella: ${STAR_RULES[sum.stars]}</small>` : ''}`;
   $('resMedals').innerHTML = sum.fresh.length ? `<h4>¡Nueva${sum.fresh.length > 1 ? 's' : ''} medalla${sum.fresh.length > 1 ? 's' : ''}!</h4><div class="mdls new">${sum.fresh.map(m => `<div class="md">${medalSvg(m)}<div><b>${m.n}</b><span>${m.d}</span></div></div>`).join('')}</div>` : '';
   $('resSum').innerHTML = summaryHtml(sum);
   const c = G.campaign, next = c && win && c.i + 1 < c.list.length ? c.list[c.i + 1] : null;
@@ -451,6 +455,8 @@ function applyMode() { G.opts.mode = G.opts.mode === 'veteran' ? 'veteran' : 'si
 for (const id of ['optMode', 'optMode2']) $(id).onchange = ev => { G.opts.mode = ev.target.value; applyMode(); G.onOptions && G.onOptions(); flash(G.opts.mode === 'simple' ? 'Modo sencillo' : 'Modo veterano', G.opts.mode === 'simple' ? 'Órdenes básicas, munición y apoyo automáticos' : 'Todas las órdenes, formaciones y apoyos', 1.6); };
 applyMode();
 $('optAutoCam').checked = G.opts.autoCam !== false; $('optAutoCam').onchange = ev => { G.opts.autoCam = ev.target.checked; G.onOptions && G.onOptions(); };
+$('optAdvisor').checked = G.opts.advisor !== false; $('optAdvisor').onchange = ev => { G.opts.advisor = ev.target.checked; G.onOptions && G.onOptions(); };
+$('optRange').checked = G.opts.range !== false; $('optRange').onchange = ev => { G.opts.range = ev.target.checked; G.onOptions && G.onOptions(); };
 $('optThreats').checked = G.opts.threats !== false; $('optThreats').onchange = ev => { G.opts.threats = ev.target.checked; G.onOptions && G.onOptions(); };
 $('optCrt').checked = G.opts.crt !== false; $('optCrt').onchange = ev => { G.opts.crt = ev.target.checked; G.onOptions && G.onOptions(); };
 $('optFps').onchange = ev => { G.opts.fps = ev.target.checked; G.onOptions && G.onOptions(); };
@@ -577,11 +583,25 @@ canvas.addEventListener('dblclick', ev => { if (!G.running) return; for (const e
 canvas.addEventListener('mouseup', ev => {
   if (ev.button !== 2 || !G.running) return;
   const p = groundAt(ev.clientX, ev.clientY); if (!p) return;
+  orderAt(p, ev.shiftKey);
+});
+// orden en un punto del mapa (clic derecho en el campo o clic en el minimapa)
+function orderAt(p, shift) {
+  if (!G.running || G.deploying) return;
   // ¿clic en un objetivo?
   if (G.battle.kind !== 'air') { const z = G.objectives.find(z => z.pos.distanceTo(V3(p.x, z.pos.y, p.z)) < G.map.cfg.zoneR); if (z) { const n = issueOrder('zone', { k: z.k }); if (n) flash(`Objetivo ${z.name}`, `${n} unidades en camino`); return; } }
   else { const k = G.sitesE.findIndex(s => s.alive && Math.hypot(s.p.x - p.x, s.p.z - p.z) < 80); if (k >= 0) { const n = issueOrder('zone', { k }); if (n) flash(`Atacar instalación ${'ABC'[k]}`, `${n} aviones`); return; } }
-  if (ev.shiftKey) { const n = issueOrder('route', { pt: V3(p.x, 0, p.z) }, true); if (n) flash('Punto de ruta añadido', 'Shift+clic derecho para más puntos', 1.2); return; }
-  const n = issueOrder('move', { x: p.x, z: p.z }); if (n) flash('Mover', `${n} unidades en formación ${G.formation}`, 1.2);
+  if (shift) { const n = issueOrder('route', { pt: V3(p.x, 0, p.z) }, true); if (n) flash('Punto de ruta añadido', 'Shift+clic para más puntos', 1.2); return; }
+  const n = issueOrder('move', { x: p.x, z: p.z }); if (n) flash('Mover', `${n} unidades en formación ${G.formation}`, 1.2); else flash('Nadie seleccionado', 'Selecciona unidades (clic, recuadro o G) antes de dar la orden', 1.6);
+}
+// minimapa: clic (o clic derecho) manda a la selección a ese punto; sobre una zona, a tomarla; Shift añade puntos de ruta
+function mmPoint(ev) { const r = $('mm').getBoundingClientRect(), B = G.map.bounds + 100; return V3(((ev.clientX - r.left) / r.width) * 2 * B - B, 0, ((ev.clientY - r.top) / r.height) * 2 * B - B); }
+$('mm').addEventListener('contextmenu', ev => ev.preventDefault());
+$('mm').addEventListener('mouseup', ev => {
+  if (!G.running || !G.map || (ev.button !== 0 && ev.button !== 2)) return;
+  ev.preventDefault(); ev.stopPropagation();
+  const p = mmPoint(ev); G.mmPing = { x: p.x, z: p.z, t: 1.4 };
+  orderAt(p, ev.shiftKey);
 });
 $('squad').addEventListener('click', ev => { const el = ev.target.closest('.sq'); if (!el) return; const e = G.ents.find(x => x.id === +el.dataset.id); if (!e || !e.alive || e === G.player) return; if (ev.shiftKey) { G.selection.has(e) ? G.selection.delete(e) : G.selection.add(e); } else G.selection = new Set([e]); G.showSel = true; });
 $('squad').addEventListener('dblclick', ev => { const el = ev.target.closest('.sq'); if (!el) return; const e = G.ents.find(x => x.id === +el.dataset.id); if (e && e.alive) setPlayer(e); });
@@ -589,4 +609,4 @@ $('squad').addEventListener('dblclick', ev => { const el = ev.target.closest('.s
 // ---------- arranque ----------
 buildFrontMenu(); show('scrFront'); startDemo();
 requestAnimationFrame(frame);
-if (location.hash === '#debug') window.__ww2 = { G, launch, startBattle, spawn: spawnUnit, step(dt) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); recordReplay(dt); updateTutorial(dt); updateDoctrine(dt); }, startReplay, showResults: r => showResults(r), issueOrder, setPlayer, toggleTactical, cam: dt => updateCamera(dt), camPreset: i => setCamPreset(i), hud: () => { updateHud(0.03); updateAimMarkers(); } };
+if (location.hash === '#debug') window.__ww2 = { G, launch, startBattle, spawn: spawnUnit, step(dt) { updateUnits(dt); updateProjs(dt); updateBattle(dt); updateFx(dt); updateDamageFx(dt); recordReplay(dt); updateTutorial(dt); updateDoctrine(dt); updateAdvisor(dt); }, startReplay, showResults: r => showResults(r), issueOrder, setPlayer, toggleTactical, cam: dt => updateCamera(dt), camPreset: i => setCamPreset(i), hud: () => { updateHud(0.03); updateAimMarkers(); } };
