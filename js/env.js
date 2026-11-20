@@ -47,7 +47,7 @@ export function applyEnv(env = {}) {
     u.sunCol.value.copy(sun.color).multiplyScalar(weather === 'clear' ? (time === 'night' ? 0.35 : 1) : 0.25);
     u.shallow.value.lerp(C(0x000000), dk); u.deep.value.lerp(C(0x000000), dk * 0.8);
   }
-  for (const c of clouds) { c.material.color.setScalar(time === 'night' ? 0.18 : weather === 'storm' ? 0.45 : 1); if (time === 'dusk') c.material.color.set(0xffc6a0); if (weather === 'storm') c.material.opacity = 0.85; }
+  for (const c of clouds) { c.material.color.setScalar(time === 'night' ? 0.18 : weather === 'storm' ? 0.45 : 1); if (time === 'dusk') c.material.color.set(0xffc6a0); if (weather === 'storm') c.userData.op = c.material.opacity = 0.85; }
 
   // lluvia
   if (rain) { rain.geometry.dispose(); rain.parent && rain.parent.remove(rain); rain = null; }

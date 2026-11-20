@@ -187,3 +187,4 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 | v2.6 | Flechas de amenaza, dirección del daño y aviso de torpedo; cámara automática hacia el blanco; cobertura en órdenes de mover y «Sígueme»; resumen final con línea de tiempo, estrellas y medallas |
 | v2.7 | Órdenes desde el minimapa, IA aliada que usa la cobertura, sugerencias del mando por radio, último avistamiento, círculo de alcance y escaramuza a medida |
 | v2.8 | Giros realistas (barcos por eslora, aviones 7–9 g, carros ~45°/s), barcos que salen marcha atrás si encallan y opción de giros arcade |
+| v2.8.1 | Modo mapa visible de nuevo: plano lejano de la cámara según la distancia y nubes que se desvanecen al subir |

@@ -194,6 +194,9 @@ function updateCamera(dt) {
   // con blanco: la mirada se inclina un poco hacia él (en altura también) para que no quede pegado al borde de arriba
   if (aimT && ct < 1) { const k = (1 - ct) * 0.3; camTarget.x += (aimT.p.x - camTarget.x) * k * 0.4; camTarget.z += (aimT.p.z - camTarget.z) * k * 0.4; camTarget.y += clamp(aimT.p.y - camTarget.y, -300, 300) * k; }
   camera.lookAt(camTarget);
+  // plano lejano según la distancia: con los mapas ampliados, en el modo mapa la cámara queda a más de 9 km y lo recortaba todo
+  const far = Math.max(9000, camera.position.distanceTo(camTarget) + G.map.bounds * 2.2);
+  if (Math.abs(far - camera.far) > 200) { camera.far = far; camera.updateProjectionMatrix(); }
   if (scene.fog) { const low = 1 - Math.min(1, ct); scene.fog.near = G.zoom * (1.4 - low * 0.6) + low * 150; scene.fog.far = G.zoom * (G.strategic ? 5 : 3.6) + 800 + low * 900; const fk = G.strategic ? Math.max(0.6, G.env?.fogK ?? 1) : (G.env?.fogK ?? 1); scene.fog.near *= fk * fk; scene.fog.far *= fk; }
   // sombras alrededor del foco
   const half = clamp(G.zoom * 0.95, 140, 1400);

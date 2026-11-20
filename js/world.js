@@ -466,6 +466,7 @@ export function buildWorld(mapKey, seed = (Math.random() * 1e9) | 0) {
   });
   for (let k = 0; k < Math.round(34 * ((cfg.bounds + 600) / 2400) ** 2); k++) {
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: ctex, transparent: true, opacity: cfg.theme === 'desert' ? 0.35 : 0.7, depthWrite: false, fog: false }));
+    sp.userData.op = sp.material.opacity;
     sp.scale.set(420 + R() * 380, 240 + R() * 160, 1); sp.position.set((R() * 2 - 1) * (cfg.bounds + 600), 520 + R() * 80, (R() * 2 - 1) * (cfg.bounds + 600));
     worldGroup.add(sp); clouds.push(sp);
   }
@@ -511,6 +512,8 @@ export function updateWorld(dt) {
   const u = water.material.uniforms;
   u.t.value += dt;
   u.fogN.value = G.scene.fog.near; u.fogF.value = G.scene.fog.far;
-  for (const c of clouds) { c.position.x += 6 * dt; if (c.position.x > 3300) c.position.x = -3300; }
+  // las nubes se desvanecen al subir la cámara por encima de ellas (modo mapa, zoom lejano): si no, lo tapan todo
+  const cy = G.camera ? G.camera.position.y : 0, ck = Math.max(0, Math.min(1, (1500 - cy) / 600));
+  for (const c of clouds) { c.position.x += 6 * dt; if (c.position.x > 3300) c.position.x = -3300; c.visible = ck > 0; c.material.opacity = (c.userData.op ?? 0.7) * ck; }
   if (sky && G.camera) sky.position.copy(G.camera.position);
 }
