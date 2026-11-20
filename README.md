@@ -122,6 +122,9 @@ El **modo veterano** (se elige en el menú principal o en la pausa) activa todo:
 - **Tanques**: las orugas tardan ~0,3 s en coger el giro a fondo y en pararlo.
 - Las velocidades máximas de giro no cambian (mismo equilibrio).
 
+## Vista «Hacia el blanco» (v2.5)
+Con <kbd>V</kbd> se llega a la vista **Hacia el blanco**: la cámara se coloca detrás de tu unidad, en la línea que va hacia tu blanco, así lo tienes siempre delante aunque gires o te adelante. Usa el blanco fijado (<kbd>T</kbd>) o el automático; si no hay ninguno, el enemigo visible más cercano (en avión, prefiere otros aviones). Si no hay enemigos, se comporta como la vista desde atrás. <kbd>A</kbd>/<kbd>D</kbd> siguen girando la cámara alrededor.
+
 ## Controles
 
 | Tecla | Acción |

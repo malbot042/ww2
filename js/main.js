@@ -94,15 +94,31 @@ const CAM_PRESETS = [
   { n: 'Cenital', pitch: 1.1, yaw: 0 }, { n: 'Desde atrás', pitch: 0.3, yaw: 0 },
   { n: 'Lateral izquierdo', pitch: 0.26, yaw: -Math.PI / 2 }, { n: 'Lateral derecho', pitch: 0.26, yaw: Math.PI / 2 },
   { n: 'Mirando hacia atrás', pitch: 0.28, yaw: Math.PI },
+  { n: 'Hacia el blanco', pitch: 0.32, yaw: 0, aim: true },
 ];
+// vista «hacia el blanco»: la cámara se pone detrás de tu unidad en la línea que va al blanco, así lo tienes siempre delante
+function camAimTarget(p) {
+  const c = G.cam, ok = o => o && o.alive && !o.falling && !o.submerged && o.side !== p.side && (!G.fog || o['vis' + p.side] !== false);
+  const t = p.lock || p.target;
+  if (ok(t)) return (c.aimT = t);
+  if (ok(c.aimT) && c.aimT.p.distanceTo(p.p) < 3200 && (G.time - (c.aimChk || 0)) < 1.5) return c.aimT;
+  c.aimChk = G.time;
+  let best = null, bd = 2600;
+  for (const o of G.ents) {
+    if (!ok(o) || o.cls === 'site') continue;
+    const d = o.p.distanceTo(p.p) * (p.dom === 'air' && o.dom !== 'air' ? 1.8 : 1);
+    if (d < bd) { bd = d; best = o; }
+  }
+  return (c.aimT = best);
+}
 G.cam = { pitch: 1.1, yaw: 0, ang: 0, rel: false, preset: 0 };
 export function setCamPreset(i) {
   const c = G.cam, p = CAM_PRESETS[i]; c.preset = i;
   const rel = p.pitch < 0.95;
   if (rel !== c.rel) c.rel = rel;
   c.pitch = p.pitch; c.yaw = p.yaw;
-  $('camName').textContent = p.n;
-  flash(`Cámara: ${p.n}`, '', 1);
+  $('camName').textContent = p.n; c.label = null; c.aimT = null;
+  flash(`Cámara: ${p.n}`, p.aim ? 'Tu unidad delante y el blanco al fondo (T cambia de blanco)' : '', 1.4);
 }
 const camTarget = V3();
 function updateCamera(dt) {
@@ -118,9 +134,19 @@ function updateCamera(dt) {
     if (rel !== c.rel && p) { c.yaw = rel ? angDiff(c.ang, p.h + Math.PI) : c.ang; c.rel = rel; }
   }
   let pitch = c.pitch, angT = c.rel && p ? p.h + Math.PI + c.yaw : c.yaw;
+  const preset = CAM_PRESETS[c.preset] || {};
+  const aimT = preset.aim && c.rel && p && !G.replayCam && !G.strategic && !G.demo ? camAimTarget(p) : null;
+  let aimDir = null;
+  if (aimT) {
+    const dx = aimT.p.x - p.p.x, dz = aimT.p.z - p.p.z, dd = Math.hypot(dx, dz);
+    if (dd > 25) { aimDir = Math.atan2(dx, dz); c.aimDir = aimDir; } else aimDir = c.aimDir ?? p.h;
+    angT = aimDir + Math.PI + c.yaw;
+  }
+  const label = preset.aim ? (aimT ? `Hacia el blanco: ${aimT.name}` : 'Hacia el blanco (sin blanco)') : null;
+  if (label && label !== c.label) { c.label = label; $('camName').textContent = label; }
   if (G.strategic || G.demo || !p) { pitch = G.strategic ? 1.42 : 1.03; angT = 0; }
   const t = clamp((pitch - 0.12) / (1.1 - 0.12), 0, 1.4);
-  c.ang += angDiff(angT, c.ang) * Math.min(1, dt * (c.rel ? 5 : 3));
+  c.ang += angDiff(angT, c.ang) * Math.min(1, dt * (aimT ? 2.6 : c.rel ? 5 : 3));
   c.curPitch = (c.curPitch ?? pitch) + (pitch - (c.curPitch ?? pitch)) * Math.min(1, dt * 4);
   const cp = c.curPitch, ct = clamp((cp - 0.12) / (1.1 - 0.12), 0, 1.4);
   let tgt;
@@ -132,7 +158,8 @@ function updateCamera(dt) {
     // del avión, para que no se salga de pantalla al subir (antes el foco acababa por encima: hasta un 30 % de la altitud)
     let fy = Math.max(p.p.y, 0);
     if (p.dom === 'air') { const base = 0.5 + 0.3 * clamp((p.p.y - 120) / 120, 0, 1), low = clamp((0.75 - ct) / 0.5, 0, 1); fy = p.p.y * (base + (1 - base) * low); }
-    tgt = V3(p.p.x + Math.sin(p.h) * look, fy, p.p.z + Math.cos(p.h) * look);
+    const hd = aimDir ?? p.h;
+    tgt = V3(p.p.x + Math.sin(hd) * look, fy, p.p.z + Math.cos(hd) * look);
   } else tgt = G.focus.clone();
   const zt = G.strategic ? (G.map.bounds * 3.1) : G.targetZoom;
   G.zoom += (zt - G.zoom) * Math.min(1, dt * 3);
@@ -143,7 +170,9 @@ function updateCamera(dt) {
   const gmin = Math.max(G.map.gy(camera.position.x, camera.position.z), 0) + 4;
   if (camera.position.y < gmin) camera.position.y = gmin;
   camTarget.copy(G.focus);
-  if (ct < 1 && p && !G.strategic && !G.demo) { const k = 1 - ct; camTarget.x += Math.sin(p.h) * D * 0.25 * k * Math.cos(c.yaw); camTarget.z += Math.cos(p.h) * D * 0.25 * k * Math.cos(c.yaw); camTarget.y += (p.dom === 'air' ? 4 : p.top || 4) * k; }
+  if (ct < 1 && p && !G.strategic && !G.demo) { const k = 1 - ct, hd = aimDir ?? p.h; camTarget.x += Math.sin(hd) * D * 0.25 * k * Math.cos(c.yaw); camTarget.z += Math.cos(hd) * D * 0.25 * k * Math.cos(c.yaw); camTarget.y += (p.dom === 'air' ? 4 : p.top || 4) * k; }
+  // con blanco: la mirada se inclina un poco hacia él (en altura también) para que no quede pegado al borde de arriba
+  if (aimT && ct < 1) { const k = (1 - ct) * 0.3; camTarget.x += (aimT.p.x - camTarget.x) * k * 0.4; camTarget.z += (aimT.p.z - camTarget.z) * k * 0.4; camTarget.y += clamp(aimT.p.y - camTarget.y, -300, 300) * k; }
   camera.lookAt(camTarget);
   if (scene.fog) { const low = 1 - Math.min(1, ct); scene.fog.near = G.zoom * (1.4 - low * 0.6) + low * 150; scene.fog.far = G.zoom * (G.strategic ? 5 : 3.6) + 800 + low * 900; const fk = G.strategic ? Math.max(0.6, G.env?.fogK ?? 1) : (G.env?.fogK ?? 1); scene.fog.near *= fk * fk; scene.fog.far *= fk; }
   // sombras alrededor del foco

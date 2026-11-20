@@ -16,7 +16,7 @@ function wingman(dx) {
 }
 const STEPS = [
   { t: 'Movimiento', d: 'Usa <kbd>↑</kbd> <kbd>↓</kbd> para acelerar y frenar y <kbd>←</kbd> <kbd>→</kbd> para girar. Avanza unos 60 metros.', init: () => { st.p0 = G.player.p.clone(); }, ok: () => G.player.p.distanceTo(st.p0) > 60 },
-  { t: 'Cámara', d: 'Pulsa <kbd>V</kbd> para cambiar de vista (cenital, desde atrás, lateral…) y <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> para girarla e inclinarla. Pulsa <kbd>B</kbd> para volver a la cenital.', init: () => { st.c0 = { ...G.cam }; }, ok: () => G.cam.preset !== st.c0.preset || Math.abs(G.cam.yaw - st.c0.yaw) > 0.5 || Math.abs(G.cam.pitch - st.c0.pitch) > 0.3 },
+  { t: 'Cámara', d: 'Pulsa <kbd>V</kbd> para cambiar de vista (cenital, desde atrás, lateral, hacia el blanco…) y <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> para girarla e inclinarla. Pulsa <kbd>B</kbd> para volver a la cenital.', init: () => { st.c0 = { ...G.cam }; }, ok: () => G.cam.preset !== st.c0.preset || Math.abs(G.cam.yaw - st.c0.yaw) > 0.5 || Math.abs(G.cam.pitch - st.c0.pitch) > 0.3 },
   { t: 'Zoom', d: 'Acerca o aleja la vista con <kbd>Z</kbd> / <kbd>X</kbd> o con la rueda del ratón.', init: () => { st.z0 = G.targetZoom; }, ok: () => Math.abs(G.targetZoom / st.z0 - 1) > 0.15 },
   { t: 'Fijar un blanco', d: 'Ha aparecido un Panzer IV delante. Pulsa <kbd>T</kbd> para fijarlo como blanco (o haz clic sobre él). Se marca en <b style="color:#f2c94c">amarillo</b> en el mapa y en el panel.', init: () => { st.tg = enemy('pz4h', 260, 0.2, 140); }, ok: () => G.player.lock === st.tg },
   { t: 'Disparar', d: 'Pulsa <kbd>Espacio</kbd> para disparar. La torreta apunta sola: espera a que el panel diga LISTO. Destruye el Panzer.', ok: () => !st.tg.alive },

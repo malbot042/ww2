@@ -183,3 +183,4 @@ Las unidades ya no solo pierden vida: algunos impactos inutilizan partes concret
 | v2.3 | Portada con botón Jugar, aviso de línea de tiro y estado de cobertura/visibilidad, marcas de impacto por tipo (blindaje, averías, santabárbara, cobertura), punto de anticipación y pausa táctica |
 | v2.3.1 | Cámara de aviones: las vistas desde atrás y laterales siguen al avión a cualquier altitud |
 | v2.4 | Inercia de giro en barcos, aviones (alabeo) y tanques, sin cambiar las velocidades máximas de giro |
+| v2.5 | Vista de cámara «Hacia el blanco»: detrás de tu unidad, encarando al blanco |
