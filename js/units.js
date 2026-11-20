@@ -754,7 +754,8 @@ function avoid(e, ang) {
     }
   }
   // sondeo de obstáculos (agua/tierra) en abanico
-  const L = e.dom === 'sea' ? 70 + Math.abs(e.speed) * 3 : 20 + Math.abs(e.speed);
+  // en el mar se mira más lejos cuanto mayor es el radio de giro (un acorazado necesita cientos de metros para virar)
+  const L = e.dom === 'sea' ? Math.max(70 + Math.abs(e.speed) * 3, 1.6 * Math.abs(e.speed) / Math.max(0.05, e.s.turn) + e.hl) : 20 + Math.abs(e.speed);
   const free = a => { for (const k of [0.5, 1]) { const x = e.p.x + Math.sin(a) * L * k, z = e.p.z + Math.cos(a) * L * k; if (!okSurface(e, x, z)) return false; } return true; };
   if (free(ang)) return ang;
   for (const d of [0.4, 0.8, 1.2, 1.7, 2.3, 3.0]) { if (free(ang + d * e.ai.dir)) return ang + d * e.ai.dir; if (free(ang - d * e.ai.dir)) { e.ai.dir *= -1; return ang + d * e.ai.dir; } }
@@ -947,7 +948,14 @@ export function recoverPlane(p, c) {
   if (p === G.player) { G.player = c; G.onMsg && G.onMsg('Aterrizaje completado', 'Vuelves al mando del portaaviones'); }
   return true;
 }
+// barco encallado o atascado: atrás con el timón a una banda unos segundos y luego vuelve a intentarlo
+function shipUnstick(e, dt) {
+  if (e.blocked > 2.5) { e.ai.back = 5; e.blocked = 0; e.ai.dir = -(e.ai.dir || 1); }
+  if (!(e.ai.back > 0)) return false;
+  e.ai.back -= dt; driveShip(e, -0.7, e.ai.dir, dt); fireAA(e); return true;
+}
 function aiShip(e, t, goal, dt) {
+  if (shipUnstick(e, dt)) return;
   let ang = angTo(e, goal), thr = 0.9;
   const dg = dist2(e.p, goal);
   if (e.cls === 'carrier') {

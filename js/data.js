@@ -205,10 +205,19 @@ export const FAC_NAME = { us: 'EE. UU.', uk: 'Reino Unido', jp: 'Japón', de: 'A
 const PACE = { sea: { max: 1.45, acc: 2.0, turn: 1.3 }, land: { max: 1.4, acc: 1.8, turn: 1.2 } };
 export const AMMO_NAME = { ap: 'Perforante (AP)', he: 'Explosiva (HE)' };
 export const testKeyFor = dom => 'test-' + (dom === 'sea' || dom === 'air' ? dom : 'land');
+// giros más realistas (aún arcade, ~2× lo real): los barcos no giran en menos de ~2,6 esloras de radio,
+// los aviones se quedan en 6–8 g y los carros a ~45°/s (los pesados, ~30°/s)
+const TURN_K = { fighter: 0.47, bomber: 0.52, tank: 0.47 };
+function realTurn(s, m) {
+  if (s.dom === 'sea' && s.len) s.turn = Math.min(s.turn, s.max / (2.6 * s.len));
+  else if (s.dom === 'air') s.turn *= s.heavy ? 0.6 : TURN_K[m.cls] || 0.5;
+  else if (m.cls === 'tank') s.turn *= TURN_K.tank;
+}
 export function specOf(key) {
   const m = MODELS[key], c = CLS[m.cls], s = { ...c };
   if (m.stats) for (const k in m.stats) s[k] = typeof m.stats[k] === 'object' && !Array.isArray(m.stats[k]) ? { ...(c[k] || {}), ...m.stats[k] } : m.stats[k];
   const p = PACE[s.dom];
   if (p) { s.max *= p.max; s.acc *= p.acc; s.turn *= p.turn; s.dispK = 1 / p.max; } else s.dispK = 1;
+  if (!globalThis.ARCADE_TURNS) realTurn(s, m); // opción «Giros: arcade» (se aplica al cargar la batalla)
   return s;
 }

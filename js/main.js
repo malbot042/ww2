@@ -454,6 +454,8 @@ $('padHelp').textContent = PAD_HELP;
 function applyMode() { G.opts.mode = G.opts.mode === 'veteran' ? 'veteran' : 'simple'; document.body.classList.toggle('simple', G.opts.mode === 'simple'); for (const id of ['optMode', 'optMode2']) $(id).value = G.opts.mode; }
 for (const id of ['optMode', 'optMode2']) $(id).onchange = ev => { G.opts.mode = ev.target.value; applyMode(); G.onOptions && G.onOptions(); flash(G.opts.mode === 'simple' ? 'Modo sencillo' : 'Modo veterano', G.opts.mode === 'simple' ? 'Órdenes básicas, munición y apoyo automáticos' : 'Todas las órdenes, formaciones y apoyos', 1.6); };
 applyMode();
+globalThis.ARCADE_TURNS = G.opts.turns === 'arcade';
+$('optTurns').value = G.opts.turns || 'real'; $('optTurns').onchange = ev => { G.opts.turns = ev.target.value; globalThis.ARCADE_TURNS = G.opts.turns === 'arcade'; G.onOptions && G.onOptions(); flash('Giros: ' + (G.opts.turns === 'arcade' ? 'arcade' : 'realistas'), 'Se aplica desde la próxima batalla', 1.6); };
 $('optAutoCam').checked = G.opts.autoCam !== false; $('optAutoCam').onchange = ev => { G.opts.autoCam = ev.target.checked; G.onOptions && G.onOptions(); };
 $('optAdvisor').checked = G.opts.advisor !== false; $('optAdvisor').onchange = ev => { G.opts.advisor = ev.target.checked; G.onOptions && G.onOptions(); };
 $('optRange').checked = G.opts.range !== false; $('optRange').onchange = ev => { G.opts.range = ev.target.checked; G.onOptions && G.onOptions(); };

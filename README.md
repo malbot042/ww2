@@ -143,6 +143,13 @@ Con <kbd>V</kbd> se llega a la vista **Hacia el blanco**: la cámara se coloca d
 - **Círculo de alcance**: círculo tenue en el suelo con el alcance de tu arma principal (barcos, tanques, infantería); se pone verde cuando tu blanco está dentro.
 - **Escaramuza a medida** (pestaña Escaramuza de la portada): frente y tipo de batalla (su mapa), tus fuerzas y las del enemigo (hasta 16 por bando, con las unidades de ese frente y las desbloqueables), duración (5, 10, 15 min o sin límite: al acabar el tiempo gana quien tenga más puntos de batalla) y niebla de guerra. No cuenta para récords, estrellas ni medallas.
 
+## Giros realistas (v2.8)
+Además de la inercia, las velocidades de giro se acercan a la realidad (siguen siendo algo más ágiles, tipo arcade):
+- **Barcos**: no giran en menos de ~2,6 esloras de radio. Destructor ~29°/s (vuelta en 12 s), crucero ~14°/s, acorazado y portaaviones ~9°/s (vuelta en ~40 s), submarino ~20°/s; las lanchas torpederas siguen siendo muy ágiles. La IA mira más lejos para esquivar islas y, si encalla, da marcha atrás con el timón a una banda.
+- **Aviones**: cazas 37–46°/s (vuelta en 8–10 s, 7–9 g), bombarderos ligeros ~29°/s, pesados ~19°/s. Los combates aéreos son más de energía y posición.
+- **Carros**: ~45°/s (Sherman, vuelta en 8 s); pesados como el Tiger ~32°/s.
+- En Pausa → opciones, **Giros: Arcade** recupera los giros rápidos de antes (se aplica desde la próxima batalla).
+
 ## Controles
 
 | Tecla | Acción |
