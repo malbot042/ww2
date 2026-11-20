@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { losBlocked, losWhy, coverOf, collisions, landImpact } from './physics.js';
+import { losBlocked, losWhy, coverOf, collisions, landImpact, coverNear } from './physics.js';
 import { diff } from './difficulty.js';
 import { trackMark } from './marks.js';
 import { updateDamageLook, onKillFx, crater } from './damagefx.js';
@@ -180,10 +180,15 @@ export function damage(e, dmg, by, dir, kind) {
   }
   if (e.cls === 'inf' && Math.abs(e.speed) < 1) mult *= 0.6; // cuerpo a tierra
   if (by === G.player && G.onHit) G.onHit(e, zone, mult, dmg * mult, kind);
+  if (by && by === G.player && e.side !== by.side && G.stats) {
+    G.stats.dealt += dmg * mult; if (kind === 'ram') G.stats.rams++;
+    const q = G.curProj; if (q && q.owner === by && !q.counted) { q.counted = true; G.stats.hits++; if (q.kind !== 'bullet') G.stats.gHits++; }
+  }
+  e.lastKind = kind;
   if (by === G.player && G.drillHook) G.drillHook(e, dmg * mult, kind, zone);
   if (e === G.player && G.godMode) { G.shake = Math.max(G.shake, 0.5); return zone; }
   e.hp -= dmg * mult;
-  if (e === G.player) { G.shake = Math.max(G.shake, 0.8 + dmg / 40); G.onHurt && G.onHurt(); }
+  if (e === G.player) { G.shake = Math.max(G.shake, 0.8 + dmg / 40); if (G.stats) G.stats.taken += dmg * mult; G.onHurt && G.onHurt(dir, by); }
   if (e.hp <= 0) kill(e, by);
   return zone;
 }
@@ -246,6 +251,8 @@ export function kill(e, by) {
   G.tickets[e.side] = Math.max(0, G.tickets[e.side] - e.s.value);
   if (G.cp && !e.support) G.cp[e.side === 'A' ? 'E' : 'A'] += e.s.value * 0.6;
   if (e.side === 'E') G.stats.kills++; else if (e.dom !== 'static' || e.cls === 'site') G.stats.lost++;
+  if (by && by === G.player && e.side !== by.side && G.stats.pk) G.stats.pk.push({ key: e.key, cls: e.cls, dom: e.dom, kind: e.lastKind || '', t: G.time });
+  if (e === G.player && G.stats.pDeaths !== undefined) G.stats.pDeaths++;
   gainXp(by, e); onKillFx(e);
   G.onKill && G.onKill(e, by);
   const p = e.p.clone();
@@ -268,6 +275,7 @@ function proj(kind, owner, from, v, o = {}) {
   m.position.copy(from); G.unitsGroup.add(m);
   const q = Object.assign({ kind, side: owner.side, owner, m, p: m.position, v, dmg: 10, life: 3, grav: 0, age: 0 }, o);
   m.lookAt(tmp.copy(from).add(v)); G.projs.push(q);
+  if (owner === G.player && G.stats && G.stats.shots !== undefined) { G.stats.shots++; if (kind !== 'bullet') G.stats.gShots++; }
   if (kind !== 'torp' && kind !== 'dc') owner.revealT = 2;
   return q;
 }
@@ -277,7 +285,7 @@ export function clearProjs() { for (let i = G.projs.length - 1; i >= 0; i--) rem
 export function updateProjs(dt) {
   const map = G.map;
   for (let i = G.projs.length - 1; i >= 0; i--) {
-    const q = G.projs[i], p = q.p;
+    const q = G.projs[i], p = q.p; G.curProj = q;
     q.age += dt; q.life -= dt;
     q.v.y -= q.grav * dt; p.addScaledVector(q.v, dt);
     if (q.kind !== 'torp' && q.kind !== 'dc') q.m.lookAt(tmp.copy(p).add(q.v));
@@ -795,7 +803,18 @@ export function orderPoint(e) {
     case 'follow': {
       const L = e.side === 'A' ? G.player : null;
       if (!L || !L.alive || L === e) return null;
-      if (L.dom === e.dom) return formationPoint(e, L, e.dom === 'sea' ? 95 : e.dom === 'air' ? 45 : 32);
+      if (L.dom === e.dom) {
+        const fp = formationPoint(e, L, e.dom === 'sea' ? 95 : e.dom === 'air' ? 45 : 32);
+        // «Sígueme» en tierra: si el jefe se para, los tanques y la infantería se ponen a cubierto junto a su puesto
+        if (e.dom === 'land' && e.cls !== 'atgun' && fp) {
+          if (Math.abs(L.speed) < 2.5) {
+            if (!L.stopT) L.stopT = G.time;
+            if (G.time - L.stopT > 1.5 && (!e.covF || G.time - e.covF.t > 3)) e.covF = { t: G.time, p: coverNear(fp.x, fp.z, 45) };
+            if (e.covF && e.covF.p) return anchorFor(e, e.covF.p.x, e.covF.p.z);
+          } else { L.stopT = 0; e.covF = null; }
+        }
+        return fp;
+      }
       return at(L.p.x, L.p.z, e.dom === 'air' ? 140 : 80);
     }
     case 'zone': {
@@ -819,7 +838,7 @@ export function orderPoint(e) {
       const d = Math.hypot(e.p.x - z.pos.x, e.p.z - z.pos.z), r = Math.max(G.map.cfg.zoneR, Math.min(d, (e.s.gun ? e.s.gun.range : 500) * 0.8));
       return anchorFor(e, z.pos.x + (e.p.x - z.pos.x) / Math.max(1, d) * r, z.pos.z + (e.p.z - z.pos.z) / Math.max(1, d) * r);
     }
-    case 'move': return anchorFor(e, o.x + (o.ox || 0), o.z + (o.oz || 0));
+    case 'move': return o.cx !== undefined ? anchorFor(e, o.cx, o.cz) : anchorFor(e, o.x + (o.ox || 0), o.z + (o.oz || 0));
     case 'route': { const p = o.pts[Math.min(o.i, o.pts.length - 1)]; return anchorFor(e, p.x + (o.ox || 0), p.z + (o.oz || 0)); }
     case 'strike': return e.leaving ? V3(e.p.x + Math.sin(e.h) * 3000, 0, e.p.z + Math.cos(e.h) * 3000) : e.strike.clone();
     case 'attack': { const t = nearestEnemy(e, e.dom === 'air' ? (e.cls === 'bomber' ? o2 => o2.dom !== 'air' && !o2.submerged : isPlane) : targetFilter(e)); return t ? anchorFor(e, t.p.x, t.p.z) : null; }
@@ -1067,6 +1086,7 @@ function aiStatic(e, dt) {
 
 // ---------- bucle de unidades ----------
 export function updateUnits(dt) {
+  G.curProj = null;
   for (const e of G.ents) {
     if (!e.alive) { updateWreck(e, dt); continue; }
     updateDamageLook(e, dt);

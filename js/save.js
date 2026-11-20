@@ -2,9 +2,9 @@
 import { G } from './state.js';
 
 const KEY = 'frentes1939-45';
-let data = { v: 1, opts: null, vol: null, campaign: null, records: {} };
+let data = { v: 1, opts: null, vol: null, campaign: null, records: {}, medals: {} };
 export function loadSave() {
-  try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.v === 1) data = { ...data, ...s, records: s.records || {} }; } catch (e) { }
+  try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.v === 1) data = { ...data, ...s, records: s.records || {}, medals: s.medals || {} }; } catch (e) { }
   if (data.opts) G.opts = { ...G.opts, ...data.opts };
   if (data.vol) G.vol = { ...G.vol, ...data.vol };
   return data;
@@ -20,4 +20,9 @@ export function record(key, score, win) {
   data.records[key] = r; write(); return isNew;
 }
 export const recordOf = key => data.records[key];
-export function clearSave() { data = { v: 1, opts: data.opts, vol: data.vol, campaign: null, records: {} }; write(); }
+// estrellas (lo mejor conseguido en cada batalla) y medallas
+export function setStars(key, n) { const r = data.records[key]; if (!r) return false; const up = n > (r.stars || 0); if (up) { r.stars = n; write(); } return up; }
+export const starsOf = key => (data.records[key] && data.records[key].stars) || 0;
+export const medalsSaved = () => data.medals;
+export function awardMedal(id, info) { if (data.medals[id]) { data.medals[id].n = (data.medals[id].n || 1) + 1; write(); return false; } data.medals[id] = { d: new Date().toISOString().slice(0, 10), n: 1, ...info }; write(); return true; }
+export function clearSave() { data = { v: 1, opts: data.opts, vol: data.vol, campaign: null, records: {}, medals: {} }; write(); }

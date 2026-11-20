@@ -85,7 +85,7 @@
   <section id="scrFront" class="scr">
     <header class="brand"><h1>FRENTES <span>1939–45</span></h1><p>Mando táctico de escuadra · 10 contra 10 · Mar, aire y tierra</p></header>
     <div id="hero"></div>
-    <nav id="more"><button data-tab="fronts">Frentes y campañas</button><button data-tab="learn">Aprender</button><button data-tab="hangar">Hangar</button><button data-tab="test">Campos de pruebas</button></nav>
+    <nav id="more"><button data-tab="fronts">Frentes y campañas</button><button data-tab="learn">Aprender</button><button data-tab="hangar">Hangar</button><button data-tab="test">Campos de pruebas</button><button data-tab="medals">Medallas</button></nav>
     <div id="contCamp"></div>
     <div id="fronts" class="hide"></div>
     <div class="qsel"><label>Dificultad <select id="optDiff2"><option value="easy">Fácil</option><option value="normal">Medio</option><option value="hard">Difícil</option></select></label><label>Mando aliado <select id="optCmd2"><option value="ai">IA coordinada</option><option value="me">Solo mis órdenes</option></select></label><label>Modo <select id="optMode2"><option value="simple">Sencillo</option><option value="veteran">Veterano</option></select></label><label>Calidad gráfica <select id="optQual2"></select></label></div>
@@ -134,7 +134,7 @@
         <p><kbd>Z</kbd><kbd>X</kbd> / rueda: zoom</p><p><kbd>M</kbd> Mapa táctico completo</p>
         <h4>Consejos</h4><p>Los barcos disparan con todas sus torres de costado. Los tanques son más débiles por los lados y por detrás. Mantener más objetivos que el enemigo le resta puntos cada segundo. La munición es limitada: vuelve a tu base (círculo verde con R) para rearmarte y reparar. AP contra blindados y barcos, HE contra infantería, cañones y defensas.</p></div>
     </div>
-    <h4 class="vh">Sonido y cámara</h4><div id="vols" class="vols"></div><label class="chk cine"><input type="checkbox" id="optCine" checked> Cámara lenta en los grandes derribos</label><div class="qrow"><label>Dificultad <select id="optDiff"><option value="easy">Fácil</option><option value="normal">Medio</option><option value="hard">Difícil</option></select></label><label>Mando aliado <select id="optCmd"><option value="ai">IA coordinada</option><option value="me">Solo mis órdenes</option></select></label><label>Modo <select id="optMode"><option value="simple">Sencillo</option><option value="veteran">Veterano</option></select></label><label>Calidad gráfica <select id="optQual"></select></label><label class="chk"><input type="checkbox" id="optCrt" checked> Efecto CRT</label><label class="chk"><input type="checkbox" id="optFps"> Mostrar FPS</label></div><p class="note small">La resolución es siempre baja (360 líneas). La densidad de vegetación se aplica al cargar la próxima batalla.</p>
+    <h4 class="vh">Sonido y cámara</h4><div id="vols" class="vols"></div><label class="chk cine"><input type="checkbox" id="optCine" checked> Cámara lenta en los grandes derribos</label><div class="qrow"><label>Dificultad <select id="optDiff"><option value="easy">Fácil</option><option value="normal">Medio</option><option value="hard">Difícil</option></select></label><label>Mando aliado <select id="optCmd"><option value="ai">IA coordinada</option><option value="me">Solo mis órdenes</option></select></label><label>Modo <select id="optMode"><option value="simple">Sencillo</option><option value="veteran">Veterano</option></select></label><label>Calidad gráfica <select id="optQual"></select></label><label class="chk"><input type="checkbox" id="optCrt" checked> Efecto CRT</label><label class="chk"><input type="checkbox" id="optAutoCam" checked> Cámara automática hacia el blanco en combate</label><label class="chk"><input type="checkbox" id="optThreats" checked> Avisos de peligro (flechas, daño, torpedos)</label><label class="chk"><input type="checkbox" id="optFps"> Mostrar FPS</label></div><p class="note small">La resolución es siempre baja (360 líneas). La densidad de vegetación se aplica al cargar la próxima batalla.</p>
     <div class="row"><button class="btn" id="resume">Continuar</button><button class="ghost dark" id="quit">Abandonar al menú</button></div>
   </div>
 </div>
@@ -144,7 +144,10 @@
   <div class="card">
     <h1 id="resTitle">Victoria</h1>
     <h3 id="resSub"></h3>
+    <div id="resStars"></div>
+    <div id="resMedals"></div>
     <div id="resStats"></div>
+    <div id="resSum"></div>
     <div class="row"><button class="btn" id="resNext">Siguiente</button><button class="ghost dark" id="resReplay">Ver repetición</button><button class="ghost dark" id="resRetry">Repetir</button><button class="ghost dark" id="resMenu">Menú</button></div>
   </div>
 </div>

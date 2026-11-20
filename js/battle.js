@@ -4,6 +4,7 @@ import { initMarks } from './marks.js';
 import { initDamageFx } from './damagefx.js';
 import { applyVeterans } from './campaign.js';
 import { G } from './state.js';
+import { coverNear } from './physics.js';
 import { BATTLES, MODELS, CLS } from './data.js';
 import { buildWorld } from './world.js';
 import { applyEnv } from './env.js';
@@ -160,7 +161,7 @@ export function startBattle(key, demo = false, opts = {}) {
   if (demo) { allies.forEach(e => e.order = { type: 'attack' }); G.selection.clear(); }
   G.tickets = { A: air ? 450 : mixed ? 800 : 600, E: air ? 450 : mixed ? 800 : 600 }; G.ticketsMax = G.tickets.A;
   if (!demo) { G.tickets.A = Math.round(G.tickets.A * diff().tickets); G.ticketsMax = Math.max(G.tickets.A, G.tickets.E); }
-  G.time = 0; G.over = false; G.stats = { kills: 0, lost: 0 }; cmdT = { A: demo ? 0 : 3, E: 0 }; deadT = 0; lastMain = -1; DOC.A = { phase: 'approach', since: 0, cyc: 0 }; DOC.E = { phase: 'approach', since: 0, cyc: 0 };
+  G.time = 0; G.over = false; G.stats = { kills: 0, lost: 0, shots: 0, hits: 0, gShots: 0, gHits: 0, pk: [], pDeaths: 0, taken: 0, dealt: 0, rams: 0, ammo: 0, crits: 0, tl: [], tlT: 0 }; cmdT = { A: demo ? 0 : 3, E: 0 }; deadT = 0; lastMain = -1; DOC.A = { phase: 'approach', since: 0, cyc: 0 }; DOC.E = { phase: 'approach', since: 0, cyc: 0 };
   // líneas de órdenes
   lines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x9fd0ff, transparent: true, opacity: 0.55, depthTest: false }));
   lines.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(240), 3)); lines.renderOrder = 11; lines.frustumCulled = false; markers.add(lines);
@@ -200,11 +201,14 @@ export function issueOrder(type, arg = {}, queued = false) {
       o = { type: 'route', pts: [arg.pt], i: 0 };
     } else o = { type, ...arg };
     if (offs) { o.ox = offs[i][0]; o.oz = offs[i][1]; }
+    // en tierra, cada unidad busca el seto, bosque o casa más próximo a su puesto (si hay alguno cerca)
+    if (type === 'move' && e.dom === 'land' && e.cls !== 'atgun') { const cp = coverNear(o.x + (o.ox || 0), o.z + (o.oz || 0), 40); if (cp) { o.cx = cp.x; o.cz = cp.z; } }
     e.manualT = G.time + MANUAL_S; // la IA aliada respeta esta orden un tiempo
     if (queued && type !== 'route') { e.queue = e.queue || []; e.queue.push(o); if (e.order.type === 'follow' || e.order.type === 'hold') e.order = e.queue.shift(); }
     else { e.order = o; e.queue = []; }
     e.ai.think = 0;
   });
+  if (type === 'move' && sel.some(e => e.dom === 'land') && G.onCoverSpots) G.onCoverSpots(arg.x, arg.z);
   return sel.length;
 }
 export function setPlayer(e) {
@@ -336,6 +340,8 @@ export function updateBattle(dt) {
   // mando IA
   if (b.kind !== 'test') for (const s of ['A', 'E']) { if (s === 'A' && !G.demo && !aiAllies()) continue; cmdT[s] -= dt; if (cmdT[s] <= 0) { command(s); cmdT[s] = s === 'E' ? diff().cmd : 7; } }
   updateVision(dt); updateStrategy(dt);
+  // línea de tiempo para el resumen final: dueño de cada zona y puntos de batalla cada 3 s
+  if (!G.demo && G.stats && (G.stats.tlT -= dt) <= 0) { G.stats.tlT = 3; G.stats.tl.push({ t: G.time, z: G.objectives.map(z => z.owner || 'N').join(''), A: Math.ceil(G.tickets.A), E: Math.ceil(G.tickets.E) }); }
   // zonas
   if (b.kind !== 'air') {
     const R = G.map.cfg.zoneR;

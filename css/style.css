@@ -263,3 +263,20 @@ body:not(.simple) .simple-only{display:none}
 #more button{background:none;border:0;border-bottom:2px solid transparent;color:var(--khaki);font:600 17px "Barlow Condensed",sans-serif;padding:8px 14px;cursor:pointer;margin-bottom:-1px}
 #more button:hover{color:var(--paper)}#more button.on{color:var(--paper);border-bottom-color:#d9a441}
 #fronts.hide{display:none}
+
+/* estrellas, medallas y resumen final */
+.stars{color:#d9a441;letter-spacing:1px;font-size:1em}.stars i{font-style:normal;color:rgba(128,128,128,.4)}
+#resStars{display:flex;flex-direction:column;align-items:center;gap:2px;margin:-4px 0 14px}#resStars .stars{font-size:40px;line-height:1}#resStars span{font-size:15px}#resStars small{font-size:13px;opacity:.65}
+#resMedals h4{margin:0 0 6px;font:700 18px "Barlow Condensed",sans-serif;color:#8a6421}#resMedals{margin-bottom:14px}
+.mdls{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}.md{display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:4px;background:rgba(128,128,100,.1)}
+.md .mdl{width:34px;height:44px;flex-shrink:0}.md div{display:flex;flex-direction:column}.md b{font-size:15px}.md span{font-size:12.5px;opacity:.8}.md small{font-size:11.5px;opacity:.6}.md.no{opacity:.55}
+.mdls.new .md{background:rgba(217,164,65,.18);animation:mdpop .5s ease-out}@keyframes mdpop{0%{transform:scale(.8);opacity:0}100%{transform:scale(1);opacity:1}}
+.front.f-medals{grid-column:1/-1;cursor:default;text-align:left}.front.f-medals .mdls{margin-top:10px}
+.fst{color:#d9a441;font-weight:700}
+.sumRows{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:12px}.sumRows div{display:flex;flex-direction:column;background:rgba(79,134,198,.08);border-radius:4px;padding:8px 12px}
+.sumRows span{font-size:13px;opacity:.7}.sumRows b{font:800 22px "Barlow Condensed",sans-serif}.sumRows small{font-size:12.5px;opacity:.75}
+.tl{margin-bottom:16px}.tlh{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:4px;flex-wrap:wrap;gap:6px}.tlh i{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 4px 0 10px;vertical-align:-1px}
+.tlsvg{width:100%;height:auto;font:11px Barlow,sans-serif;fill:currentColor}.tln{font-size:12px;opacity:.6;margin:2px 0 0}
+#results .card{max-height:92vh;overflow:auto}
+
+#thr{position:fixed;inset:0;pointer-events:none;z-index:1}

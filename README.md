@@ -125,6 +125,16 @@ El **modo veterano** (se elige en el menú principal o en la pausa) activa todo:
 ## Vista «Hacia el blanco» (v2.5)
 Con <kbd>V</kbd> se llega a la vista **Hacia el blanco**: la cámara se coloca detrás de tu unidad, en la línea que va hacia tu blanco, así lo tienes siempre delante aunque gires o te adelante. Usa el blanco fijado (<kbd>T</kbd>) o el automático; si no hay ninguno, el enemigo visible más cercano (en avión, prefiere otros aviones). Si no hay enemigos, se comporta como la vista desde atrás. <kbd>A</kbd>/<kbd>D</kbd> siguen girando la cámara alrededor.
 
+## Avisos, cámara automática, resumen y medallas (v2.6)
+- **Flechas de amenaza** en los bordes: enemigos fuera de pantalla que te apuntan (rojo, con distancia), aviones **a tus seis** (amarillo) y torpedos que vienen hacia ti.
+- **Dirección del daño**: un arco rojo alrededor de tu unidad señala desde dónde te han dado.
+- **Aviso de torpedo**: alarma, mensaje con el lado (proa, popa, babor, estribor) y los segundos hasta el impacto, y una línea roja con su trayectoria (naranja si va a pasar de largo).
+- **Cámara automática**: con combate cerca pasa sola a la vista «Hacia el blanco» y vuelve a la cenital cuando no queda nadie cerca. Si eliges vista a mano en pleno combate, se respeta. Se desactiva en Pausa → opciones.
+- **Cobertura en las órdenes**: al mandar mover a unidades de tierra se marcan los setos, bosques y casas cercanos al destino, y cada unidad se coloca en el más próximo a su puesto. Con «Sígueme», cuando te paras, tus tanques e infantería se ponen a cubierto junto a su puesto.
+- **Resumen final**: tus bajas por tipo, aciertos y precisión, daño causado y recibido, bajas de tu bando y una línea de tiempo con quién controlaba cada zona y los puntos de batalla.
+- **Estrellas por batalla**: ★ ganar · ★★ con menos del 30 % de bajas · ★★★ con menos del 15 % en dificultad media o difícil. Se ven en la portada, en cada frente y en las batallas de la campaña.
+- **Medallas** (pestaña Medallas de la portada): Bautismo de fuego, As del aire, Cazador de submarinos, Pez de acero, Matagigantes, Cazacarros, Embestida, Santabárbara, Buen tirador, Superviviente, Victoria impecable, Veterano, Perfeccionista y Campaña completada.
+
 ## Controles
 
 | Tecla | Acción |

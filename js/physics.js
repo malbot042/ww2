@@ -105,3 +105,34 @@ export function landImpact(e, o, damage) {
   if (o.cls !== 'inf' && e.cls !== 'inf' && v > 6) { const k = (v - 4) * (o.side === e.side ? 2 : 6); damage(o, k, e, null, 'ram'); damage(e, k * 0.6, o, null, 'ram'); e.colT = o.colT = 1.2; e.speed *= 0.2; if (e === G.player && G.onMsg) G.onMsg('¡Choque!', o.name, 1.2); }
   return false;
 }
+
+// ---------- cobertura cercana (órdenes de mover y «Sígueme») ----------
+// mejor punto a cubierto en un radio: más cobertura y más cerca puntúan mejor; null si no hay nada que merezca la pena
+export function coverNear(x, z, R = 40, min = 0.3) {
+  const m = G.map; if (!m || !m.coverAt) return null;
+  let best = null, bs = -1;
+  const st = 8;
+  for (let dx = -R; dx <= R; dx += st) for (let dz = -R; dz <= R; dz += st) {
+    const d = Math.hypot(dx, dz); if (d > R) continue;
+    const px = x + dx, pz = z + dz;
+    if (m.h(px, pz) < 0.5) continue; // nada de agua
+    const c = Math.min(1, m.coverAt(px, pz)); if (c < min) continue;
+    const sc = c - d / R * 0.45;
+    if (sc > bs) { bs = sc; best = V3(px, 0, pz); }
+  }
+  return best;
+}
+// varios puntos con cobertura alrededor de un punto (para marcarlos en el mapa)
+export function coverSpots(x, z, R = 160, n = 10) {
+  const m = G.map; if (!m || !m.coverAt) return [];
+  const cand = [];
+  for (let dx = -R; dx <= R; dx += 12) for (let dz = -R; dz <= R; dz += 12) {
+    if (dx * dx + dz * dz > R * R) continue;
+    const px = x + dx, pz = z + dz; if (m.h(px, pz) < 0.5) continue;
+    const c = m.coverAt(px, pz); if (c >= 0.3) cand.push({ x: px, z: pz, c, house: c >= 0.75 });
+  }
+  cand.sort((a, b) => b.c - a.c);
+  const out = [];
+  for (const p of cand) { if (out.every(q => (q.x - p.x) ** 2 + (q.z - p.z) ** 2 > 38 * 38)) out.push(p); if (out.length >= n) break; }
+  return out;
+}
